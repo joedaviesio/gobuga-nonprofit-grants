@@ -1,4 +1,5 @@
 .env
+initial-sequence.md
 __pycache__/
 *.pyc
 .DS_Store

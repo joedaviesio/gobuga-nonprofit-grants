@@ -1,0 +1,23 @@
+.env
+__pycache__/
+*.pyc
+.DS_Store
+
+# Runtime data (per-org, created by the app)
+orgs/
+platform/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+.next/
+
+# Legacy single-tenant dirs (should not exist in multi-tenant)
+cases/
+cycles/
+evidence/
+state/
+signoffs/
+logs/
+data/
+sessions.json

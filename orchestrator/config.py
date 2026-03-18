@@ -1,0 +1,48 @@
+"""Bot configuration — the only file you edit to add/remove agents."""
+
+MODEL_INSPECTOR = "claude-sonnet-4-20250514"
+MODEL_ANALYST = "claude-sonnet-4-20250514"
+MODEL_REPORTER = "claude-haiku-4-5-20251001"
+
+AGENTS = [
+    # Phase 1 — Watcher (parallel, cheap)
+    {
+        "id": "grant_watcher",
+        "name": "Grant Watcher",
+        "prompt_file": "prompts/grant_watcher.md",
+        "phase": 1,
+        "depends_on": [],
+        "model": MODEL_INSPECTOR,
+        "tools": ["web_fetch", "web_search", "save_evidence"],
+        "max_iterations": 30,
+    },
+    # Phase 2 — Analyst (depends on watcher output)
+    {
+        "id": "grant_analyst",
+        "name": "Grant Analyst",
+        "prompt_file": "prompts/grant_analyst.md",
+        "phase": 2,
+        "depends_on": ["grant_watcher"],
+        "model": MODEL_ANALYST,
+        "tools": ["save_evidence"],
+        "max_iterations": 12,
+    },
+    # Phase 3 — Reporter (compiles brief)
+    {
+        "id": "grant_reporter",
+        "name": "Grant Reporter",
+        "prompt_file": "prompts/grant_reporter.md",
+        "phase": 3,
+        "depends_on": ["grant_watcher", "grant_analyst"],
+        "model": MODEL_REPORTER,
+        "tools": [],
+        "max_iterations": 1,
+    },
+]
+
+# Group agents by phase for the orchestrator
+def agents_by_phase():
+    phases = {}
+    for agent in AGENTS:
+        phases.setdefault(agent["phase"], []).append(agent)
+    return dict(sorted(phases.items()))

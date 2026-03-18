@@ -1,0 +1,773 @@
+"use client";
+
+import { useEffect, useState, useRef, use } from "react";
+import {
+  getCase,
+  updateCase,
+  exportDraft,
+  uploadFile,
+  botParseAndFill,
+  botQuestions,
+  botAnswer,
+  botIngest,
+  getDatabank,
+  type CaseFull,
+  type Message,
+  type DatabankEntry,
+} from "@/lib/api";
+
+const API_BASE = "/api";
+
+// The three user paths after seeing the summary
+type FlowPath = null | "upload_file" | "upload_submission" | "ask_questions";
+type BotStatus = "idle" | "working" | "done" | "error";
+
+function formatTime(ts: string) {
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function SimpleMarkdown({ text }: { text: string }) {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const inlineMd = (s: string) => s
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+  // Process tables separately, then inline markdown for everything else
+  const lines = text.split("\n");
+  const output: string[] = [];
+  let inTable = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const isTableRow = /^\|(.+)\|$/.test(line);
+    const isSeparator = /^\|[-:|  ]+\|$/.test(line);
+
+    if (isTableRow && !inTable) {
+      inTable = true;
+      const cells = line.split("|").filter((c) => c.trim()).map((c) => inlineMd(esc(c.trim())));
+      output.push('<table class="text-xs border-collapse w-full my-2"><thead><tr>' +
+        cells.map((c) => `<th class="border border-stone-200 px-2 py-1 bg-stone-50 text-left font-medium">${c}</th>`).join("") +
+        "</tr></thead><tbody>");
+    } else if (inTable && isSeparator) {
+      // skip separator row
+    } else if (inTable && isTableRow) {
+      const cells = line.split("|").filter((c) => c.trim()).map((c) => inlineMd(esc(c.trim())));
+      output.push("<tr>" +
+        cells.map((c) => `<td class="border border-stone-200 px-2 py-1">${c}</td>`).join("") +
+        "</tr>");
+    } else {
+      if (inTable) {
+        output.push("</tbody></table>");
+        inTable = false;
+      }
+      // Apply standard markdown to non-table lines
+      const html = esc(line)
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-blue-600 underline hover:text-blue-800">$1</a>')
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/`(.+?)`/g, "<code>$1</code>")
+        .replace(/^### (.+)$/, '<h3>$1</h3>')
+        .replace(/^## (.+)$/, '<h2>$1</h2>')
+        .replace(/^# (.+)$/, '<h1>$1</h1>')
+        .replace(/^- (.+)$/, "<li>$1</li>");
+      output.push(html);
+    }
+  }
+  if (inTable) output.push("</tbody></table>");
+
+  const html = output.join("<br>");
+  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function LoadingDots({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 p-3 bg-stone-50 rounded-lg">
+      <div className="flex gap-1">
+        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+      </div>
+      <span className="text-xs text-stone-500">{label}</span>
+    </div>
+  );
+}
+
+
+export default function CaseDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [caseData, setCaseData] = useState<CaseFull | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [flowPath, setFlowPath] = useState<FlowPath>(null);
+  const [botStatus, setBotStatus] = useState<BotStatus>("idle");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [qaInput, setQaInput] = useState("");
+  const [qaMessages, setQaMessages] = useState<{ role: string; content: string }[]>([]);
+  const [databank, setDatabank] = useState<DatabankEntry[]>([]);
+  const [sidebarTab, setSidebarTab] = useState<"brief" | "databank" | "draft">("brief");
+  const [totalUsage, setTotalUsage] = useState({ input_tokens: 0, output_tokens: 0, api_calls: 0, cost_usd: 0 });
+
+  const trackUsage = (usage: { input_tokens?: number; output_tokens?: number; api_calls?: number; cost_usd?: number } | undefined) => {
+    if (!usage) return;
+    setTotalUsage((prev) => ({
+      input_tokens: prev.input_tokens + (usage.input_tokens || 0),
+      output_tokens: prev.output_tokens + (usage.output_tokens || 0),
+      api_calls: prev.api_calls + (usage.api_calls || 0),
+      cost_usd: Math.round((prev.cost_usd + (usage.cost_usd || 0)) * 10000) / 10000,
+    }));
+  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const submissionInputRef = useRef<HTMLInputElement>(null);
+  const qaEndRef = useRef<HTMLDivElement>(null);
+
+  // Load case data
+  useEffect(() => {
+    getCase(id).then((data) => {
+      setCaseData(data);
+      setMessages(data.conversation || []);
+    });
+    getDatabank(id).then(setDatabank).catch(() => {});
+  }, [id]);
+
+  useEffect(() => {
+    qaEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [qaMessages]);
+
+  const refreshCase = async () => {
+    const data = await getCase(id);
+    setCaseData(data);
+    setMessages(data.conversation || []);
+    const db = await getDatabank(id).catch(() => []);
+    setDatabank(db);
+  };
+
+  // --- Download helper ---
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExport = async (format: string, templateFilename?: string) => {
+    try {
+      const result = await exportDraft(id, format, templateFilename);
+      if (format === "docx" && result.filename) {
+        const res = await fetch(`${API_BASE}/cases/${id}/download/${result.filename}`);
+        downloadBlob(await res.blob(), result.filename);
+      } else if (format === "markdown") {
+        downloadBlob(new Blob([result.content], { type: "text/markdown" }), `${id}-draft.md`);
+      } else {
+        downloadBlob(new Blob([JSON.stringify(result.content, null, 2)], { type: "application/json" }), `${id}-draft.json`);
+      }
+    } catch (err) {
+      alert(`Export failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  // --- Download summary as DOCX ---
+  const handleDownloadSummary = async () => {
+    const summaryMsg = messages.find((m) => m.role === "assistant");
+    if (!summaryMsg) return;
+    const blob = new Blob([summaryMsg.content], { type: "text/markdown" });
+    downloadBlob(blob, `${id}-summary.md`);
+  };
+
+  // --- Path 1: Upload a file → ingest to databank ---
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    setBotStatus("working");
+    setStatusMessage(`Adding ${file.name} to data bank...`);
+
+    try {
+      await uploadFile(id, file, "reference");
+      const ingestResult = await botIngest(id, file.name);
+      trackUsage(ingestResult.usage);
+      await refreshCase();
+      setBotStatus("done");
+      setStatusMessage(`Added ${file.name} to data bank.`);
+    } catch (err) {
+      setBotStatus("error");
+      setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  // --- Path 2: Upload submission → Bot B + C ---
+  const handleUploadSubmission = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (submissionInputRef.current) submissionInputRef.current.value = "";
+
+    setBotStatus("working");
+    setStatusMessage("Uploading submission form...");
+
+    try {
+      await uploadFile(id, file, "application_form");
+      setStatusMessage("Parsing form sections...");
+      const result = await botParseAndFill(id, file.name);
+      trackUsage(result.usage);
+      await refreshCase();
+      setBotStatus("done");
+      setStatusMessage(
+        `Parsed ${result.parsed} sections, filled ${result.filled}.` +
+        (result.needs_review > 0 ? ` ${result.needs_review} need review.` : " Ready to export!")
+      );
+    } catch (err) {
+      setBotStatus("error");
+      setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  // --- Path 3: Ask questions → Bot D ---
+  const handleStartQuestions = async () => {
+    setBotStatus("working");
+    setStatusMessage("Analyzing what information we need...");
+
+    try {
+      const result = await botQuestions(id);
+      trackUsage(result.usage);
+      setQaMessages([{ role: "assistant", content: result.response }]);
+      await refreshCase();
+      setBotStatus("idle");
+      setStatusMessage("");
+    } catch (err) {
+      setBotStatus("error");
+      setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  const handleQaSend = async () => {
+    const msg = qaInput.trim();
+    if (!msg || botStatus === "working") return;
+    setQaInput("");
+    setQaMessages((prev) => [...prev, { role: "user", content: msg }]);
+    setBotStatus("working");
+
+    try {
+      const result = await botAnswer(id, msg);
+      trackUsage(result.usage);
+      setQaMessages((prev) => [...prev, { role: "assistant", content: result.response }]);
+      await refreshCase();
+      setBotStatus("idle");
+    } catch (err) {
+      setQaMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err instanceof Error ? err.message : "Unknown error"}` }]);
+      setBotStatus("error");
+    }
+  };
+
+  // --- Render ---
+
+  if (!caseData) {
+    return <div className="p-8 text-sm text-stone-400">Loading case...</div>;
+  }
+
+  const sections = caseData.draft?.sections || {};
+  const sectionNames = Object.keys(sections);
+  const brief = caseData.grant_brief || {};
+  const summaryMsg = messages.find((m) => m.role === "assistant");
+  const docxUploads = (caseData.uploads || []).filter(
+    (u) => u.filename.endsWith(".docx") && u.type === "application_form"
+  );
+
+  return (
+    <div className="flex flex-col md:flex-row h-[calc(100vh-49px)]">
+      {/* Hidden file inputs */}
+      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.html,.htm,.txt,.csv,.xlsx" onChange={handleUploadFile} />
+      <input ref={submissionInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc" onChange={handleUploadSubmission} />
+
+      {/* Left sidebar */}
+      <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-stone-200 flex flex-col bg-white overflow-y-auto md:max-h-none max-h-[40vh]">
+        {/* Case header */}
+        <div className="p-4 border-b border-stone-200">
+          <div className="text-xs font-mono text-stone-400">{caseData.case_id}</div>
+          <div className="text-sm font-medium text-stone-700 mt-1">{caseData.grant_id}</div>
+          {/* Status stepper */}
+          {(() => {
+            const statuses = [
+              { value: "open", label: "Open", color: "bg-blue-500" },
+              { value: "submitted", label: "Submitted", color: "bg-amber-500" },
+              { value: "accepted", label: "Accepted", color: "bg-green-500" },
+              { value: "rejected", label: "Rejected", color: "bg-red-500" },
+            ];
+            const currentIdx = statuses.findIndex((s) => s.value === caseData.status);
+            const isClosed = caseData.status === "closed";
+
+            return (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-1">
+                  {statuses.map((s, i) => {
+                    const isActive = s.value === caseData.status;
+                    const isPast = !isClosed && currentIdx >= 0 && i < currentIdx;
+                    // Can only move forward in the main flow, or pick accepted/rejected from submitted
+                    const isClickable = !isClosed && (
+                      (s.value === "submitted" && caseData.status === "open") ||
+                      (s.value === "accepted" && caseData.status === "submitted") ||
+                      (s.value === "rejected" && caseData.status === "submitted") ||
+                      (s.value === "open" && (caseData.status === "submitted" || caseData.status === "accepted" || caseData.status === "rejected"))
+                    );
+
+                    return (
+                      <button
+                        key={s.value}
+                        disabled={!isClickable}
+                        onClick={async () => {
+                          if (!isClickable) return;
+                          const updated = await updateCase(id, { status: s.value });
+                          setCaseData(updated);
+                        }}
+                        className={`flex-1 py-1 text-[10px] font-medium rounded transition-colors ${
+                          isActive
+                            ? `${s.color} text-white`
+                            : isPast
+                            ? "bg-stone-200 text-stone-500"
+                            : isClickable
+                            ? "bg-stone-100 text-stone-500 hover:bg-stone-200 cursor-pointer"
+                            : "bg-stone-50 text-stone-300 cursor-default"
+                        }`}
+                        title={isClickable ? `Set to ${s.label}` : ""}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Close/reopen toggle */}
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={async () => {
+                      const newStatus = isClosed ? "open" : "closed";
+                      const updated = await updateCase(id, { status: newStatus });
+                      setCaseData(updated);
+                    }}
+                    className={`text-[10px] ${
+                      isClosed
+                        ? "text-blue-500 hover:text-blue-700"
+                        : "text-stone-400 hover:text-stone-600"
+                    }`}
+                  >
+                    {isClosed ? "Reopen case" : "Close case"}
+                  </button>
+                  {typeof brief.deadline === "string" && !isNaN(new Date(brief.deadline as string).getTime()) && (
+                    <span className="text-[10px] text-stone-400">
+                      Due {new Date(brief.deadline as string).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                {isClosed && (
+                  <div className="text-[10px] px-2 py-1 bg-stone-100 rounded text-stone-500 text-center">
+                    Case closed
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Session usage */}
+          {totalUsage.api_calls > 0 && (
+            <div className="mt-3 flex items-center justify-between text-[10px] text-stone-400 px-1">
+              <span>{totalUsage.input_tokens.toLocaleString()} in / {totalUsage.output_tokens.toLocaleString()} out</span>
+              <span className="font-mono">${totalUsage.cost_usd.toFixed(4)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar tabs */}
+        <div className="flex border-b border-stone-200">
+          {(["brief", "databank", "draft"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setSidebarTab(tab)}
+              className={`flex-1 py-2 text-xs font-medium ${
+                sidebarTab === tab
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-stone-400 hover:text-stone-600"
+              }`}
+            >
+              {tab === "brief" ? "Brief" :
+               tab === "databank" ? `Data Bank (${databank.length})` :
+               `Draft (${sectionNames.length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* Sidebar content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {sidebarTab === "brief" && (
+            <div className="space-y-3 text-xs">
+              {Object.entries(brief).map(([k, v]) => {
+                // Skip null/undefined/empty values
+                if (v === null || v === undefined) return null;
+                if (Array.isArray(v) && v.length === 0) return null;
+
+                return (
+                  <div key={k}>
+                    <div className="font-medium text-stone-500 mb-0.5">{k.replace(/_/g, " ")}</div>
+                    <div className="text-stone-700">
+                      {Array.isArray(v) ? (
+                        v.every((item) => typeof item === "string") ? (
+                          <ul className="space-y-0.5">
+                            {v.map((item, i) => (
+                              <li key={i}>- {item}</li>
+                            ))}
+                          </ul>
+                        ) : v.every((item) => typeof item === "object" && item !== null && "title" in item && "url" in item) ? (
+                          <div className="space-y-1">
+                            {v.map((item: { title?: string; url: string }, i: number) => (
+                              <a key={i} href={item.url} target="_blank" rel="noopener" className="block text-blue-600 underline hover:text-blue-800 truncate">
+                                {item.title || item.url}
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <pre className="text-xs bg-stone-50 p-2 rounded overflow-x-auto">
+                            {JSON.stringify(v, null, 2)}
+                          </pre>
+                        )
+                      ) : typeof v === "object" ? (
+                        <pre className="text-xs bg-stone-50 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(v, null, 2)}
+                        </pre>
+                      ) : (
+                        String(v)
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {sidebarTab === "databank" && (
+            <div className="space-y-2">
+              {databank.length === 0 ? (
+                <p className="text-xs text-stone-400">Data bank is empty. Upload files or answer questions to populate it.</p>
+              ) : (
+                (() => {
+                  const byCategory: Record<string, DatabankEntry[]> = {};
+                  databank.forEach((e) => {
+                    const cat = e.category || "general";
+                    if (!byCategory[cat]) byCategory[cat] = [];
+                    byCategory[cat].push(e);
+                  });
+                  return Object.entries(byCategory).map(([cat, entries]) => (
+                    <div key={cat}>
+                      <div className="text-xs font-medium text-stone-500 mb-1 capitalize">{cat.replace(/_/g, " ")}</div>
+                      {entries.map((e) => (
+                        <div key={e.id} className="p-2 mb-1 bg-stone-50 rounded text-xs">
+                          <div className="font-medium text-stone-700">{e.key.replace(/_/g, " ")}</div>
+                          <div className="text-stone-500 mt-0.5 line-clamp-2">{e.value}</div>
+                          <div className="text-[10px] text-stone-300 mt-0.5">{e.source}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ));
+                })()
+              )}
+              {/* Uploads list */}
+              {(caseData.uploads?.length || 0) > 0 && (
+                <div className="pt-2 mt-2 border-t border-stone-100">
+                  <div className="text-xs font-medium text-stone-500 mb-1">Documents ({caseData.uploads.length})</div>
+                  {caseData.uploads.map((u, i) => (
+                    <div key={i} className="flex items-center gap-1 text-xs text-stone-600 py-0.5">
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                        u.type === "application_form" ? "bg-blue-400" :
+                        u.type === "project_plan" ? "bg-amber-400" :
+                        "bg-stone-300"
+                      }`} />
+                      <span className="truncate">{u.filename}</span>
+                      <span className="text-stone-300 text-[10px] ml-auto">{u.type}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {sidebarTab === "draft" && (
+            <div className="space-y-2">
+              {sectionNames.length === 0 ? (
+                <p className="text-xs text-stone-400">No sections drafted yet. Upload a submission form to get started.</p>
+              ) : (
+                sectionNames.map((name) => {
+                  const sec = sections[name];
+                  return (
+                    <div key={name} className="p-2 border border-stone-200 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-stone-700">
+                          {name.replace(/_/g, " ")}
+                        </span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          sec.status === "complete" ? "bg-green-100 text-green-700" :
+                          sec.status === "review" ? "bg-amber-100 text-amber-700" :
+                          sec.status === "blocked" ? "bg-red-100 text-red-700" :
+                          "bg-stone-100 text-stone-500"
+                        }`}>
+                          {sec.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-stone-400 mt-1">
+                        {sec.content ? `${sec.content.split(" ").length} words` : "empty"}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {sectionNames.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <div className="text-xs font-medium text-stone-500">Export</div>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => handleExport("markdown")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">MD</button>
+                    <button onClick={() => handleExport("json")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">JSON</button>
+                    <button onClick={() => handleExport("docx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
+                    {docxUploads.map((u) => (
+                      <button
+                        key={u.filename}
+                        onClick={() => handleExport("docx", u.filename)}
+                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        title={`Fill template: ${u.filename}`}
+                      >
+                        Fill {u.filename.slice(0, 20)}...
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right panel — main flow */}
+      <div className="flex-1 flex flex-col overflow-y-auto">
+        <div className="max-w-3xl mx-auto w-full p-6 space-y-6">
+
+          {/* Step 1: "What would you like to do next?" */}
+          {!flowPath && (
+            <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-5">
+              <h3 className="text-sm font-bold text-stone-800 mb-4">What would you like to do next?</h3>
+              <div className="grid grid-cols-3 gap-3">
+                {/* Upload a file */}
+                <button
+                  onClick={() => setFlowPath("upload_file")}
+                  className="text-left p-4 rounded-lg border-2 border-amber-200 bg-amber-50 hover:border-amber-400 transition-colors"
+                >
+                  <div className="text-sm font-medium text-stone-800">Upload a file</div>
+                  <div className="text-xs text-stone-500 mt-1">Add documents to the case data bank</div>
+                </button>
+
+                {/* Upload submission */}
+                <button
+                  onClick={() => setFlowPath("upload_submission")}
+                  className="text-left p-4 rounded-lg border-2 border-teal-200 bg-teal-50 hover:border-teal-400 transition-colors"
+                >
+                  <div className="text-sm font-medium text-stone-800">Upload submission</div>
+                  <div className="text-xs text-stone-500 mt-1">Upload a grant application doc to parse and fill</div>
+                </button>
+
+                {/* Ask questions */}
+                <button
+                  onClick={() => {
+                    setFlowPath("ask_questions");
+                    handleStartQuestions();
+                  }}
+                  className="text-left p-4 rounded-lg border-2 border-purple-200 bg-purple-50 hover:border-purple-400 transition-colors"
+                >
+                  <div className="text-sm font-medium text-stone-800">Ask questions</div>
+                  <div className="text-xs text-stone-500 mt-1">Chatbot guides you to fill data gaps</div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Flow path content — renders in same position as the options card */}
+          {flowPath && (
+            <div className="space-y-4">
+              {/* Back button */}
+              <button
+                onClick={() => {
+                  setFlowPath(null);
+                  setBotStatus("idle");
+                  setStatusMessage("");
+                  setQaMessages([]);
+                }}
+                className="text-xs text-stone-400 hover:text-stone-600"
+              >
+                &larr; Back to options
+              </button>
+
+              {/* Path: Upload a file */}
+              {flowPath === "upload_file" && (
+                <div className="bg-white border border-amber-200 rounded-lg shadow-sm p-5">
+                  <h3 className="text-sm font-bold text-stone-800 mb-1">Upload a file</h3>
+                  <p className="text-xs text-stone-500 mb-4">
+                    Upload documents one at a time. Each file will be analyzed and key information added to the case data bank.
+                  </p>
+
+                  {botStatus === "working" ? (
+                    <LoadingDots label={statusMessage} />
+                  ) : (
+                    <>
+                      {statusMessage && (
+                        <div className={`text-xs mb-3 p-2 rounded ${
+                          botStatus === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                        }`}>
+                          {statusMessage}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-500 hover:border-amber-400 hover:text-amber-600 transition-colors"
+                      >
+                        Click to select a file
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Path: Upload submission */}
+              {flowPath === "upload_submission" && (
+                <div className="bg-white border border-teal-200 rounded-lg shadow-sm p-5">
+                  <h3 className="text-sm font-bold text-stone-800 mb-1">Upload submission form</h3>
+                  <p className="text-xs text-stone-500 mb-4">
+                    Upload the grant application document. It will be parsed into sections and automatically filled from the data bank.
+                  </p>
+
+                  {botStatus === "working" ? (
+                    <LoadingDots label={statusMessage} />
+                  ) : botStatus === "done" ? (
+                    <div className="space-y-3">
+                      <div className="text-xs p-3 bg-teal-50 text-teal-700 rounded-lg">
+                        {statusMessage}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleExport("docx")}
+                          className="flex-1 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                        >
+                          Download as .docx
+                        </button>
+                        <button
+                          onClick={() => handleExport("markdown")}
+                          className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                        >
+                          .md
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setBotStatus("idle");
+                          setStatusMessage("");
+                        }}
+                        className="text-xs text-stone-400 hover:text-stone-600"
+                      >
+                        Upload another submission
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {statusMessage && (
+                        <div className="text-xs mb-3 p-2 rounded bg-red-50 text-red-600">
+                          {statusMessage}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => submissionInputRef.current?.click()}
+                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-500 hover:border-teal-400 hover:text-teal-600 transition-colors"
+                      >
+                        Click to select submission form (.pdf, .docx)
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Path: Ask questions */}
+              {flowPath === "ask_questions" && (
+                <div className="bg-white border border-purple-200 rounded-lg shadow-sm flex flex-col" style={{ minHeight: "400px" }}>
+                  <div className="p-4 border-b border-purple-100">
+                    <h3 className="text-sm font-bold text-stone-800">Information gathering</h3>
+                    <p className="text-xs text-stone-500">Answer questions to fill gaps in the data bank</p>
+                  </div>
+
+                  {/* Q&A messages */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {qaMessages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`rounded-lg px-3 py-2 max-w-[85%] ${
+                          msg.role === "user"
+                            ? "bg-purple-600 text-white"
+                            : "bg-stone-50 border border-stone-200"
+                        }`}>
+                          {msg.role === "user" ? (
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          ) : (
+                            <SimpleMarkdown text={msg.content} />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {botStatus === "working" && (
+                      <LoadingDots label={statusMessage || "Thinking..."} />
+                    )}
+                    <div ref={qaEndRef} />
+                  </div>
+
+                  {/* Q&A input */}
+                  <div className="border-t border-purple-100 p-3">
+                    <div className="flex gap-2">
+                      <input
+                        value={qaInput}
+                        onChange={(e) => setQaInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleQaSend();
+                          }
+                        }}
+                        placeholder="Type your answer..."
+                        className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-purple-400"
+                        disabled={botStatus === "working"}
+                      />
+                      <button
+                        onClick={handleQaSend}
+                        disabled={botStatus === "working" || !qaInput.trim()}
+                        className="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Grant Summary */}
+          {summaryMsg && (
+            <div className="bg-white border border-stone-200 rounded-lg shadow-sm">
+              <div className="p-4 border-b border-stone-100">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-stone-800">Grant Summary</h2>
+                  <button
+                    onClick={handleDownloadSummary}
+                    className="text-xs px-2.5 py-1 bg-stone-100 text-stone-600 rounded hover:bg-stone-200"
+                  >
+                    Download .md
+                  </button>
+                </div>
+              </div>
+              <div className="p-4">
+                <SimpleMarkdown text={summaryMsg.content} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

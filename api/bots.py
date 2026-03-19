@@ -134,7 +134,7 @@ Be direct, specific to this grant. No generic advice. Write in English."""
     client = anthropic.Anthropic()
     response = client.messages.create(
         model=bot_model,
-        max_tokens=256,
+        max_tokens=1024,
         system=system_prompt,
         messages=[{
             "role": "user",

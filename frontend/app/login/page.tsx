@@ -35,7 +35,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-stone-50">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-stone-800">GoBuga</h1>
+          <h1 className="text-2xl font-bold text-stone-800">gobuga</h1>
           <p className="text-sm text-stone-500 mt-1">Sign in to your account</p>
         </div>
 
@@ -66,6 +66,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              placeholder="Your password"
               className="w-full px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
             />
           </div>

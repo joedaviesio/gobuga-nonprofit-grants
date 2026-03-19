@@ -8,9 +8,9 @@ export function HeaderLogout() {
   if (!session) return null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3 text-nowrap">
       {session.org_name && (
-        <span className="text-xs text-stone-400">{session.org_name}</span>
+        <span className="text-xs text-stone-400 hidden sm:inline">{session.org_name}</span>
       )}
       <a href="/settings" className="text-xs text-stone-400 hover:text-stone-600">
         Settings

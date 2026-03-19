@@ -32,3 +32,37 @@ body {
   padding: 0.1em 0.3em;
   border-radius: 3px;
 }
+
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@keyframes pixel-drift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.pixel-gradient {
+  background: linear-gradient(
+    90deg,
+    #e7e5e4 0%,
+    #d6d3d1 8%,
+    #93c5fd 18%,
+    #3b82f6 28%,
+    #6366f1 38%,
+    #a78bfa 48%,
+    #3b82f6 58%,
+    #93c5fd 68%,
+    #d6d3d1 80%,
+    #e7e5e4 100%
+  );
+  background-size: 300% 100%;
+  animation: pixel-drift 6s ease-in-out infinite;
+  image-rendering: pixelated;
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s ease-in-out infinite;
+}

@@ -5,11 +5,11 @@ Bots read from and write to this store. Uploads, user answers, org docs,
 and grant brief details all get distilled into entries here.
 """
 
-import json
 import os
 from datetime import datetime, timezone
 from typing import Optional
 
+from api.store import load_json, save_json
 from api.case_manager import _case_dir, load_case
 
 # Sources that can populate the databank
@@ -22,16 +22,12 @@ def _databank_path(org_id: str, case_id: str) -> str:
 
 def _load_databank(org_id: str, case_id: str) -> dict:
     path = _databank_path(org_id, case_id)
-    if os.path.exists(path):
-        with open(path) as f:
-            return json.load(f)
-    return {"entries": []}
+    return load_json(path, default={"entries": []})
 
 
 def _save_databank(org_id: str, case_id: str, databank: dict):
     path = _databank_path(org_id, case_id)
-    with open(path, "w") as f:
-        json.dump(databank, f, indent=2)
+    save_json(path, databank)
 
 
 def _next_id(databank: dict) -> str:

@@ -21,7 +21,7 @@ def main():
     elif command == "signoff":
         interactive_signoff(date_arg)
     elif command == "serve":
-        port = 8000
+        port = 8102
         if "--port" in sys.argv:
             idx = sys.argv.index("--port")
             if idx + 1 < len(sys.argv):

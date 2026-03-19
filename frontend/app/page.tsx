@@ -13,6 +13,8 @@ import {
   type Opportunity,
   type CaseSummary,
 } from "@/lib/api";
+import DOMPurify from "dompurify";
+import LoadingBar from "@/app/loading-bar";
 
 function PriorityBadge({ priority }: { priority: string }) {
   const colors =
@@ -57,7 +59,7 @@ function SimpleMarkdown({ text }: { text: string }) {
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/^- (.+)$/gm, "<li>$1</li>")
     .replace(/\n/g, "<br>");
-  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
 }
 
 // --- Report View Component (reused for brief tab and history viewing) ---
@@ -97,8 +99,9 @@ function ReportView({
       {/* Opportunities */}
       <div>
         <h2 className="text-sm font-bold text-stone-800 mb-3">Opportunities</h2>
-        <div className="space-y-3">
-          {report.opportunities.filter((opp) => {
+        {(() => {
+          const filtered = report.opportunities.filter((opp) => {
+            if (opp.expired) return false;
             const oppTitle = opp.title.toLowerCase();
             const oppWords = oppTitle.split(/\s+/).slice(0, 5);
             const matchedCase = cases.find((c) => {
@@ -107,7 +110,12 @@ function ReportView({
               return overlap.length >= 2;
             });
             return !(matchedCase && (matchedCase.status === "open" || matchedCase.status === "closed"));
-          }).map((opp) => (
+          });
+          const priorityOrder = ["high", "medium", "low"] as const;
+          const sorted = priorityOrder.flatMap((p) => filtered.filter((o) => o.priority === p));
+          return (
+            <div className="space-y-3">
+              {sorted.map((opp) => (
             <div
               key={opp.id}
               className={`bg-white border border-stone-200 rounded-lg p-4${opp.expired ? " opacity-50" : ""}`}
@@ -191,7 +199,9 @@ function ReportView({
               </div>
             </div>
           ))}
-        </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Donor Intelligence */}
@@ -230,6 +240,22 @@ const CASE_TABS = [
 ] as const;
 
 type CaseTab = (typeof CASE_TABS)[number]["key"];
+
+function getViewedCases(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("gobuga_viewed_cases") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function isCaseUnread(c: CaseSummary): boolean {
+  const viewed = getViewedCases();
+  const lastSeen = viewed[c.case_id];
+  if (!lastSeen) return true;
+  return new Date(c.updated) > new Date(lastSeen);
+}
 
 function CasesView({ cases }: { cases: CaseSummary[] }) {
   const [tab, setTab] = useState<CaseTab>("open");
@@ -277,21 +303,40 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
         </p>
       ) : (
         <div className="space-y-2">
-          {filtered.map((c) => (
+          {filtered.map((c) => {
+            const unread = isCaseUnread(c);
+            return (
             <a
               key={c.case_id}
               href={`/case/${c.case_id}`}
-              className="block p-4 border border-stone-200 rounded-lg bg-white hover:border-blue-300 transition-colors"
+              className={`block p-4 rounded-lg bg-white transition-colors ${
+                unread
+                  ? "border-2 border-red-300 hover:border-red-400"
+                  : "border-2 border-green-200 hover:border-green-300"
+              }`}
             >
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex items-center gap-2">
+                  {unread && (
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                    </span>
+                  )}
                   <span className="text-sm font-mono font-medium text-stone-700">
                     {c.case_id}
                   </span>
                   <span className="mx-2 text-stone-300">|</span>
                   <span className="text-sm text-stone-600">{c.grant_id}</span>
                 </div>
-                <StatusBadge status={c.status} />
+                <div className="flex items-center gap-2">
+                  {unread && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
+                      New
+                    </span>
+                  )}
+                  <StatusBadge status={c.status} />
+                </div>
               </div>
               <div className="mt-1 flex gap-4 text-xs text-stone-400">
                 <span>{c.sections_count} sections</span>
@@ -299,7 +344,8 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
                 <span>updated {new Date(c.updated).toLocaleDateString()}</span>
               </div>
             </a>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -315,19 +361,99 @@ export default function Dashboard() {
   const [openingCase, setOpeningCase] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"brief" | "cases" | "cycle">("brief");
   const [cycleStatus, setCycleStatus] = useState<string>("idle");
+  const [cyclePhase, setCyclePhase] = useState<string | null>(null);
+  const [watcherMsgIndex, setWatcherMsgIndex] = useState(0);
+
+  const watcherMessages = [
+    "Scanning federal grant databases",
+    "Checking foundation directories",
+    "Crawling state agency portals",
+    "Indexing new RFPs and NOFAs",
+    "Parsing eligibility criteria",
+    "Matching keywords to your mission",
+    "Reviewing submission deadlines",
+    "Pulling program announcements",
+    "Screening for geographic fit",
+    "Cross-referencing funding priorities",
+  ];
+
+  useEffect(() => {
+    if (cyclePhase !== "watcher") return;
+    setWatcherMsgIndex(0);
+    const interval = setInterval(() => {
+      setWatcherMsgIndex((i) => (i + 1) % watcherMessages.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [cyclePhase]);
   const [cycleMessage, setCycleMessage] = useState("");
+
+  // Resume polling if a cycle is already running on the backend
+  const startCyclePolling = () => {
+    setCycleStatus("running");
+    const poll = setInterval(async () => {
+      try {
+        const status = await getCycleStatus();
+        if (status.status === "running" && status.phase) {
+          setCyclePhase(status.phase);
+        }
+        if (status.status === "complete") {
+          clearInterval(poll);
+          setCycleStatus("complete");
+          setCyclePhase("complete");
+          setCycleMessage(
+            `Cycle complete! Found ${status.opportunities || 0} opportunities.`
+          );
+          const newReport = await getLatestReport().catch(() => null);
+          if (newReport) {
+            setReport(newReport);
+            setLatestDate(newReport.date);
+          }
+          const newCases = await listCases();
+          setCases(newCases);
+          const newDates = await listReportDates().catch(() => []);
+          setReportDates(newDates);
+        }
+        if (status.status === "error") {
+          clearInterval(poll);
+          setCycleStatus("error");
+          setCycleMessage("Cycle failed. Check the server logs.");
+        }
+      } catch {
+        clearInterval(poll);
+        setCycleStatus("error");
+        setCycleMessage("Lost connection to server.");
+      }
+    }, 5000);
+
+    const timeout = setTimeout(() => {
+      clearInterval(poll);
+      setCycleStatus("error");
+      setCycleMessage("Cycle timed out after 15 minutes.");
+    }, 900000);
+
+    return () => {
+      clearInterval(poll);
+      clearTimeout(timeout);
+    };
+  };
 
   useEffect(() => {
     Promise.all([
       getLatestReport().catch(() => null),
       listCases(),
       listReportDates().catch(() => []),
+      getCycleStatus().catch(() => null),
     ])
-      .then(([r, c, dates]) => {
+      .then(([r, c, dates, cycleCheck]) => {
         setReport(r);
         setLatestDate(r?.date || null);
         setCases(c);
         setReportDates(dates);
+        // If a cycle is already running, resume polling
+        if (cycleCheck && cycleCheck.status === "running") {
+          if (cycleCheck.phase) setCyclePhase(cycleCheck.phase);
+          startCyclePolling();
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -371,41 +497,8 @@ export default function Dashboard() {
     setCycleMessage("");
     try {
       await runCycle();
-      setCycleStatus("running");
-      setCycleMessage("Cycle started. Bots are scanning for grant opportunities...");
-
-      const poll = setInterval(async () => {
-        try {
-          const status = await getCycleStatus();
-          if (status.status === "complete") {
-            clearInterval(poll);
-            setCycleStatus("complete");
-            setCycleMessage(
-              `Cycle complete! Found ${status.opportunities || 0} opportunities.`
-            );
-            // Refresh everything
-            const newReport = await getLatestReport().catch(() => null);
-            if (newReport) {
-              setReport(newReport);
-              setLatestDate(newReport.date);
-            }
-            const newCases = await listCases();
-            setCases(newCases);
-            const newDates = await listReportDates().catch(() => []);
-            setReportDates(newDates);
-          }
-        } catch {
-          // still running
-        }
-      }, 10000);
-
-      setTimeout(() => {
-        clearInterval(poll);
-        if (cycleStatus === "running") {
-          setCycleStatus("timeout");
-          setCycleMessage("Cycle is taking longer than expected. Check the server logs.");
-        }
-      }, 900000);
+      setCycleMessage("Cycle started. Scanning for grant opportunities...");
+      startCyclePolling();
     } catch (err) {
       setCycleStatus("error");
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -418,7 +511,11 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return <div className="max-w-5xl mx-auto px-6 py-8 text-sm text-stone-400">Loading...</div>;
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <LoadingBar label="Loading dashboard..." />
+      </div>
+    );
   }
 
   const isHistorical = report != null && latestDate != null && report.date !== latestDate;
@@ -446,6 +543,14 @@ export default function Dashboard() {
           }`}
         >
           Cases ({cases.length})
+          {(() => {
+            const unreadCount = cases.filter(isCaseUnread).length;
+            return unreadCount > 0 ? (
+              <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                {unreadCount}
+              </span>
+            ) : null;
+          })()}
         </button>
         <button
           onClick={() => setActiveView("cycle")}
@@ -470,6 +575,9 @@ export default function Dashboard() {
         <>
           {!report ? (
             <div className="text-center py-12">
+              <div className="mx-auto mb-6 w-64 h-32 rounded-lg overflow-hidden border border-stone-200">
+                <div className="pixel-gradient w-full h-full" />
+              </div>
               <p className="text-sm text-stone-400">No reports yet. Run a cycle first.</p>
               <button
                 onClick={() => setActiveView("cycle")}
@@ -514,7 +622,7 @@ export default function Dashboard() {
           <div className="bg-white border border-stone-200 rounded-lg p-6">
             <h2 className="text-sm font-bold text-stone-800 mb-1">Run Grant Scanning Cycle</h2>
             <p className="text-xs text-stone-500 mb-4">
-              Launches the 3-bot system: Watcher scans for opportunities, Analyst assesses fit, Reporter compiles the brief. Takes 5-15 minutes.
+              Scans for opportunities, assesses fit, and compiles your daily brief. Takes around 3 minutes.
             </p>
 
             {cycleStatus === "idle" || cycleStatus === "error" ? (
@@ -527,36 +635,72 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : cycleStatus === "starting" ? (
-              <div className="text-center py-4">
-                <div className="flex justify-center gap-1 mb-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <p className="text-xs text-stone-500">Starting cycle...</p>
+              <div className="py-4">
+                <LoadingBar label="Starting cycle..." />
               </div>
             ) : cycleStatus === "running" ? (
               <div className="py-4">
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-4">
                   <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
                   <span className="text-sm font-medium text-blue-700">Cycle running</span>
                 </div>
-                <div className="space-y-2 text-xs text-stone-500">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-blue-400 rounded" />
-                    <span>Grant Watcher scanning web sources...</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-stone-200 rounded" />
-                    <span>Grant Analyst waiting for evidence...</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-stone-200 rounded" />
-                    <span>Grant Reporter waiting to compile brief...</span>
-                  </div>
-                </div>
+
+                {/* Progress bar */}
+                {(() => {
+                  const phases = [
+                    { key: "watcher", label: "Watcher", desc: watcherMessages[watcherMsgIndex] },
+                    { key: "analyst", label: "Analyst", desc: "Assessing fit" },
+                    { key: "reporter", label: "Reporter", desc: "Compiling brief" },
+                    { key: "saving", label: "Saving", desc: "Saving report" },
+                  ];
+                  const currentIndex = phases.findIndex((p) => p.key === cyclePhase);
+                  const progress = currentIndex === -1 ? 5 : Math.min(((currentIndex + 0.5) / phases.length) * 100, 100);
+
+                  return (
+                    <div>
+                      {/* Bar track */}
+                      <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden mb-4">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+
+                      {/* Phase steps */}
+                      <div className="space-y-2">
+                        {phases.map((phase, i) => {
+                          const isDone = currentIndex > i;
+                          const isActive = currentIndex === i;
+                          return (
+                            <div key={phase.key} className="flex items-center gap-2.5">
+                              {isDone ? (
+                                <span className="text-green-500 text-sm w-4 text-center">&#10003;</span>
+                              ) : isActive ? (
+                                <div className="w-4 flex justify-center">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                </div>
+                              ) : (
+                                <div className="w-4 flex justify-center">
+                                  <div className="w-2 h-2 bg-stone-200 rounded-full" />
+                                </div>
+                              )}
+                              <span className={`text-xs ${
+                                isActive ? "text-blue-700 font-medium" :
+                                isDone ? "text-stone-400" :
+                                "text-stone-400"
+                              }`}>
+                                {phase.label}{isActive ? ` — ${phase.desc}...` : isDone ? ` — done` : ""}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <p className="text-xs text-stone-400 mt-4">
-                  Takes 5-15 minutes. You can switch to other tabs while it runs.
+                  Takes around 3 minutes. You can switch to other tabs while it runs.
                 </p>
               </div>
             ) : cycleStatus === "complete" ? (

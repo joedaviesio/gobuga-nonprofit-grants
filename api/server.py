@@ -3,9 +3,10 @@
 import json
 import os
 import traceback
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from api.auth import register, login, verify_session, logout, get_org, update_org
@@ -21,7 +22,7 @@ from api.case_manager import (
     get_conversation,
 )
 from api.chat import chat
-from api.export import export_markdown, export_json, export_to_file
+from api.export import export_markdown, export_json, export_pdf, export_xlsx, export_to_file
 from api.reports import list_report_dates, load_report, load_latest_report
 from api.bots import (
     bot_a_generate_summary,
@@ -29,6 +30,7 @@ from api.bots import (
     bot_c_fill_sections,
     bot_d_analyze_gaps,
     bot_d_process_answer,
+    bot_d_process_answer_stream,
     ingest_file_to_databank,
 )
 from api.databank import get_entries, add_entry, delete_entry, format_databank_for_prompt
@@ -92,6 +94,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     org_name: str
+    website_url: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -103,7 +106,7 @@ class LoginRequest(BaseModel):
 def api_register(req: RegisterRequest):
     """Register a new user and org."""
     try:
-        result = register(req.email, req.password, req.org_name)
+        result = register(req.email, req.password, req.org_name, req.website_url)
         return result
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -133,6 +136,7 @@ def api_verify(request: Request):
         "org_id": session["org_id"],
         "org_name": org["name"] if org else "",
         "setup_complete": org.get("setup_complete", False) if org else False,
+        "seeding_complete": org.get("seeding_complete", True) if org else True,
     }
 
 
@@ -152,6 +156,7 @@ class OrgSetupRequest(BaseModel):
     website: str = ""
     charitable_status: str = ""
     mission: str = ""
+    org_status: str = ""
     sectors: list[str] = []
     geographies: list[str] = []
 
@@ -192,6 +197,59 @@ def api_org_profile(org_id: str = Depends(get_current_org)):
 def api_org_usage(org_id: str = Depends(get_current_org), date: str = None):
     """Get usage summary for the org."""
     return usage_summary(org_id, date)
+
+
+ALLOWED_DOC_TYPES = [
+    "annual-reports",
+    "mission-statements",
+    "organisational-reviews",
+    "previous-applications",
+    "financial-statements",
+]
+
+
+@app.post("/api/org/upload")
+async def api_org_upload(
+    file: UploadFile = File(...),
+    doc_type: str = Form(...),
+    org_id: str = Depends(get_current_org),
+):
+    """Upload an org document for seeding."""
+    if doc_type not in ALLOWED_DOC_TYPES:
+        raise HTTPException(400, f"Invalid doc_type. Must be one of: {ALLOWED_DOC_TYPES}")
+    from api.tenant import org_data_dir
+    org_dir = os.path.join(org_data_dir(org_id), "org")
+    os.makedirs(org_dir, exist_ok=True)
+    safe_filename = file.filename.replace("/", "_").replace("\\", "_")
+    dest = os.path.join(org_dir, f"{doc_type}_{safe_filename}")
+    if not Path(dest).resolve().is_relative_to(Path(org_dir).resolve()):
+        raise HTTPException(400, "Invalid filename")
+    contents = await file.read()
+    with open(dest, "wb") as f:
+        f.write(contents)
+    return {"filename": f"{doc_type}_{safe_filename}", "size": len(contents), "doc_type": doc_type}
+
+
+@app.get("/api/org/uploads")
+def api_org_uploads(org_id: str = Depends(get_current_org)):
+    """List uploaded org documents."""
+    from api.tenant import org_data_dir
+    org_dir = os.path.join(org_data_dir(org_id), "org")
+    if not os.path.isdir(org_dir):
+        return []
+    files = []
+    for name in sorted(os.listdir(org_dir)):
+        path = os.path.join(org_dir, name)
+        if os.path.isfile(path):
+            files.append({"filename": name, "size": os.path.getsize(path)})
+    return files
+
+
+@app.post("/api/org/seeding-complete")
+def api_seeding_complete(org_id: str = Depends(get_current_org)):
+    """Mark org seeding as complete."""
+    update_org(org_id, {"seeding_complete": True})
+    return {"ok": True}
 
 
 # --- Request models ---
@@ -332,6 +390,8 @@ def api_export(case_id: str, req: ExportRequest, org_id: str = Depends(get_curre
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
 
+    FILE_FORMATS = {"docx", "doc", "pdf", "xlsx", "xls"}
+
     if req.format == "markdown":
         content = export_markdown(org_id, case_id)
         filepath = export_to_file(org_id, case_id, "markdown")
@@ -340,13 +400,13 @@ def api_export(case_id: str, req: ExportRequest, org_id: str = Depends(get_curre
         content = export_json(org_id, case_id)
         filepath = export_to_file(org_id, case_id, "json")
         return {"format": "json", "content": content, "file": filepath}
-    elif req.format == "docx":
-        filepath = export_to_file(org_id, case_id, "docx", template_filename=req.template_filename)
+    elif req.format in FILE_FORMATS:
+        filepath = export_to_file(org_id, case_id, req.format, template_filename=req.template_filename)
         if filepath is None:
-            raise HTTPException(500, "DOCX export failed")
-        return {"format": "docx", "file": filepath, "filename": os.path.basename(filepath)}
+            raise HTTPException(500, f"{req.format.upper()} export failed")
+        return {"format": req.format, "file": filepath, "filename": os.path.basename(filepath)}
     else:
-        raise HTTPException(400, f"Unsupported format: {req.format}. Use 'markdown', 'json', or 'docx'.")
+        raise HTTPException(400, f"Unsupported format: {req.format}. Use 'markdown', 'json', 'pdf', 'docx', 'doc', 'xlsx', or 'xls'.")
 
 
 # --- Download ---
@@ -354,7 +414,10 @@ def api_export(case_id: str, req: ExportRequest, org_id: str = Depends(get_curre
 @app.get("/api/cases/{case_id}/download/{filename}")
 def api_download(case_id: str, filename: str, org_id: str = Depends(get_current_org)):
     from api.case_manager import _case_dir
-    filepath = os.path.join(_case_dir(org_id, case_id), "exports", filename)
+    exports_dir = os.path.join(_case_dir(org_id, case_id), "exports")
+    filepath = os.path.join(exports_dir, filename)
+    if not Path(filepath).resolve().is_relative_to(Path(exports_dir).resolve()):
+        raise HTTPException(400, "Invalid filename")
     if not os.path.exists(filepath):
         raise HTTPException(404, f"File not found: {filename}")
     return FileResponse(filepath, filename=filename)
@@ -465,6 +528,7 @@ _cycle_state = {
     "started_at": None,
     "completed_at": None,
     "error": None,
+    "phase": None,
 }
 
 
@@ -488,14 +552,19 @@ def api_run_cycle(req: RunCycleRequest, org_id: str = Depends(get_current_org)):
     _cycle_state["started_at"] = datetime.now(timezone.utc).isoformat()
     _cycle_state["completed_at"] = None
     _cycle_state["error"] = None
+    _cycle_state["phase"] = "starting"
 
     # Determine model overrides based on plan
     from api.limits import get_model_overrides
     model_overrides = get_model_overrides(org_id)
 
+    def _on_phase(phase: str):
+        _cycle_state["phase"] = phase
+
     def _run():
         try:
-            run_cycle(org_id, cycle_date, model_overrides=model_overrides)
+            run_cycle(org_id, cycle_date, model_overrides=model_overrides, on_phase=_on_phase)
+            _cycle_state["phase"] = "complete"
             _cycle_state["completed_at"] = datetime.now(timezone.utc).isoformat()
         except Exception as e:
             _cycle_state["error"] = str(e)
@@ -518,6 +587,7 @@ def api_cycle_status(org_id: str = Depends(get_current_org)):
         return {
             "status": "running",
             "started_at": _cycle_state["started_at"],
+            "phase": _cycle_state.get("phase"),
         }
 
     if _cycle_state["error"]:
@@ -666,6 +736,19 @@ def api_bot_answer(case_id: str, req: AnswerRequest, org_id: str = Depends(get_c
     if "error" in result:
         raise HTTPException(400, result["error"])
     return result
+
+
+@app.post("/api/cases/{case_id}/bot/answer/stream")
+def api_bot_answer_stream(case_id: str, req: AnswerRequest, org_id: str = Depends(get_current_org)):
+    """Bot D: Streaming version — process user's answer with SSE text chunks."""
+    case = load_case(org_id, case_id)
+    if case is None:
+        raise HTTPException(404, f"Case {case_id} not found")
+    return StreamingResponse(
+        bot_d_process_answer_stream(org_id, case_id, req.message),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 class IngestFileRequest(BaseModel):

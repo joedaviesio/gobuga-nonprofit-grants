@@ -188,7 +188,30 @@ def _extract_opportunities(org_id: str, raw: str, cycle_date: str) -> list[dict]
                 current_opp["amount"] = detail
             elif "recommend" in detail_lower:
                 current_opp["recommendation"] = detail
+
+            # Extract inline URLs from details (Source: URL or markdown links)
+            url_match = re.search(r'https?://[^\s)\]]+', detail)
+            if url_match:
+                url = url_match.group(0).rstrip(".,;")
+                if "_inline_urls" not in current_opp:
+                    current_opp["_inline_urls"] = []
+                current_opp["_inline_urls"].append(url)
         elif current_opp and line.strip():
+            # Check for Source: lines
+            source_match = re.match(r'(?:source|link|url)\s*:\s*(https?://[^\s]+)', line.strip(), re.IGNORECASE)
+            if source_match:
+                url = source_match.group(1).rstrip(".,;")
+                if "_inline_urls" not in current_opp:
+                    current_opp["_inline_urls"] = []
+                current_opp["_inline_urls"].append(url)
+
+            # Also check for markdown-style links
+            md_link_match = re.search(r'\[([^\]]*)\]\((https?://[^)]+)\)', line)
+            if md_link_match:
+                url = md_link_match.group(2)
+                if "_inline_urls" not in current_opp:
+                    current_opp["_inline_urls"] = []
+                current_opp["_inline_urls"].append(url)
             if current_opp["description"]:
                 current_opp["description"] += " " + line.strip()
             else:
@@ -212,6 +235,20 @@ def _extract_opportunities(org_id: str, raw: str, cycle_date: str) -> list[dict]
     for i, opp in enumerate(opportunities):
         opp["id"] = f"OPP-{cycle_date}-{i+1:03d}"
         opp["source_urls"] = _match_evidence_urls(opp, evidence)
+
+        # Fallback: merge in URLs parsed directly from the report markdown
+        inline_urls = opp.pop("_inline_urls", [])
+        if inline_urls:
+            existing = {u["url"] for u in opp["source_urls"]}
+            for url in inline_urls:
+                if url not in existing:
+                    opp["source_urls"].append({
+                        "title": opp.get("title", ""),
+                        "url": url,
+                        "type": "report_link",
+                    })
+                    existing.add(url)
+
         opp["expired"] = _is_expired(opp, today)
 
     return opportunities

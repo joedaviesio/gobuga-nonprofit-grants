@@ -1,0 +1,167 @@
+======================================================================
+EXPORT PIPELINE TEST SUITE
+API: http://localhost:8102
+======================================================================
+Authenticated as org: f94a9d7f
+
+======================================================================
+TEST 1: Fresh DOCX generation produces a valid file
+======================================================================
+[PASS] Case created
+[PASS] Export returns 200
+[PASS] Response has filename
+[PASS] Filename ends with .docx
+[PASS] Download returns 200
+[PASS] Content-type is correct
+[PASS] File size > 0
+[PASS] python-docx can open file
+[PASS] Has paragraphs
+[PASS] Contains project_summary content
+[PASS] Contains budget content
+
+======================================================================
+TEST 2: Fresh PDF generation produces a valid file
+======================================================================
+[PASS] Case created
+[PASS] Export returns 200
+[PASS] Filename ends with .pdf
+[PASS] Download returns 200
+[PASS] File size > 0
+[PASS] PyMuPDF can open file
+[PASS] Has pages
+[PASS] Contains project content
+
+======================================================================
+TEST 3: Fresh XLSX generation produces a valid file
+======================================================================
+[PASS] Case created
+[PASS] Export returns 200
+[PASS] Filename ends with .xlsx
+[PASS] Download returns 200
+[PASS] openpyxl can open file
+[PASS] Has rows
+[PASS] Contains project content
+
+======================================================================
+TEST 4: Markdown export returns content
+======================================================================
+[PASS] Case created
+[PASS] Export returns 200
+[PASS] Has content
+[PASS] Contains section headers
+[PASS] Contains project content
+[PASS] Contains budget
+
+======================================================================
+TEST 5: JSON export returns structured data
+======================================================================
+[PASS] Case created
+[PASS] Export returns 200
+[PASS] Has case_id
+[PASS] Has sections
+[PASS] Has project_summary section
+[PASS] Section has content
+
+======================================================================
+TEST 6: Template-filled DOCX puts content in cells
+======================================================================
+[PASS] Case created
+[PASS] Template uploaded
+[PASS] Template export returns 200
+[PASS] Filename contains 'filled'
+[PASS] Download returns 200
+[PASS] python-docx can open filled file
+    Project Summary: This project delivers digital literacy workshops a...
+    Organisation Background: Kiwi Community Trust is a registered charity (CC12...
+    Budget Overview: Total budget: $185,000
+- Staff costs: $95,000
+- Eq...
+    Expected Outcomes: - 500 seniors complete digital skills course
+- 200...
+[PASS] At least one table cell was filled
+
+======================================================================
+TEST 7: Template-filled XLSX puts content in cells
+======================================================================
+[PASS] Case created
+[PASS] Template uploaded
+[PASS] Template export returns 200
+[PASS] Filename contains 'filled'
+[PASS] Download returns 200
+[PASS] openpyxl can open filled file
+    Project Summary: This project delivers digital literacy workshops a...
+    Organisation Background: Kiwi Community Trust is a registered charity (CC12...
+    Budget Overview: Total budget: $185,000
+- Staff costs: $95,000
+- Eq...
+    Expected Outcomes: - 500 seniors complete digital skills course
+- 200...
+[PASS] At least one cell was filled
+
+======================================================================
+TEST 8: Template-filled PDF
+======================================================================
+[PASS] Case created
+[PASS] Template uploaded
+[PASS] PDF template export returns 200
+[PASS] Has filename
+[PASS] Download returns 200
+[PASS] File size > original template
+[PASS] PyMuPDF can open filled PDF
+[PASS] Filled PDF has more text than template
+
+======================================================================
+TEST 9: .doc to .docx conversion
+======================================================================
+[PASS] textutil available (macOS)
+[PASS] .doc file created
+[PASS] Case created
+[PASS] .doc uploaded
+[PASS] Export with .doc template returns 200
+[PASS] Output is .docx
+[PASS] Download returns 200
+[PASS] Converted file opens as valid DOCX
+
+======================================================================
+TEST 10: Download endpoint requires auth token
+======================================================================
+[PASS] Case created
+[PASS] Export returns 200
+[PASS] Download without auth is rejected
+[PASS] Download with auth succeeds
+[PASS] Authed response is binary (not JSON error)
+
+======================================================================
+TEST 11: Export with no sections returns valid file
+======================================================================
+[PASS] Case created
+[PASS] Empty DOCX export returns 200
+[PASS] Empty markdown export returns 200
+[PASS] Markdown has fallback content
+[PASS] Empty PDF export returns 200
+
+======================================================================
+TEST 12: Export with unicode content doesn't crash
+======================================================================
+[PASS] Case created
+[PASS] Unicode docx export returns 200
+[PASS] Unicode docx download OK
+[PASS] Unicode docx file > 0 bytes
+[PASS] Unicode pdf export returns 200
+[PASS] Unicode pdf download OK
+[PASS] Unicode pdf file > 0 bytes
+[PASS] Unicode xlsx export returns 200
+[PASS] Unicode xlsx download OK
+[PASS] Unicode xlsx file > 0 bytes
+[PASS] Unicode markdown export returns 200
+[PASS] Unicode json export returns 200
+
+======================================================================
+SUMMARY
+======================================================================
+  Total: 90  Passed: 90  Failed: 0
+
+  All 90 checks passed!
+======================================================================
+
+Results saved to: /Users/joedaviesio/Desktop/gobuga-nonprofit-grants/tests/export_test_results.txt

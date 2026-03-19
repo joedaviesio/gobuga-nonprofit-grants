@@ -1,7 +1,7 @@
 const BASE = "/api";
 const BOT_BASE = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api`
-  : "http://localhost:8111/api";
+  : "http://localhost:8102/api";
 
 // --- Auth helpers ---
 
@@ -50,11 +50,11 @@ export interface AuthResponse {
   expires_in: number;
 }
 
-export const registerAccount = async (email: string, password: string, orgName: string): Promise<AuthResponse> => {
+export const registerAccount = async (email: string, password: string, orgName: string, websiteUrl: string = ""): Promise<AuthResponse> => {
   const res = await fetch(`${BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, org_name: orgName }),
+    body: JSON.stringify({ email, password, org_name: orgName, website_url: websiteUrl }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ detail: "Registration failed" }));
@@ -86,6 +86,7 @@ export interface VerifyResponse {
   org_id: string;
   org_name: string;
   setup_complete: boolean;
+  seeding_complete: boolean;
 }
 
 export const verifySession = async (): Promise<VerifyResponse | null> => {
@@ -149,6 +150,28 @@ export const getOrgProfile = () => request<OrgProfile>("/org/profile");
 
 export const getOrgUsage = (date?: string) =>
   request<Record<string, unknown>>(`/org/usage${date ? `?date=${date}` : ""}`);
+
+// --- Org Seeding ---
+
+export const uploadOrgDocument = async (file: File, docType: string) => {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("doc_type", docType);
+  const token = getToken();
+  const res = await fetch(`${BASE}/org/upload`, {
+    method: "POST",
+    body: form,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  return res.json();
+};
+
+export const listOrgUploads = () =>
+  request<{ filename: string; size: number }[]>("/org/uploads");
+
+export const completeSeedingStep = () =>
+  request<{ ok: boolean }>("/org/seeding-complete", { method: "POST" });
 
 // --- Billing ---
 
@@ -324,7 +347,7 @@ export const runCycle = (date?: string) =>
   });
 
 export const getCycleStatus = () =>
-  request<{ status: string; date: string; opportunities?: number }>("/cycle/status");
+  request<{ status: string; date: string; opportunities?: number; phase?: string }>("/cycle/status");
 
 // --- Bots ---
 
@@ -477,6 +500,71 @@ export const botQuestions = async (caseId: string): Promise<BotQuestionsResponse
   } finally {
     clearTimeout(timeout);
   }
+};
+
+export const botAnswerStream = async (
+  caseId: string,
+  message: string,
+  onChunk: (text: string) => void,
+  onStatus?: (text: string) => void,
+): Promise<BotAnswerResponse> => {
+  const token = getToken();
+  const base = BOT_BASE;
+  const res = await fetch(`${base}/cases/${caseId}/bot/answer/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ message }),
+  });
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Session expired");
+  }
+  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalResult: BotAnswerResponse | null = null;
+  let fullText = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const data = JSON.parse(line.slice(6));
+        if (data.type === "text") {
+          fullText += data.content;
+          onChunk(data.content);
+        } else if (data.type === "status" && onStatus) {
+          onStatus(data.content);
+        } else if (data.type === "done") {
+          finalResult = {
+            case_id: caseId,
+            response: fullText,
+            saved_entries: data.saved_entries || 0,
+            usage: data.usage,
+          };
+        } else if (data.type === "error") {
+          throw new Error(data.content);
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message !== "Unexpected end of JSON input") throw e;
+      }
+    }
+  }
+
+  return finalResult || { case_id: caseId, response: fullText, saved_entries: 0 };
 };
 
 export const botAnswer = async (caseId: string, message: string): Promise<BotAnswerResponse> => {

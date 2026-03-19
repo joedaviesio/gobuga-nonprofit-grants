@@ -12,6 +12,7 @@ import anthropic
 from dotenv import load_dotenv
 
 from api.case_manager import load_case, append_message, _uploads_dir
+from api.file_extraction import extract_text
 from api.databank import (
     add_entry,
     add_entries_bulk,
@@ -21,43 +22,10 @@ from api.databank import (
     seed_from_org_profile,
 )
 from api.tenant import org_profile_path, org_data_dir, org_state_dir
+from api.usage import DEFAULT_MODEL as MODEL, new_usage, track_usage, finalize_usage
 from api.usage_log import log_usage
 
 load_dotenv()
-
-MODEL = os.getenv("GOBUGA_BOT_MODEL", "claude-haiku-4-5-20251001")
-
-# Pricing per million tokens (USD)
-PRICING = {
-    "claude-haiku-4-5-20251001": {"input": 0.80, "output": 4.00},
-    "claude-sonnet-4-20250514": {"input": 3.00, "output": 12.00},
-    "claude-opus-4-20250514": {"input": 15.00, "output": 60.00},
-}
-
-
-def _track_usage(response, usage: dict) -> dict:
-    """Accumulate token usage from an API response."""
-    input_tokens = getattr(response.usage, "input_tokens", 0)
-    output_tokens = getattr(response.usage, "output_tokens", 0)
-    usage["input_tokens"] += input_tokens
-    usage["output_tokens"] += output_tokens
-    usage["api_calls"] += 1
-    return usage
-
-
-def _calc_cost(usage: dict, model: str = None) -> dict:
-    """Add cost calculation to usage dict."""
-    m = model or MODEL
-    prices = PRICING.get(m, PRICING["claude-haiku-4-5-20251001"])
-    input_cost = (usage["input_tokens"] / 1_000_000) * prices["input"]
-    output_cost = (usage["output_tokens"] / 1_000_000) * prices["output"]
-    usage["cost_usd"] = round(input_cost + output_cost, 4)
-    usage["model"] = m
-    return usage
-
-
-def _new_usage() -> dict:
-    return {"input_tokens": 0, "output_tokens": 0, "api_calls": 0}
 
 
 def _load_org_profile(org_id: str) -> str:
@@ -71,7 +39,6 @@ def _load_org_profile(org_id: str) -> str:
 
 def _load_data_files(org_id: str, subfolder: str, max_per_file: int = 3000) -> str:
     """Load reference data files from org data/{subfolder}/."""
-    from orchestrator.main import _extract_pdf, _extract_docx, _strip_html
     data_dir = os.path.join(org_data_dir(org_id), subfolder)
     if not os.path.exists(data_dir):
         return ""
@@ -80,19 +47,9 @@ def _load_data_files(org_id: str, subfolder: str, max_per_file: int = 3000) -> s
         filepath = os.path.join(data_dir, fname)
         if not os.path.isfile(filepath):
             continue
-        ext = os.path.splitext(fname)[1].lower()
         try:
-            if ext == ".pdf":
-                content = _extract_pdf(filepath, max_pages=5)
-            elif ext == ".docx":
-                content = _extract_docx(filepath)
-            elif ext in {".html", ".htm"}:
-                with open(filepath, errors="replace") as f:
-                    content = _strip_html(f.read())
-            elif ext in {".md", ".txt", ".json", ".csv"}:
-                with open(filepath, errors="replace") as f:
-                    content = f.read()
-            else:
+            content = extract_text(filepath, max_pages=5)
+            if not content:
                 continue
             if len(content) > max_per_file:
                 content = content[:max_per_file] + "\n... [truncated]"
@@ -110,22 +67,12 @@ def _load_state(org_id: str, filename: str) -> dict:
 
 def _extract_upload_text(org_id: str, case_id: str, filename: str) -> str:
     """Extract text from an uploaded file."""
-    from orchestrator.main import _extract_pdf, _extract_docx, _strip_html
     filepath = os.path.join(_uploads_dir(org_id, case_id), filename)
     if not os.path.exists(filepath):
         return f"File not found: {filename}"
-    ext = os.path.splitext(filename)[1].lower()
     try:
-        if ext == ".pdf":
-            return _extract_pdf(filepath, max_pages=30)
-        elif ext == ".docx":
-            return _extract_docx(filepath)
-        elif ext in {".html", ".htm"}:
-            with open(filepath, errors="replace") as f:
-                return _strip_html(f.read())
-        else:
-            with open(filepath, errors="replace") as f:
-                return f.read()
+        content = extract_text(filepath, max_pages=30)
+        return content if content else f"No text extracted from {filename}"
     except Exception as e:
         return f"Error reading {filename}: {e}"
 
@@ -181,28 +128,27 @@ Write a tailored grant summary with these sections:
 4. **Watch out for** — risks, eligibility concerns, or competition
 5. **Recommended next steps** — 3-4 concrete actions
 
-Be direct, specific to this grant. No generic advice. Write in English.
-Keep it under 500 words."""
+Be direct, specific to this grant. No generic advice. Write in English."""
 
-    usage = _new_usage()
+    usage = new_usage()
     client = anthropic.Anthropic()
     response = client.messages.create(
         model=bot_model,
-        max_tokens=2048,
+        max_tokens=256,
         system=system_prompt,
         messages=[{
             "role": "user",
             "content": f"Generate the tailored grant summary for: {grant_brief.get('title', 'this opportunity')}",
         }],
     )
-    _track_usage(response, usage)
+    track_usage(usage, response)
 
     summary = response.content[0].text
 
     # Save as the opening assistant message
     append_message(org_id, case_id, "assistant", summary, actions=[{"type": "bot_a_summary"}])
 
-    result_usage = _calc_cost(usage, bot_model)
+    result_usage = finalize_usage(usage, bot_model)
     log_usage(org_id, "bot_a", result_usage, case_id=case_id)
     return {
         "case_id": case_id,
@@ -295,7 +241,7 @@ question, and field that needs to be filled in.
 Be thorough — miss nothing. Include administrative fields (org name, address, etc.)
 as well as narrative sections (project description, methodology, etc.)."""
 
-    usage = _new_usage()
+    usage = new_usage()
     client = anthropic.Anthropic()
     messages = [{
         "role": "user",
@@ -309,7 +255,7 @@ as well as narrative sections (project description, methodology, etc.)."""
         messages=messages,
         tools=BOT_B_TOOLS,
     )
-    _track_usage(response, usage)
+    track_usage(usage, response)
 
     parsed_sections = []
     bot_text = ""
@@ -321,7 +267,7 @@ as well as narrative sections (project description, methodology, etc.)."""
             parsed_sections = block.input.get("sections", [])
 
     if not parsed_sections:
-        result_usage = _calc_cost(usage, bot_model)
+        result_usage = finalize_usage(usage, bot_model)
         log_usage(org_id, "bot_b", result_usage, case_id=case_id, extra={"status": "no_sections"})
         return {
             "error": "Bot B failed to extract sections. Raw response saved.",
@@ -358,7 +304,7 @@ as well as narrative sections (project description, methodology, etc.)."""
         actions=[{"type": "bot_b_parse", "sections_found": len(parsed_sections)}],
     )
 
-    result_usage = _calc_cost(usage, bot_model)
+    result_usage = finalize_usage(usage, bot_model)
     log_usage(org_id, "bot_b", result_usage, case_id=case_id, extra={"sections_found": len(parsed_sections)})
     return {
         "case_id": case_id,
@@ -410,7 +356,7 @@ def bot_c_fill_sections(org_id: str, case_id: str, model: str = None) -> dict:
     if case is None:
         return {"error": f"Case {case_id} not found"}
 
-    parsed = case.get("parsed_sections", {})
+    parsed = case.get("parsed_sections") or {}
     sections = parsed.get("sections", [])
     if not sections:
         return {"error": "No parsed sections found. Run Bot B first."}
@@ -468,7 +414,7 @@ information available in the case data bank and organisation profile.
 
 Call fill_section for EACH section. Do them all."""
 
-    usage = _new_usage()
+    usage = new_usage()
     client = anthropic.Anthropic()
     messages = [{
         "role": "user",
@@ -490,7 +436,7 @@ Call fill_section for EACH section. Do them all."""
             messages=messages,
             tools=BOT_C_TOOLS,
         )
-        _track_usage(response, usage)
+        track_usage(usage, response)
 
         tool_calls = []
         for block in response.content:
@@ -556,7 +502,7 @@ Call fill_section for EACH section. Do them all."""
         actions=[{"type": "bot_c_fill", "filled": len(filled), "needs_review": len(needs_review)}],
     )
 
-    result_usage = _calc_cost(usage, bot_model)
+    result_usage = finalize_usage(usage, bot_model)
     log_usage(org_id, "bot_c", result_usage, case_id=case_id, extra={"filled": len(filled), "needs_review": len(needs_review)})
     return {
         "case_id": case_id,
@@ -607,7 +553,7 @@ def bot_d_analyze_gaps(org_id: str, case_id: str, model: str = None) -> dict:
 
     databank_text = format_databank_for_prompt(org_id, case_id)
     grant_brief = case.get("grant_brief", {})
-    parsed = case.get("parsed_sections", {})
+    parsed = case.get("parsed_sections") or {}
     sections = parsed.get("sections", [])
 
     sections_text = ""
@@ -619,7 +565,7 @@ def bot_d_analyze_gaps(org_id: str, case_id: str, model: str = None) -> dict:
     system_prompt = f"""You are an information gathering assistant for a grant application.
 
 Your task: look at what information we already have in the data bank, and what
-the grant application requires, then ask the user targeted questions to fill gaps.
+the grant application requires, then ask the user targeted questions to fill gaps. First message has to be super brief but open. Following that ideally you can help them in less than 100 words. People have short attention spans. 
 
 {databank_text}
 
@@ -637,20 +583,21 @@ the grant application requires, then ask the user targeted questions to fill gap
 6. Be conversational and clear — the officer should be able to answer quickly
 
 Do NOT ask about things already in the data bank.
-Do NOT ask generic questions — be specific to THIS grant."""
+Do NOT ask generic questions — be specific to THIS grant.
+Keep your response under 100 words."""
 
-    usage = _new_usage()
+    usage = new_usage()
     client = anthropic.Anthropic()
     response = client.messages.create(
         model=bot_model,
-        max_tokens=1500,
+        max_tokens=800,
         system=system_prompt,
         messages=[{
             "role": "user",
             "content": "What information do we still need for this application?",
         }],
     )
-    _track_usage(response, usage)
+    track_usage(usage, response)
 
     response_text = response.content[0].text
 
@@ -659,7 +606,7 @@ Do NOT ask generic questions — be specific to THIS grant."""
         actions=[{"type": "bot_d_questions"}],
     )
 
-    result_usage = _calc_cost(usage, bot_model)
+    result_usage = finalize_usage(usage, bot_model)
     log_usage(org_id, "bot_d", result_usage, case_id=case_id, extra={"action": "analyze_gaps"})
     return {
         "case_id": case_id,
@@ -668,12 +615,11 @@ Do NOT ask generic questions — be specific to THIS grant."""
     }
 
 
-def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: str = None) -> dict:
-    """Process a user's answer to Bot D's questions. Extract and save to data bank."""
-    bot_model = model or MODEL
+def _build_bot_d_answer_context(org_id: str, case_id: str, user_message: str):
+    """Build the shared context for bot_d answer (used by both sync and streaming)."""
     case = load_case(org_id, case_id)
     if case is None:
-        return {"error": f"Case {case_id} not found"}
+        return None, None, None, None
 
     recent = case.get("conversation", [])[-10:]
     databank_text = format_databank_for_prompt(org_id, case_id)
@@ -688,7 +634,8 @@ def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: st
 3. Then either:
    a. Ask follow-up questions if the answers were incomplete or raised new questions
    b. Confirm what was saved and ask if there's anything else they'd like to add
-4. Be conversational and efficient"""
+4. Be conversational and efficient
+5. Keep your response under 100 words"""
 
     messages = []
     for msg in recent:
@@ -700,7 +647,17 @@ def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: st
     if len(messages) >= 2 and messages[-1]["role"] == "user" and messages[-2]["role"] == "user":
         messages = messages[:-1]
 
-    usage = _new_usage()
+    return case, system_prompt, messages, databank_text
+
+
+def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: str = None) -> dict:
+    """Process a user's answer to Bot D's questions. Extract and save to data bank."""
+    bot_model = model or MODEL
+    case, system_prompt, messages, _ = _build_bot_d_answer_context(org_id, case_id, user_message)
+    if case is None:
+        return {"error": f"Case {case_id} not found"}
+
+    usage = new_usage()
     client = anthropic.Anthropic()
     saved_count = 0
     final_text = ""
@@ -717,7 +674,7 @@ def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: st
             messages=messages,
             tools=BOT_D_TOOLS,
         )
-        _track_usage(response, usage)
+        track_usage(usage, response)
 
         text_parts = []
         tool_calls = []
@@ -761,7 +718,7 @@ def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: st
         actions=[{"type": "bot_d_answer", "saved_entries": saved_count}],
     )
 
-    result_usage = _calc_cost(usage, bot_model)
+    result_usage = finalize_usage(usage, bot_model)
     log_usage(org_id, "bot_d", result_usage, case_id=case_id, extra={"action": "process_answer", "saved_entries": saved_count})
     return {
         "case_id": case_id,
@@ -769,6 +726,100 @@ def bot_d_process_answer(org_id: str, case_id: str, user_message: str, model: st
         "saved_entries": saved_count,
         "usage": result_usage,
     }
+
+
+def bot_d_process_answer_stream(org_id: str, case_id: str, user_message: str, model: str = None):
+    """Streaming version of bot_d_process_answer. Yields SSE-formatted chunks."""
+    import json as _json
+    bot_model = model or MODEL
+    case, system_prompt, messages, _ = _build_bot_d_answer_context(org_id, case_id, user_message)
+    if case is None:
+        yield f"data: {_json.dumps({'type': 'error', 'content': 'Case not found'})}\n\n"
+        return
+
+    usage = new_usage()
+    client = anthropic.Anthropic()
+    saved_count = 0
+    final_text = ""
+    max_iterations = 5
+    iterations = 0
+
+    while iterations < max_iterations:
+        iterations += 1
+
+        # Check if this iteration might be the final text response
+        # by trying a non-streaming call first for tool-use iterations
+        # For efficiency: use streaming on every iteration, handle tool calls from accumulated blocks
+        collected_text = ""
+        tool_calls = []
+        input_tokens = 0
+        output_tokens = 0
+
+        with client.messages.stream(
+            model=bot_model,
+            max_tokens=2048,
+            system=system_prompt,
+            messages=messages,
+            tools=BOT_D_TOOLS,
+        ) as stream:
+            for event in stream:
+                if event.type == "content_block_delta":
+                    if event.delta.type == "text_delta":
+                        collected_text += event.delta.text
+                        yield f"data: {_json.dumps({'type': 'text', 'content': event.delta.text})}\n\n"
+
+            # Get the final message for tool calls and usage
+            response = stream.get_final_message()
+
+        # Track usage from the response
+        track_usage(usage, response)
+
+        # Collect tool calls from the final message
+        for block in response.content:
+            if block.type == "tool_use":
+                tool_calls.append(block)
+
+        if collected_text:
+            final_text = collected_text
+
+        if not tool_calls or response.stop_reason == "end_turn":
+            break
+
+        # Process tool calls (don't stream these, just notify)
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = []
+        for tc in tool_calls:
+            if tc.name == "save_to_databank":
+                add_entry(
+                    org_id, case_id,
+                    tc.input["key"],
+                    tc.input["value"],
+                    source="user_input",
+                    category=tc.input.get("category", "general"),
+                )
+                saved_count += 1
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tc.id,
+                    "content": f"Saved '{tc.input['key']}' to data bank.",
+                })
+
+        yield f"data: {_json.dumps({'type': 'status', 'content': f'Saved {saved_count} entries to data bank...'})}\n\n"
+
+        if tool_results:
+            messages.append({"role": "user", "content": tool_results})
+
+    # Save conversation
+    append_message(org_id, case_id, "officer", user_message)
+    append_message(
+        org_id, case_id, "assistant", final_text,
+        actions=[{"type": "bot_d_answer", "saved_entries": saved_count}],
+    )
+
+    result_usage = finalize_usage(usage, bot_model)
+    log_usage(org_id, "bot_d", result_usage, case_id=case_id, extra={"action": "process_answer", "saved_entries": saved_count})
+
+    yield f"data: {_json.dumps({'type': 'done', 'saved_entries': saved_count, 'usage': result_usage})}\n\n"
 
 
 # ---------------------------------------------------------------------------
@@ -800,7 +851,7 @@ Categories: organisation, project, budget, team, impact, logistics, grant, gener
 Extract ALL useful facts — names, numbers, dates, descriptions, capacities, etc.
 Be specific in your keys (e.g. 'annual_budget_2025' not just 'budget')."""
 
-    usage = _new_usage()
+    usage = new_usage()
     client = anthropic.Anthropic()
     messages = [{"role": "user", "content": f"Extract key information from this document ({filename}):\n\n{doc_text}"}]
     saved_count = 0
@@ -817,7 +868,7 @@ Be specific in your keys (e.g. 'annual_budget_2025' not just 'budget')."""
             messages=messages,
             tools=BOT_D_TOOLS,
         )
-        _track_usage(response, usage)
+        track_usage(usage, response)
 
         tool_calls = []
         for block in response.content:
@@ -855,7 +906,7 @@ Be specific in your keys (e.g. 'annual_budget_2025' not just 'budget')."""
         actions=[{"type": "file_ingest", "filename": filename, "entries_added": saved_count}],
     )
 
-    result_usage = _calc_cost(usage, bot_model)
+    result_usage = finalize_usage(usage, bot_model)
     log_usage(org_id, "file_ingest", result_usage, case_id=case_id, extra={"filename": filename, "entries_added": saved_count})
     return {
         "case_id": case_id,

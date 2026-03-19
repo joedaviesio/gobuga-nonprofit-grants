@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { setupOrg, runCycle, getCycleStatus, getToken, verifySession } from "@/lib/api";
+import { setupOrg, getToken, verifySession } from "@/lib/api";
+import LoadingBar from "@/app/loading-bar";
 
 const SECTORS = [
   "Access to justice",
@@ -35,7 +36,7 @@ const GEOGRAPHIES = [
   "Latin America",
 ];
 
-type Step = "basics" | "sectors" | "scanning";
+type Step = "basics" | "sectors";
 
 export default function SetupPage() {
   const [step, setStep] = useState<Step>("basics");
@@ -43,16 +44,12 @@ export default function SetupPage() {
   // Form data
   const [orgName, setOrgName] = useState("");
   const [country, setCountry] = useState("");
-  const [website, setWebsite] = useState("");
-  const [charitableStatus, setCharitableStatus] = useState("");
-  const [mission, setMission] = useState("");
+  const [orgStatus, setOrgStatus] = useState<"nonprofit" | "pending" | "forprofit">("nonprofit");
   const [sectors, setSectors] = useState<string[]>([]);
   const [geographies, setGeographies] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [scanStatus, setScanStatus] = useState<"starting" | "running" | "complete" | "error">("starting");
-  const [scanMessage, setScanMessage] = useState("");
 
   // Check if already set up
   useEffect(() => {
@@ -90,57 +87,15 @@ export default function SetupPage() {
       await setupOrg({
         org_name: orgName,
         country,
-        website,
-        charitable_status: charitableStatus,
-        mission,
+        org_status: orgStatus,
         sectors,
         geographies,
       });
-      setStep("scanning");
-      triggerFirstScan();
+      window.location.href = "/seed";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Setup failed");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const triggerFirstScan = async () => {
-    setScanStatus("starting");
-    try {
-      await runCycle();
-      setScanStatus("running");
-      setScanMessage("Scanning for grant opportunities...");
-
-      const poll = setInterval(async () => {
-        try {
-          const status = await getCycleStatus();
-          if (status.status === "complete") {
-            clearInterval(poll);
-            setScanStatus("complete");
-            setScanMessage(
-              `Found ${status.opportunities || 0} opportunities!`
-            );
-          } else if (status.status === "error") {
-            clearInterval(poll);
-            setScanStatus("complete");
-            setScanMessage("Scan completed with some issues. Your dashboard is ready.");
-          }
-        } catch {
-          // still running
-        }
-      }, 8000);
-
-      // Timeout after 15 min
-      setTimeout(() => {
-        clearInterval(poll);
-        setScanStatus("complete");
-        setScanMessage("Your dashboard is ready.");
-      }, 900000);
-    } catch {
-      // Cycle may already be running or unavailable — still proceed
-      setScanStatus("complete");
-      setScanMessage("Your dashboard is ready.");
     }
   };
 
@@ -180,36 +135,32 @@ export default function SetupPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-600 mb-1">Website (optional)</label>
-              <input
-                type="url"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
-                placeholder="https://yourorg.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-stone-600 mb-1">Charitable status (optional)</label>
-              <input
-                type="text"
-                value={charitableStatus}
-                onChange={(e) => setCharitableStatus(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
-                placeholder="e.g. Registered Charity, 501(c)(3)"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-stone-600 mb-1">Mission statement</label>
-              <textarea
-                value={mission}
-                onChange={(e) => setMission(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
-                placeholder="What does your organisation do? Who do you serve?"
-              />
+              <label className="block text-xs font-medium text-stone-600 mb-2">Organisation status</label>
+              <div className="flex gap-2">
+                {([
+                  { value: "nonprofit", label: "Non-profit" },
+                  { value: "pending", label: "Pending" },
+                  { value: "forprofit", label: "For-profit" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setOrgStatus(opt.value)}
+                    className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
+                      orgStatus === opt.value
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-stone-600 border-stone-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {orgStatus === "forprofit" && (
+                <p className="mt-2 text-xs text-amber-600">
+                  GoBuga is designed for non-profit organisations. Some grant opportunities may not be applicable to for-profit entities.
+                </p>
+              )}
             </div>
 
             <button
@@ -273,6 +224,10 @@ export default function SetupPage() {
               </div>
             </div>
 
+            {loading && (
+              <LoadingBar label="Setting up your organisation..." />
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={() => setStep("basics")}
@@ -285,7 +240,7 @@ export default function SetupPage() {
                 disabled={loading || sectors.length === 0}
                 className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? "Setting up..." : "Start scanning for grants"}
+                {loading ? "Setting up..." : "Continue"}
               </button>
             </div>
           </div>
@@ -294,48 +249,5 @@ export default function SetupPage() {
     );
   }
 
-  // Step: scanning
-  return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-bold text-stone-800 mb-2">
-          {scanStatus === "complete" ? "You're all set!" : "Scanning for grants..."}
-        </h1>
-
-        {scanStatus === "running" || scanStatus === "starting" ? (
-          <div className="space-y-4">
-            <div className="flex justify-center gap-1 my-6">
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-            </div>
-            <p className="text-sm text-stone-500">
-              Our AI is scanning the web for grant opportunities matched to your organisation.
-              This usually takes 5-10 minutes.
-            </p>
-            <div className="text-xs text-stone-400 space-y-1">
-              <p>Grant Watcher scanning web sources...</p>
-              <p>Grant Analyst will assess fit...</p>
-              <p>Grant Reporter will compile your brief...</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-sm text-stone-600">{scanMessage}</p>
-            <a
-              href="/"
-              className="inline-block px-6 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Go to Dashboard
-            </a>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return null;
 }

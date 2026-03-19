@@ -8,13 +8,15 @@ import {
   uploadFile,
   botParseAndFill,
   botQuestions,
-  botAnswer,
+  botAnswerStream,
   botIngest,
   getDatabank,
+  getToken,
   type CaseFull,
   type Message,
   type DatabankEntry,
 } from "@/lib/api";
+import DOMPurify from "dompurify";
 
 const API_BASE = "/api";
 
@@ -76,18 +78,15 @@ function SimpleMarkdown({ text }: { text: string }) {
   if (inTable) output.push("</tbody></table>");
 
   const html = output.join("<br>");
-  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
 }
+
+import LoadingBar from "@/app/loading-bar";
 
 function LoadingDots({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 p-3 bg-stone-50 rounded-lg">
-      <div className="flex gap-1">
-        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-      </div>
-      <span className="text-xs text-stone-500">{label}</span>
+    <div className="p-3 bg-stone-50 rounded-lg">
+      <LoadingBar label={label} />
     </div>
   );
 }
@@ -105,6 +104,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   const [databank, setDatabank] = useState<DatabankEntry[]>([]);
   const [sidebarTab, setSidebarTab] = useState<"brief" | "databank" | "draft">("brief");
   const [totalUsage, setTotalUsage] = useState({ input_tokens: 0, output_tokens: 0, api_calls: 0, cost_usd: 0 });
+  const [submissionFilename, setSubmissionFilename] = useState("");
 
   const trackUsage = (usage: { input_tokens?: number; output_tokens?: number; api_calls?: number; cost_usd?: number } | undefined) => {
     if (!usage) return;
@@ -117,20 +117,36 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submissionInputRef = useRef<HTMLInputElement>(null);
-  const qaEndRef = useRef<HTMLDivElement>(null);
+  const qaScrollRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+
+  // Mark case as viewed in localStorage
+  const markCaseViewed = (caseId: string) => {
+    try {
+      const viewed = JSON.parse(localStorage.getItem("gobuga_viewed_cases") || "{}");
+      viewed[caseId] = new Date().toISOString();
+      localStorage.setItem("gobuga_viewed_cases", JSON.stringify(viewed));
+    } catch {}
+  };
 
   // Load case data
   useEffect(() => {
     getCase(id).then((data) => {
       setCaseData(data);
       setMessages(data.conversation || []);
+      markCaseViewed(id);
     });
     getDatabank(id).then(setDatabank).catch(() => {});
   }, [id]);
 
+  // Auto-scroll: only scroll if user is near the bottom, use instant scroll during streaming
+  const lastQaContent = qaMessages[qaMessages.length - 1]?.content;
+  const lastQaLength = qaMessages.length;
   useEffect(() => {
-    qaEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [qaMessages]);
+    const el = qaScrollRef.current;
+    if (!el || !isNearBottomRef.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [lastQaLength, lastQaContent]);
 
   const refreshCase = async () => {
     const data = await getCase(id);
@@ -151,10 +167,14 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   };
 
   const handleExport = async (format: string, templateFilename?: string) => {
+    const fileFormats = ["docx", "doc", "pdf", "xlsx", "xls"];
     try {
       const result = await exportDraft(id, format, templateFilename);
-      if (format === "docx" && result.filename) {
-        const res = await fetch(`${API_BASE}/cases/${id}/download/${result.filename}`);
+      if (fileFormats.includes(format) && result.filename) {
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/cases/${id}/download/${result.filename}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         downloadBlob(await res.blob(), result.filename);
       } else if (format === "markdown") {
         downloadBlob(new Blob([result.content], { type: "text/markdown" }), `${id}-draft.md`);
@@ -184,12 +204,13 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
     setStatusMessage(`Adding ${file.name} to data bank...`);
 
     try {
-      await uploadFile(id, file, "reference");
-      const ingestResult = await botIngest(id, file.name);
+      const uploadResult = await uploadFile(id, file, "reference");
+      const sanitizedName = uploadResult.filename || file.name;
+      const ingestResult = await botIngest(id, sanitizedName);
       trackUsage(ingestResult.usage);
       await refreshCase();
       setBotStatus("done");
-      setStatusMessage(`Added ${file.name} to data bank.`);
+      setStatusMessage(`Added ${sanitizedName} to data bank.`);
     } catch (err) {
       setBotStatus("error");
       setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -206,9 +227,11 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
     setStatusMessage("Uploading submission form...");
 
     try {
-      await uploadFile(id, file, "application_form");
+      const uploadResult = await uploadFile(id, file, "application_form");
+      const sanitizedName = uploadResult.filename || file.name;
+      setSubmissionFilename(sanitizedName);
       setStatusMessage("Parsing form sections...");
-      const result = await botParseAndFill(id, file.name);
+      const result = await botParseAndFill(id, sanitizedName);
       trackUsage(result.usage);
       await refreshCase();
       setBotStatus("done");
@@ -245,39 +268,75 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
     if (!msg || botStatus === "working") return;
     setQaInput("");
     setQaMessages((prev) => [...prev, { role: "user", content: msg }]);
+    isNearBottomRef.current = true;
     setBotStatus("working");
+    setStatusMessage("Thinking...");
+
+    // Add an empty assistant message that we'll stream into
+    setQaMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
-      const result = await botAnswer(id, msg);
+      const result = await botAnswerStream(
+        id,
+        msg,
+        (chunk) => {
+          // Append each text chunk to the last assistant message
+          setQaMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last && last.role === "assistant") {
+              updated[updated.length - 1] = { ...last, content: last.content + chunk };
+            }
+            return updated;
+          });
+        },
+        (status) => {
+          setStatusMessage(status);
+        },
+      );
       trackUsage(result.usage);
-      setQaMessages((prev) => [...prev, { role: "assistant", content: result.response }]);
       await refreshCase();
       setBotStatus("idle");
+      setStatusMessage("");
     } catch (err) {
-      setQaMessages((prev) => [...prev, { role: "assistant", content: `Error: ${err instanceof Error ? err.message : "Unknown error"}` }]);
+      setQaMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last && last.role === "assistant" && !last.content) {
+          updated[updated.length - 1] = { ...last, content: `Error: ${err instanceof Error ? err.message : "Unknown error"}` };
+        } else {
+          updated.push({ role: "assistant", content: `Error: ${err instanceof Error ? err.message : "Unknown error"}` });
+        }
+        return updated;
+      });
       setBotStatus("error");
+      setStatusMessage("");
     }
   };
 
   // --- Render ---
 
   if (!caseData) {
-    return <div className="p-8 text-sm text-stone-400">Loading case...</div>;
+    return (
+      <div className="p-8 max-w-xs">
+        <LoadingBar label="Loading case..." />
+      </div>
+    );
   }
 
   const sections = caseData.draft?.sections || {};
   const sectionNames = Object.keys(sections);
   const brief = caseData.grant_brief || {};
   const summaryMsg = messages.find((m) => m.role === "assistant");
-  const docxUploads = (caseData.uploads || []).filter(
-    (u) => u.filename.endsWith(".docx") && u.type === "application_form"
+  const templateUploads = (caseData.uploads || []).filter(
+    (u) => (u.filename.endsWith(".docx") || u.filename.endsWith(".xlsx")) && u.type === "application_form"
   );
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-49px)]">
       {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.html,.htm,.txt,.csv,.xlsx" onChange={handleUploadFile} />
-      <input ref={submissionInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc" onChange={handleUploadSubmission} />
+      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.xlsx,.xls,.html,.htm,.txt,.csv" onChange={handleUploadFile} />
+      <input ref={submissionInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.xlsx,.xls" onChange={handleUploadSubmission} />
 
       {/* Left sidebar */}
       <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-stone-200 flex flex-col bg-white overflow-y-auto md:max-h-none max-h-[40vh]">
@@ -366,13 +425,6 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
             );
           })()}
 
-          {/* Session usage */}
-          {totalUsage.api_calls > 0 && (
-            <div className="mt-3 flex items-center justify-between text-[10px] text-stone-400 px-1">
-              <span>{totalUsage.input_tokens.toLocaleString()} in / {totalUsage.output_tokens.toLocaleString()} out</span>
-              <span className="font-mono">${totalUsage.cost_usd.toFixed(4)}</span>
-            </div>
-          )}
         </div>
 
         {/* Sidebar tabs */}
@@ -520,19 +572,24 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                 <div className="space-y-2 mt-3">
                   <div className="text-xs font-medium text-stone-500">Export</div>
                   <div className="flex flex-wrap gap-2">
+                    <button onClick={() => handleExport("pdf")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">PDF</button>
+                    <button onClick={() => handleExport("docx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
+                    <button onClick={() => handleExport("xlsx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">XLSX</button>
                     <button onClick={() => handleExport("markdown")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">MD</button>
                     <button onClick={() => handleExport("json")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">JSON</button>
-                    <button onClick={() => handleExport("docx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
-                    {docxUploads.map((u) => (
-                      <button
-                        key={u.filename}
-                        onClick={() => handleExport("docx", u.filename)}
-                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                        title={`Fill template: ${u.filename}`}
-                      >
-                        Fill {u.filename.slice(0, 20)}...
-                      </button>
-                    ))}
+                    {templateUploads.map((u) => {
+                      const ext = u.filename.split(".").pop() || "docx";
+                      return (
+                        <button
+                          key={u.filename}
+                          onClick={() => handleExport(ext, u.filename)}
+                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          title={`Fill template: ${u.filename}`}
+                        >
+                          Fill {u.filename.slice(0, 20)}...
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -645,18 +702,43 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         {statusMessage}
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleExport("docx")}
-                          className="flex-1 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                        >
-                          Download as .docx
-                        </button>
-                        <button
-                          onClick={() => handleExport("markdown")}
-                          className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
-                        >
-                          .md
-                        </button>
+                        {(() => {
+                          const ext = submissionFilename.split(".").pop()?.toLowerCase() || "docx";
+                          const templateFillable = ["docx", "doc", "xlsx", "xls", "pdf"].includes(ext);
+                          const exportFmt = ext === "pdf" ? "pdf" : ["doc", "docx"].includes(ext) ? "docx" : ["xls", "xlsx"].includes(ext) ? "xlsx" : "docx";
+                          return (
+                            <>
+                              <button
+                                onClick={() => handleExport(exportFmt, templateFillable ? submissionFilename : undefined)}
+                                className="flex-1 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                              >
+                                Download as .{exportFmt}
+                              </button>
+                              {exportFmt !== "pdf" && (
+                                <button
+                                  onClick={() => handleExport("pdf")}
+                                  className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                                >
+                                  .pdf
+                                </button>
+                              )}
+                              {exportFmt !== "docx" && (
+                                <button
+                                  onClick={() => handleExport("docx")}
+                                  className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                                >
+                                  .docx
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleExport("markdown")}
+                                className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                              >
+                                .md
+                              </button>
+                            </>
+                          );
+                        })()}
                       </div>
                       <button
                         onClick={() => {
@@ -679,7 +761,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         onClick={() => submissionInputRef.current?.click()}
                         className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-500 hover:border-teal-400 hover:text-teal-600 transition-colors"
                       >
-                        Click to select submission form (.pdf, .docx)
+                        Click to select submission form (.pdf, .docx, .doc, .xlsx, .xls)
                       </button>
                     </>
                   )}
@@ -688,14 +770,23 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
 
               {/* Path: Ask questions */}
               {flowPath === "ask_questions" && (
-                <div className="bg-white border border-purple-200 rounded-lg shadow-sm flex flex-col" style={{ minHeight: "400px" }}>
+                <div className="bg-white border border-purple-200 rounded-lg shadow-sm flex flex-col font-[family-name:var(--font-dm-sans)]" style={{ minHeight: "400px" }}>
                   <div className="p-4 border-b border-purple-100">
                     <h3 className="text-sm font-bold text-stone-800">Information gathering</h3>
                     <p className="text-xs text-stone-500">Answer questions to fill gaps in the data bank</p>
                   </div>
 
                   {/* Q&A messages */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <div
+                    ref={qaScrollRef}
+                    className="flex-1 overflow-y-auto p-4 space-y-3"
+                    onScroll={() => {
+                      const el = qaScrollRef.current;
+                      if (!el) return;
+                      // Consider "near bottom" if within 80px of the bottom
+                      isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                    }}
+                  >
                     {qaMessages.map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         <div className={`rounded-lg px-3 py-2 max-w-[85%] ${
@@ -711,10 +802,9 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         </div>
                       </div>
                     ))}
-                    {botStatus === "working" && (
+                    {botStatus === "working" && !qaMessages.some((m, i) => i === qaMessages.length - 1 && m.role === "assistant" && m.content) && (
                       <LoadingDots label={statusMessage || "Thinking..."} />
                     )}
-                    <div ref={qaEndRef} />
                   </div>
 
                   {/* Q&A input */}
@@ -722,7 +812,12 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                     <div className="flex gap-2">
                       <input
                         value={qaInput}
-                        onChange={(e) => setQaInput(e.target.value)}
+                        onChange={(e) => {
+                          const words = e.target.value.trim().split(/\s+/).filter(Boolean);
+                          if (words.length <= 150 || e.target.value.length < qaInput.length) {
+                            setQaInput(e.target.value);
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -741,6 +836,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         Send
                       </button>
                     </div>
+                    <div className="mt-1 text-right">
+                      <span className={`text-[10px] ${
+                        qaInput.trim().split(/\s+/).filter(Boolean).length >= 140
+                          ? "text-red-500"
+                          : "text-stone-300"
+                      }`}>
+                        {qaInput.trim() ? qaInput.trim().split(/\s+/).filter(Boolean).length : 0}/150 words
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -749,7 +853,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
 
           {/* Grant Summary */}
           {summaryMsg && (
-            <div className="bg-white border border-stone-200 rounded-lg shadow-sm">
+            <div className="bg-white border border-stone-200 rounded-lg shadow-sm font-[family-name:var(--font-dm-sans)]">
               <div className="p-4 border-b border-stone-100">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-bold text-stone-800">Grant Summary</h2>

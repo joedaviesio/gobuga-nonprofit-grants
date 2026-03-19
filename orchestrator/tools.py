@@ -73,7 +73,7 @@ TOOL_DEFINITIONS = {
                     "description": "Priority/severity of this finding",
                 },
             },
-            "required": ["title", "type", "content"],
+            "required": ["title", "type", "content", "source_url"],
         },
     },
 }

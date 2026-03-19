@@ -24,6 +24,10 @@ For each opportunity found by the Watcher, evaluate:
 
 {{SECTORS}}
 
+## Target Geographies
+
+{{GEOGRAPHIES}}
+
 ## Output Protocol
 
 For each opportunity, save an evidence item with:

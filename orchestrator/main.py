@@ -12,6 +12,24 @@ from orchestrator.evidence import load_evidence_for_date
 from orchestrator.signoff import load_signoff
 
 from api.tenant import org_root, org_cycles_dir, org_data_dir, org_prompts_dir
+from api.file_extraction import (
+    extract_text,
+    extract_pdf,
+    extract_docx,
+    extract_doc,
+    extract_xlsx,
+    extract_xls,
+    strip_html,
+)
+
+# Backward-compatible aliases so existing ``from orchestrator.main import _extract_*``
+# statements elsewhere continue to work during migration.
+_extract_pdf = extract_pdf
+_extract_docx = extract_docx
+_extract_doc = extract_doc
+_extract_xlsx = extract_xlsx
+_extract_xls = extract_xls
+_strip_html = strip_html
 
 
 def _load_prompt(org_id: str, agent_config: dict, state: dict, prior_outputs: dict, date: str) -> str:
@@ -55,65 +73,15 @@ def _load_prompt(org_id: str, agent_config: dict, state: dict, prior_outputs: di
     return "\n".join(parts)
 
 
-def _extract_docx(filepath: str) -> str:
-    """Extract text from a .docx file."""
-    from docx import Document
-    doc = Document(filepath)
-    parts = []
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if text:
-            parts.append(text)
-    for table in doc.tables:
-        for row in table.rows:
-            cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
-            if cells:
-                parts.append(" | ".join(cells))
-    return "\n".join(parts)
-
-
-def _extract_pdf(filepath: str, max_pages: int = 20) -> str:
-    """Extract text from a PDF file using PyMuPDF."""
-    import fitz
-    doc = fitz.open(filepath)
-    pages = min(len(doc), max_pages)
-    text_parts = []
-    for i in range(pages):
-        page_text = doc[i].get_text()
-        if page_text.strip():
-            text_parts.append(f"[Page {i+1}]\n{page_text.strip()}")
-    if len(doc) > max_pages:
-        text_parts.append(f"\n... [{len(doc) - max_pages} more pages not extracted]")
-    doc.close()
-    return "\n\n".join(text_parts)
-
-
-def _strip_html(html: str) -> str:
-    """Extract readable text from HTML content."""
-    import re
-    text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
-    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
-    text = re.sub(r'<(?:br|p|div|h[1-6]|li|tr)[^>]*>', '\n', text, flags=re.IGNORECASE)
-    text = re.sub(r'<[^>]+>', ' ', text)
-    text = re.sub(r'[ \t]+', ' ', text)
-    text = re.sub(r'\n[ \t]+', '\n', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    return text.strip()
-
-
 def _load_input_data(org_id: str) -> str:
     """Load all text-based and HTML files from org data/ subfolders into a context section."""
     data_dir = org_data_dir(org_id)
     if not os.path.exists(data_dir):
         return ""
 
-    TEXT_EXTENSIONS = {".md", ".txt", ".json", ".csv"}
-    HTML_EXTENSIONS = {".html", ".htm"}
-    PDF_EXTENSIONS = {".pdf"}
-    DOCX_EXTENSIONS = {".docx"}
-    SUPPORTED = TEXT_EXTENSIONS | HTML_EXTENSIONS | PDF_EXTENSIONS | DOCX_EXTENSIONS
+    SUPPORTED = {".md", ".txt", ".json", ".csv", ".html", ".htm",
+                 ".pdf", ".docx", ".doc", ".xlsx", ".xls"}
     MAX_PER_FILE = 8000
-
     SKIP_DIRS = {"archive"}
 
     sections = []
@@ -130,16 +98,9 @@ def _load_input_data(org_id: str) -> str:
                 continue
             filepath = os.path.join(dirpath, fname)
             try:
-                if ext in PDF_EXTENSIONS:
-                    content = _extract_pdf(filepath)
-                elif ext in DOCX_EXTENSIONS:
-                    content = _extract_docx(filepath)
-                elif ext in HTML_EXTENSIONS:
-                    with open(filepath, errors="replace") as f:
-                        content = _strip_html(f.read())
-                else:
-                    with open(filepath, errors="replace") as f:
-                        content = f.read()
+                content = extract_text(filepath)
+                if not content:
+                    continue
                 if len(content) > MAX_PER_FILE:
                     content = content[:MAX_PER_FILE] + f"\n... [truncated, {len(content)} chars total]"
                 files_content.append(f"#### {fname}\n```\n{content}\n```")
@@ -155,7 +116,7 @@ def _load_input_data(org_id: str) -> str:
     return "\n\n---\n## Input Data\n\n" + "\n\n".join(sections)
 
 
-def run_cycle(org_id: str, cycle_date: str | None = None, model_overrides: dict | None = None):
+def run_cycle(org_id: str, cycle_date: str | None = None, model_overrides: dict | None = None, on_phase=None):
     """Run a full cycle for the given org and date."""
     if cycle_date is None:
         cycle_date = date_type.today().isoformat()
@@ -182,9 +143,14 @@ def run_cycle(org_id: str, cycle_date: str | None = None, model_overrides: dict 
     for phase_num, cfg in agents:
         phase_groups.setdefault(phase_num, []).append(cfg)
 
+    phase_names = {1: "watcher", 2: "analyst", 3: "reporter"}
+
     for phase_num in sorted(phase_groups.keys()):
         phase_agents = phase_groups[phase_num]
         print(f"--- Phase {phase_num} ---")
+
+        if on_phase:
+            on_phase(phase_names.get(phase_num, f"phase_{phase_num}"))
 
         if phase_num == 1:
             with ThreadPoolExecutor(max_workers=len(phase_agents)) as executor:
@@ -216,6 +182,8 @@ def run_cycle(org_id: str, cycle_date: str | None = None, model_overrides: dict 
                     all_outputs[agent_cfg["id"]] = {"raw_text": f"Error: {e}", "agent_id": agent_cfg["id"]}
 
     # Save the report
+    if on_phase:
+        on_phase("saving")
     reporter_output = all_outputs.get("grant_reporter", {})
     report_text = reporter_output.get("raw_text", "No report generated.")
 

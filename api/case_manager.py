@@ -1,11 +1,12 @@
 """Case data model — CRUD for grant submission cases (multi-tenant)."""
 
-import json
 import os
 import shutil
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
+from api.store import load_json, save_json
 from api.tenant import org_cases_dir
 
 
@@ -102,16 +103,14 @@ def create_case(org_id: str, grant_id: str, grant_brief: dict, officer: str = "g
 
 def _save(org_id: str, case: dict):
     case["updated"] = datetime.now(timezone.utc).isoformat()
-    with open(_case_path(org_id, case["case_id"]), "w") as f:
-        json.dump(case, f, indent=2)
+    save_json(_case_path(org_id, case["case_id"]), case)
 
 
 def load_case(org_id: str, case_id: str) -> Optional[dict]:
     path = _case_path(org_id, case_id)
     if not os.path.exists(path):
         return None
-    with open(path) as f:
-        return json.load(f)
+    return load_json(path)
 
 
 def update_case(org_id: str, case_id: str, updates: dict) -> Optional[dict]:
@@ -135,8 +134,7 @@ def list_cases(org_id: str) -> list[dict]:
     for d in sorted(os.listdir(cases_dir)):
         path = os.path.join(cases_dir, d, "case.json")
         if os.path.exists(path):
-            with open(path) as f:
-                case = json.load(f)
+            case = load_json(path)
             cases.append({
                 "case_id": case["case_id"],
                 "grant_id": case["grant_id"],
@@ -182,14 +180,25 @@ def update_section(org_id: str, case_id: str, section_name: str, content: str, s
 
 # --- Upload operations ---
 
+def _sanitize_filename(filename: str) -> str:
+    """Replace spaces and problematic characters with underscores."""
+    import re
+    name = re.sub(r'[^\w\-.]', '_', filename)
+    name = re.sub(r'_+', '_', name)
+    return name
+
+
 def add_upload(org_id: str, case_id: str, filename: str, file_bytes: bytes, file_type: str = "document") -> Optional[dict]:
     """Save an uploaded file and register it in the case."""
     case = load_case(org_id, case_id)
     if case is None:
         return None
+    filename = _sanitize_filename(filename)
     uploads_dir = _uploads_dir(org_id, case_id)
     os.makedirs(uploads_dir, exist_ok=True)
     filepath = os.path.join(uploads_dir, filename)
+    if not Path(filepath).resolve().is_relative_to(Path(uploads_dir).resolve()):
+        raise ValueError("Invalid filename")
     with open(filepath, "wb") as f:
         f.write(file_bytes)
     upload_record = {

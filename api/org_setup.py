@@ -32,8 +32,11 @@ def setup_org(org_id: str, wizard_data: dict) -> dict:
     org_name = wizard_data.get("org_name", "").strip()
     country = wizard_data.get("country", "").strip()
     website = wizard_data.get("website", "").strip()
+    if website and not website.startswith(("http://", "https://")):
+        website = "https://" + website
     charitable_status = wizard_data.get("charitable_status", "").strip()
     mission = wizard_data.get("mission", "").strip()
+    org_status = wizard_data.get("org_status", "")
     sectors = wizard_data.get("sectors", [])
     geographies = wizard_data.get("geographies", [])
 
@@ -72,16 +75,32 @@ def setup_org(org_id: str, wizard_data: dict) -> dict:
                 f.write(content)
             prompts_generated.append(template_name)
 
-    # 3. Update org record
+    # 3. Scrape website URL if available
+    from api.auth import get_org as _get_org
+    org_record = _get_org(org_id)
+    website_url = (org_record or {}).get("website_url", "")
+    if website_url:
+        try:
+            from orchestrator.tools import handle_web_fetch
+            scraped = handle_web_fetch({"url": website_url})
+            scrape_path = os.path.join(org_data_dir(org_id), "org", "website-scrape.md")
+            with open(scrape_path, "w") as f:
+                f.write(f"# Website Scrape: {website_url}\n\n{scraped}\n")
+        except Exception as e:
+            print(f"[Setup] Website scrape failed for {website_url}: {e}")
+
+    # 4. Update org record
     update_org(org_id, {
         "name": org_name,
         "country": country,
         "website": website,
         "charitable_status": charitable_status,
+        "org_status": org_status,
         "mission": mission,
         "sectors": sectors,
         "geographies": geographies,
         "setup_complete": True,
+        "seeding_complete": False,
     })
 
     return {

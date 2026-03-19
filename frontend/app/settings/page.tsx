@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, type OrgProfile } from "@/lib/api";
+import LoadingBar from "@/app/loading-bar";
 import AuthGate, { useAuth } from "../auth-gate";
 
 const PLAN_INFO = {
   free: { label: "Free", price: "$0/mo", features: ["2 scans/month", "1 active case", "5 chat messages/case"] },
-  starter: { label: "Starter", price: "$49/mo", features: ["Daily scans", "5 active cases", "50 chat messages/case", "DOCX export", "Bots B-D"] },
-  professional: { label: "Professional", price: "$149/mo", features: ["Daily scans", "Unlimited cases", "Unlimited chat", "DOCX export", "Bots B-D", "Sonnet models"] },
+  starter: { label: "Starter", price: "$49/mo", features: ["Daily scans", "5 active cases", "50 chat messages/case", "DOCX export", "Parse & fill"] },
+  professional: { label: "Professional", price: "$149/mo", features: ["Daily scans", "Unlimited cases", "Unlimited chat", "DOCX export", "Parse & fill", "Premium models"] },
 };
 
 function SettingsContent() {
@@ -54,7 +55,11 @@ function SettingsContent() {
   };
 
   if (loading) {
-    return <div className="max-w-3xl mx-auto px-6 py-8 text-sm text-stone-400">Loading...</div>;
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        <LoadingBar label="Loading settings..." />
+      </div>
+    );
   }
 
   const currentPlan = org?.plan || "free";

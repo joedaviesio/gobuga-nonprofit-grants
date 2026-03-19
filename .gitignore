@@ -1,5 +1,6 @@
 .env
 initial-sequence.md
+COST-ESTIMATES.md
 __pycache__/
 *.pyc
 .DS_Store

@@ -45,6 +45,14 @@ Write the report in this exact structure:
 
 ---
 
+## Priority Sectors
+
+{{SECTORS}}
+
+## Target Geographies
+
+{{GEOGRAPHIES}}
+
 ## Rules
 
 1. Every opportunity from the Watcher's evidence MUST appear in the report

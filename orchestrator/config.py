@@ -1,7 +1,7 @@
 """Bot configuration — the only file you edit to add/remove agents."""
 
-MODEL_INSPECTOR = "claude-sonnet-4-20250514"
-MODEL_ANALYST = "claude-sonnet-4-20250514"
+MODEL_INSPECTOR = "claude-haiku-4-5-20251001"
+MODEL_ANALYST = "claude-haiku-4-5-20251001"
 MODEL_REPORTER = "claude-haiku-4-5-20251001"
 
 AGENTS = [
@@ -14,7 +14,7 @@ AGENTS = [
         "depends_on": [],
         "model": MODEL_INSPECTOR,
         "tools": ["web_fetch", "web_search", "save_evidence"],
-        "max_iterations": 30,
+        "max_iterations": 12,
     },
     # Phase 2 — Analyst (depends on watcher output)
     {
@@ -25,7 +25,7 @@ AGENTS = [
         "depends_on": ["grant_watcher"],
         "model": MODEL_ANALYST,
         "tools": ["save_evidence"],
-        "max_iterations": 12,
+        "max_iterations": 5,
     },
     # Phase 3 — Reporter (compiles brief)
     {

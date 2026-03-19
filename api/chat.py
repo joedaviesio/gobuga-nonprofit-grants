@@ -12,9 +12,11 @@ from api.case_manager import (
     _uploads_dir,
 )
 from api.tenant import org_profile_path, org_data_dir
+from api.usage import new_usage, track_usage, finalize_usage
+from api.usage_log import log_usage
 from orchestrator.state_manager import load_state
 
-from orchestrator.main import _extract_pdf, _extract_docx, _strip_html
+from api.file_extraction import extract_text
 
 load_dotenv()
 
@@ -160,19 +162,9 @@ def _load_data_context(org_id: str) -> str:
             filepath = os.path.join(folder, fname)
             if not os.path.isfile(filepath):
                 continue
-            ext = os.path.splitext(fname)[1].lower()
             try:
-                if ext == ".pdf":
-                    content = _extract_pdf(filepath, max_pages=10)
-                elif ext == ".docx":
-                    content = _extract_docx(filepath)
-                elif ext in {".html", ".htm"}:
-                    with open(filepath, errors="replace") as f:
-                        content = _strip_html(f.read())
-                elif ext in {".md", ".txt", ".json", ".csv"}:
-                    with open(filepath, errors="replace") as f:
-                        content = f.read()
-                else:
+                content = extract_text(filepath, max_pages=10)
+                if not content:
                     continue
                 if len(content) > 4000:
                     content = content[:4000] + "\n... [truncated]"
@@ -192,18 +184,9 @@ def _extract_upload(org_id: str, case_id: str, filename: str) -> str:
     filepath = os.path.join(_uploads_dir(org_id, case_id), filename)
     if not os.path.exists(filepath):
         return f"File not found: {filename}"
-    ext = os.path.splitext(filename)[1].lower()
     try:
-        if ext == ".pdf":
-            return _extract_pdf(filepath, max_pages=20)
-        elif ext == ".docx":
-            return _extract_docx(filepath)
-        elif ext in {".html", ".htm"}:
-            with open(filepath, errors="replace") as f:
-                return _strip_html(f.read())
-        else:
-            with open(filepath, errors="replace") as f:
-                return f.read()
+        content = extract_text(filepath, max_pages=20)
+        return content if content else f"No text extracted from {filename}"
     except Exception as e:
         return f"Error reading {filename}: {e}"
 
@@ -273,6 +256,7 @@ def chat(org_id: str, case_id: str, user_message: str, model: str = None) -> dic
     client = anthropic.Anthropic()
     actions = []
     final_text = ""
+    usage = new_usage()
     max_iterations = 10
     iterations = 0
 
@@ -286,6 +270,7 @@ def chat(org_id: str, case_id: str, user_message: str, model: str = None) -> dic
             messages=messages,
             tools=CHAT_TOOLS,
         )
+        track_usage(usage, response)
 
         text_parts = []
         tool_calls = []
@@ -322,8 +307,12 @@ def chat(org_id: str, case_id: str, user_message: str, model: str = None) -> dic
     # Save assistant response
     append_message(org_id, case_id, "assistant", final_text, actions=actions if actions else None)
 
+    result_usage = finalize_usage(usage, chat_model)
+    log_usage(org_id, "chat", result_usage, case_id=case_id)
+
     return {
         "case_id": case_id,
         "response": final_text,
         "actions": actions,
+        "usage": result_usage,
     }

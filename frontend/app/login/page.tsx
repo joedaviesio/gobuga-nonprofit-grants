@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { login, getToken } from "@/lib/api";
+import LoadingBar from "@/app/loading-bar";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,11 +10,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect
-  if (typeof window !== "undefined" && getToken()) {
-    window.location.href = "/";
-    return null;
-  }
+  // If already logged in with a valid session, redirect
+  // (Don't just check token exists — it may be expired/invalid)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +70,9 @@ export default function LoginPage() {
             />
           </div>
 
+          {loading && (
+            <LoadingBar label="Signing in..." />
+          )}
           <button
             type="submit"
             disabled={loading}

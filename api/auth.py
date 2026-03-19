@@ -1,6 +1,5 @@
 """Authentication — user/org model with bcrypt hashing and session tokens."""
 
-import json
 import os
 import secrets
 import time
@@ -9,6 +8,7 @@ from datetime import datetime, timezone
 
 import bcrypt
 
+from api.store import load_json, save_json
 from api.tenant import (
     ensure_org_dirs,
     ensure_platform_dirs,
@@ -23,16 +23,12 @@ SESSION_TTL = 60 * 60 * 24 * 30  # 30 days
 # --- Low-level JSON store ---
 
 def _load_json(path: str) -> dict | list:
-    if os.path.exists(path):
-        with open(path) as f:
-            return json.load(f)
-    return {}
+    return load_json(path, default={})
 
 
 def _save_json(path: str, data):
     ensure_platform_dirs()
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
+    save_json(path, data)
 
 
 # --- Users ---
@@ -104,7 +100,7 @@ def _save_sessions(sessions: dict):
 
 # --- Public API ---
 
-def register(email: str, password: str, org_name: str) -> dict:
+def register(email: str, password: str, org_name: str, website_url: str = "") -> dict:
     """
     Register a new user and org.
     Returns {"token", "user_id", "org_id", "expires_in"}.
@@ -123,8 +119,10 @@ def register(email: str, password: str, org_name: str) -> dict:
     now = datetime.now(timezone.utc).isoformat()
     orgs[org_id] = {
         "name": org_name.strip(),
+        "website_url": website_url.strip() if website_url.strip().startswith(("http://", "https://")) else "https://" + website_url.strip() if website_url.strip() else "",
         "plan": "free",
         "setup_complete": False,
+        "seeding_complete": False,
         "created": now,
         "updated": now,
         "stripe_customer_id": None,

@@ -83,7 +83,7 @@ function SettingsContent() {
           </div>
           <div className="flex justify-between">
             <span className="text-stone-500">Website</span>
-            <span className="text-stone-800">{org?.website || "-"}</span>
+            <span className="text-stone-800">{org?.website_url || org?.website || "-"}</span>
           </div>
           {org?.sectors && org.sectors.length > 0 && (
             <div>

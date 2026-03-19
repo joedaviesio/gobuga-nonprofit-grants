@@ -140,6 +140,7 @@ export interface OrgProfile {
   setup_complete: boolean;
   country?: string;
   website?: string;
+  website_url?: string;
   mission?: string;
   sectors?: string[];
   geographies?: string[];

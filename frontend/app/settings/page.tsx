@@ -95,6 +95,16 @@ function SettingsContent() {
               </div>
             </div>
           )}
+          {org?.geographies && org.geographies.length > 0 && (
+            <div>
+              <span className="text-stone-500 block mb-1">Geographies</span>
+              <div className="flex flex-wrap gap-1">
+                {org.geographies.map((g) => (
+                  <span key={g} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{g}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

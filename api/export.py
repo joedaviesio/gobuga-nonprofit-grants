@@ -774,6 +774,26 @@ def export_xlsx(org_id: str, case_id: str, template_filename: str | None = None)
     return filepath
 
 
+def _convert_xls_to_xlsx(xls_path: str) -> str:
+    """Convert a legacy .xls file to .xlsx and return the new path."""
+    import xlrd
+    from openpyxl import Workbook
+
+    xls_wb = xlrd.open_workbook(xls_path)
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    for sheet in xls_wb.sheets():
+        ws = wb.create_sheet(title=sheet.name)
+        for row_idx in range(sheet.nrows):
+            for col_idx in range(sheet.ncols):
+                ws.cell(row=row_idx + 1, column=col_idx + 1, value=sheet.cell_value(row_idx, col_idx))
+
+    xlsx_path = xls_path + "x"  # .xls -> .xlsx
+    wb.save(xlsx_path)
+    return xlsx_path
+
+
 def _fill_xlsx_template(org_id: str, case_id: str, template_filename: str, sections: dict, exports_dir: str, ts: str) -> str | None:
     """Fill an uploaded XLSX template with draft content."""
     from openpyxl import load_workbook
@@ -781,6 +801,10 @@ def _fill_xlsx_template(org_id: str, case_id: str, template_filename: str, secti
     template_path = os.path.join(_uploads_dir(org_id, case_id), template_filename)
     if not os.path.exists(template_path):
         return None
+
+    # Convert legacy .xls to .xlsx before loading
+    if template_path.lower().endswith(".xls") and not template_path.lower().endswith(".xlsx"):
+        template_path = _convert_xls_to_xlsx(template_path)
 
     wb = load_workbook(template_path)
 

@@ -35,8 +35,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-stone-50">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-stone-800">gobuga</h1>
-          <p className="text-sm text-stone-500 mt-1">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-stone-800" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
+          <p className="text-sm text-stone-500 mt-1 font-[family-name:var(--font-dm-sans)]">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-lg p-6 space-y-4">

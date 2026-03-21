@@ -24,3 +24,4 @@ logs/
 data/
 sessions.json
 .gstack/
+plan/

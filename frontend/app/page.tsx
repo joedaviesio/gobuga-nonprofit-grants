@@ -19,12 +19,12 @@ import LoadingBar from "@/app/loading-bar";
 function PriorityBadge({ priority }: { priority: string }) {
   const colors =
     priority === "high"
-      ? "bg-red-100 text-red-700"
+      ? "bg-red-50 text-red-600 border border-red-200"
       : priority === "low"
-      ? "bg-stone-100 text-stone-500"
-      : "bg-amber-100 text-amber-700";
+      ? "bg-slate-50 text-slate-500 border border-slate-200"
+      : "bg-amber-50 text-amber-600 border border-amber-200";
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors}`}>
+    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
       {priority}
     </span>
   );
@@ -33,18 +33,18 @@ function PriorityBadge({ priority }: { priority: string }) {
 function StatusBadge({ status }: { status: string }) {
   const colors =
     status === "open"
-      ? "bg-blue-100 text-blue-700"
+      ? "bg-blue-50 text-blue-600 border border-blue-200"
       : status === "submitted"
-      ? "bg-amber-100 text-amber-700"
+      ? "bg-amber-50 text-amber-600 border border-amber-200"
       : status === "accepted" || status === "approved"
-      ? "bg-green-100 text-green-700"
+      ? "bg-green-50 text-green-600 border border-green-200"
       : status === "rejected"
-      ? "bg-red-100 text-red-700"
+      ? "bg-red-50 text-red-600 border border-red-200"
       : status === "closed"
-      ? "bg-stone-200 text-stone-500"
-      : "bg-stone-100 text-stone-600";
+      ? "bg-slate-100 text-slate-500 border border-slate-200"
+      : "bg-slate-50 text-slate-600 border border-slate-200";
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors}`}>
+    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
       {status}
     </span>
   );
@@ -59,10 +59,10 @@ function SimpleMarkdown({ text }: { text: string }) {
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/^- (.+)$/gm, "<li>$1</li>")
     .replace(/\n/g, "<br>");
-  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
+  return <div className="prose text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
 }
 
-// --- Report View Component (reused for brief tab and history viewing) ---
+// --- Report View Component ---
 function ReportView({
   report,
   isHistorical,
@@ -80,7 +80,7 @@ function ReportView({
     <div className="space-y-6">
       {/* Historical banner */}
       {isHistorical && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-2">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
           <div className="w-2 h-2 bg-amber-400 rounded-full" />
           <span className="text-xs text-amber-700">
             Viewing report from <strong>{report.date}</strong> (not the latest)
@@ -90,15 +90,15 @@ function ReportView({
 
       {/* Action Required */}
       {report.sections["Action Required"] && (
-        <div className="bg-white border border-stone-200 rounded-lg p-5">
-          <h2 className="text-sm font-bold text-stone-800 mb-3">Action Required</h2>
+        <div className="card-gradient border border-slate-200 rounded-xl p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-800 mb-3">Action Required</h2>
           <SimpleMarkdown text={report.sections["Action Required"]} />
         </div>
       )}
 
       {/* Opportunities */}
       <div>
-        <h2 className="text-sm font-bold text-stone-800 mb-3">Opportunities</h2>
+        <h2 className="text-sm font-semibold text-slate-800 mb-3 font-[family-name:var(--font-dm-sans)]">Opportunities</h2>
         {(() => {
           const filtered = report.opportunities.filter((opp) => {
             if (opp.expired) return false;
@@ -118,20 +118,20 @@ function ReportView({
               {sorted.map((opp) => (
             <div
               key={opp.id}
-              className={`bg-white border border-stone-200 rounded-lg p-4${opp.expired ? " opacity-50" : ""}`}
+              className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow${opp.expired ? " opacity-50" : ""}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <PriorityBadge priority={opp.priority} />
-                    <span className="text-sm font-medium text-stone-800">
+                    <span className="text-sm font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
                       {opp.title}
                     </span>
                   </div>
                   {opp.description && (
-                    <p className="text-xs text-stone-600 mt-1">{opp.description}</p>
+                    <p className="text-xs text-slate-600 mt-1">{opp.description}</p>
                   )}
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-stone-400">
+                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-400">
                     {opp.deadline && <span>Deadline: {opp.deadline}</span>}
                     {opp.amount && <span>Amount: {opp.amount}</span>}
                     {opp.funder && <span>Funder: {opp.funder}</span>}
@@ -139,7 +139,7 @@ function ReportView({
                   {opp.details.length > 0 && (
                     <ul className="mt-2 space-y-0.5">
                       {opp.details.map((d, i) => (
-                        <li key={i} className="text-xs text-stone-500">
+                        <li key={i} className="text-xs text-slate-500">
                           - {d}
                         </li>
                       ))}
@@ -171,7 +171,7 @@ function ReportView({
                   });
                   if (opp.expired) {
                     return (
-                      <span className="shrink-0 px-3 py-1.5 text-xs bg-stone-100 text-stone-400 rounded-md">
+                      <span className="shrink-0 px-3 py-1.5 text-xs bg-slate-100 text-slate-400 rounded-lg">
                         Expired
                       </span>
                     );
@@ -180,7 +180,7 @@ function ReportView({
                     return (
                       <a
                         href={`/case/${existingCase.case_id}`}
-                        className="shrink-0 px-3 py-1.5 text-xs bg-stone-100 text-stone-600 rounded-md hover:bg-stone-200"
+                        className="shrink-0 px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
                       >
                         View Case
                       </a>
@@ -190,7 +190,7 @@ function ReportView({
                     <button
                       onClick={() => onOpenCase(opp)}
                       disabled={openingCase === opp.id}
-                      className="shrink-0 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="shrink-0 px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                     >
                       {openingCase === opp.id ? "Creating..." : "Open Case"}
                     </button>
@@ -206,8 +206,8 @@ function ReportView({
 
       {/* Donor Intelligence */}
       {report.sections["Donor Intelligence"] && (
-        <div className="bg-white border border-stone-200 rounded-lg p-5">
-          <h2 className="text-sm font-bold text-stone-800 mb-3">Donor Intelligence</h2>
+        <div className="card-gradient border border-slate-200 rounded-xl p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-800 mb-3">Donor Intelligence</h2>
           <SimpleMarkdown text={report.sections["Donor Intelligence"]} />
         </div>
       )}
@@ -215,14 +215,14 @@ function ReportView({
       {/* Pipeline + Gaps */}
       <div className="grid grid-cols-2 gap-4">
         {report.sections["Pipeline Update"] && (
-          <div className="bg-white border border-stone-200 rounded-lg p-5">
-            <h2 className="text-sm font-bold text-stone-800 mb-3">Pipeline</h2>
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-800 mb-3">Pipeline</h2>
             <SimpleMarkdown text={report.sections["Pipeline Update"]} />
           </div>
         )}
         {report.sections["Gaps & Recommendations"] && (
-          <div className="bg-white border border-stone-200 rounded-lg p-5">
-            <h2 className="text-sm font-bold text-stone-800 mb-3">Gaps</h2>
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-800 mb-3">Gaps</h2>
             <SimpleMarkdown text={report.sections["Gaps & Recommendations"]} />
           </div>
         )}
@@ -236,7 +236,7 @@ const CASE_TABS = [
   { key: "submitted", label: "Submitted", color: "text-amber-600 border-amber-600" },
   { key: "accepted", label: "Accepted", color: "text-green-600 border-green-600" },
   { key: "rejected", label: "Rejected", color: "text-red-600 border-red-600" },
-  { key: "closed", label: "Closed", color: "text-stone-500 border-stone-500" },
+  { key: "closed", label: "Closed", color: "text-slate-500 border-slate-500" },
 ] as const;
 
 type CaseTab = (typeof CASE_TABS)[number]["key"];
@@ -279,7 +279,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
 
   return (
     <div>
-      <div className="flex gap-1 mb-4 border-b border-stone-200">
+      <div className="flex gap-1 mb-4 border-b border-slate-200">
         {CASE_TABS.map((t) => (
           <button
             key={t.key}
@@ -287,7 +287,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tab === t.key
                 ? t.color
-                : "text-stone-400 border-transparent hover:text-stone-600"
+                : "text-slate-400 border-transparent hover:text-slate-600"
             }`}
           >
             {t.label} ({counts[t.key]})
@@ -296,7 +296,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-stone-400 py-4">
+        <p className="text-sm text-slate-400 py-4">
           {cases.length === 0
             ? "No cases yet. Open one from the Daily Brief."
             : `No ${tab} cases.`}
@@ -309,10 +309,10 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
             <a
               key={c.case_id}
               href={`/case/${c.case_id}`}
-              className={`block p-4 rounded-lg bg-white transition-colors ${
+              className={`block p-4 rounded-xl bg-white transition-all hover:shadow-md ${
                 unread
-                  ? "border-2 border-red-300 hover:border-red-400"
-                  : "border-2 border-green-200 hover:border-green-300"
+                  ? "border-2 border-red-200 shadow-sm"
+                  : "border border-slate-200 shadow-sm"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -323,11 +323,11 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
                     </span>
                   )}
-                  <span className="text-sm font-mono font-medium text-stone-700">
+                  <span className="text-sm font-mono font-medium text-slate-700">
                     {c.case_id}
                   </span>
-                  <span className="mx-2 text-stone-300">|</span>
-                  <span className="text-sm text-stone-600">{c.grant_id}</span>
+                  <span className="mx-2 text-slate-300">|</span>
+                  <span className="text-sm text-slate-600">{c.grant_id}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {unread && (
@@ -338,7 +338,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
                   <StatusBadge status={c.status} />
                 </div>
               </div>
-              <div className="mt-1 flex gap-4 text-xs text-stone-400">
+              <div className="mt-1 flex gap-4 text-xs text-slate-400">
                 <span>{c.sections_count} sections</span>
                 <span>{c.uploads_count} uploads</span>
                 <span>updated {new Date(c.updated).toLocaleDateString()}</span>
@@ -365,16 +365,16 @@ export default function Dashboard() {
   const [watcherMsgIndex, setWatcherMsgIndex] = useState(0);
 
   const watcherMessages = [
-    "Scanning federal grant databases",
-    "Checking foundation directories",
-    "Crawling state agency portals",
-    "Indexing new RFPs and NOFAs",
-    "Parsing eligibility criteria",
-    "Matching keywords to your mission",
-    "Reviewing submission deadlines",
-    "Pulling program announcements",
-    "Screening for geographic fit",
-    "Cross-referencing funding priorities",
+    "Scanning",
+    "Checking",
+    "Crawling",
+    "Indexing",
+    "Parsing",
+    "Matching",
+    "Reviewing",
+    "Pulling",
+    "Screening",
+    "Cross-referencing",
   ];
 
   useEffect(() => {
@@ -387,7 +387,6 @@ export default function Dashboard() {
   }, [cyclePhase]);
   const [cycleMessage, setCycleMessage] = useState("");
 
-  // Resume polling if a cycle is already running on the backend
   const startCyclePolling = () => {
     setCycleStatus("running");
     const poll = setInterval(async () => {
@@ -449,7 +448,6 @@ export default function Dashboard() {
         setLatestDate(r?.date || null);
         setCases(c);
         setReportDates(dates);
-        // If a cycle is already running, resume polling
         if (cycleCheck && cycleCheck.status === "running") {
           if (cycleCheck.phase) setCyclePhase(cycleCheck.phase);
           startCyclePolling();
@@ -523,23 +521,23 @@ export default function Dashboard() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* Nav tabs */}
-      <div className="flex items-center gap-4 mb-6 border-b border-stone-200 pb-3">
+      <div className="flex items-center gap-4 mb-6 border-b border-slate-200 pb-3">
         <button
           onClick={handleViewLatest}
-          className={`text-sm font-medium pb-1 ${
+          className={`text-sm font-medium pb-1 transition-colors ${
             activeView === "brief"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-stone-400 hover:text-stone-600"
+              ? "text-slate-900 border-b-2 border-slate-900"
+              : "text-slate-400 hover:text-slate-600"
           }`}
         >
           Daily Brief
         </button>
         <button
           onClick={() => setActiveView("cases")}
-          className={`text-sm font-medium pb-1 ${
+          className={`text-sm font-medium pb-1 transition-colors ${
             activeView === "cases"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-stone-400 hover:text-stone-600"
+              ? "text-slate-900 border-b-2 border-slate-900"
+              : "text-slate-400 hover:text-slate-600"
           }`}
         >
           Cases ({cases.length})
@@ -554,16 +552,16 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => setActiveView("cycle")}
-          className={`text-sm font-medium pb-1 ${
+          className={`text-sm font-medium pb-1 transition-colors ${
             activeView === "cycle"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-stone-400 hover:text-stone-600"
+              ? "text-slate-900 border-b-2 border-slate-900"
+              : "text-slate-400 hover:text-slate-600"
           }`}
         >
           Run Cycle
         </button>
         {report && (
-          <span className="ml-auto text-xs text-stone-400">
+          <span className="ml-auto text-xs text-slate-400">
             {isHistorical ? `Viewing: ${report.date}` : `Last scan: ${report.date}`}
             {" "}&middot; {report.evidence_count} evidence items
           </span>
@@ -574,14 +572,14 @@ export default function Dashboard() {
       {activeView === "brief" && (
         <>
           {!report ? (
-            <div className="text-center py-12">
-              <div className="mx-auto mb-6 w-64 h-32 rounded-lg overflow-hidden border border-stone-200">
+            <div className="text-center py-16">
+              <div className="mx-auto mb-6 w-64 h-32 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
                 <div className="pixel-gradient w-full h-full" />
               </div>
-              <p className="text-sm text-stone-400">No reports yet. Run a cycle first.</p>
+              <p className="text-sm text-slate-400">No reports yet. Run a cycle first.</p>
               <button
                 onClick={() => setActiveView("cycle")}
-                className="mt-3 px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="mt-4 px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Go to Run Cycle
               </button>
@@ -592,7 +590,7 @@ export default function Dashboard() {
                 <div className="mb-4 flex justify-end">
                   <button
                     onClick={handleViewLatest}
-                    className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
                   >
                     Back to latest ({latestDate})
                   </button>
@@ -619,9 +617,9 @@ export default function Dashboard() {
       {activeView === "cycle" && (
         <div className="max-w-lg mx-auto space-y-6">
           {/* Run controls */}
-          <div className="bg-white border border-stone-200 rounded-lg p-6">
-            <h2 className="text-sm font-bold text-stone-800 mb-1">Run Grant Scanning Cycle</h2>
-            <p className="text-xs text-stone-500 mb-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-800 mb-1">Run Grant Scanning Cycle</h2>
+            <p className="text-xs text-slate-500 mb-4">
               Scans for opportunities, assesses fit, and compiles your daily brief. Takes around 3 minutes.
             </p>
 
@@ -629,7 +627,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 <button
                   onClick={handleRunCycle}
-                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Run Cycle
                 </button>
@@ -641,8 +639,8 @@ export default function Dashboard() {
             ) : cycleStatus === "running" ? (
               <div className="py-4">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                  <span className="text-sm font-medium text-blue-700">Cycle running</span>
+                  <div className="w-3 h-3 rounded-full animate-pulse brand-gradient" />
+                  <span className="text-sm font-medium text-slate-700">Cycle running</span>
                 </div>
 
                 {/* Progress bar */}
@@ -658,10 +656,10 @@ export default function Dashboard() {
 
                   return (
                     <div>
-                      {/* Bar track */}
-                      <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden mb-4">
+                      {/* Gradient progress bar */}
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
                         <div
-                          className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
+                          className="h-full rounded-full transition-all duration-1000 ease-out brand-gradient"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
@@ -677,17 +675,17 @@ export default function Dashboard() {
                                 <span className="text-green-500 text-sm w-4 text-center">&#10003;</span>
                               ) : isActive ? (
                                 <div className="w-4 flex justify-center">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                  <div className="w-2 h-2 rounded-full animate-pulse brand-gradient" />
                                 </div>
                               ) : (
                                 <div className="w-4 flex justify-center">
-                                  <div className="w-2 h-2 bg-stone-200 rounded-full" />
+                                  <div className="w-2 h-2 bg-slate-200 rounded-full" />
                                 </div>
                               )}
                               <span className={`text-xs ${
-                                isActive ? "text-blue-700 font-medium" :
-                                isDone ? "text-stone-400" :
-                                "text-stone-400"
+                                isActive ? "text-slate-700 font-medium" :
+                                isDone ? "text-slate-400" :
+                                "text-slate-400"
                               }`}>
                                 {phase.label}{isActive ? ` — ${phase.desc}...` : isDone ? ` — done` : ""}
                               </span>
@@ -699,7 +697,7 @@ export default function Dashboard() {
                   );
                 })()}
 
-                <p className="text-xs text-stone-400 mt-4">
+                <p className="text-xs text-slate-400 mt-4">
                   Takes around 3 minutes. You can switch to other tabs while it runs.
                 </p>
               </div>
@@ -714,7 +712,7 @@ export default function Dashboard() {
                     handleViewLatest();
                     setCycleStatus("idle");
                   }}
-                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 mt-2"
+                  className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mt-2"
                 >
                   View Daily Brief
                 </button>
@@ -725,7 +723,7 @@ export default function Dashboard() {
               <p className={`text-xs mt-3 ${
                 cycleStatus === "error" ? "text-red-600" :
                 cycleStatus === "complete" ? "text-green-600" :
-                "text-stone-500"
+                "text-slate-500"
               }`}>
                 {cycleMessage}
               </p>
@@ -733,30 +731,30 @@ export default function Dashboard() {
           </div>
 
           {/* Cycle History */}
-          <div className="bg-white border border-stone-200 rounded-lg p-5">
-            <h3 className="text-xs font-bold text-stone-700 mb-3">Cycle History</h3>
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-xs font-semibold text-slate-700 mb-3">Cycle History</h3>
             {reportDates.length === 0 ? (
-              <p className="text-xs text-stone-400">No cycles have been run yet.</p>
+              <p className="text-xs text-slate-400">No cycles have been run yet.</p>
             ) : (
               <div className="space-y-1">
                 {[...reportDates].sort((a, b) => b.localeCompare(a)).map((date) => (
                   <button
                     key={date}
                     onClick={() => handleViewReport(date)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-md hover:bg-stone-50 text-left group"
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 text-left group transition-colors"
                   >
                     <div className="flex items-center gap-2">
                       {date === latestDate ? (
                         <div className="w-2 h-2 bg-green-400 rounded-full" />
                       ) : (
-                        <div className="w-2 h-2 bg-stone-300 rounded-full" />
+                        <div className="w-2 h-2 bg-slate-300 rounded-full" />
                       )}
-                      <span className="text-sm font-mono text-stone-700">{date}</span>
+                      <span className="text-sm font-mono text-slate-700">{date}</span>
                       {date === latestDate && (
                         <span className="text-xs text-green-600 font-medium">latest</span>
                       )}
                     </div>
-                    <span className="text-xs text-stone-400 group-hover:text-blue-600">
+                    <span className="text-xs text-slate-400 group-hover:text-slate-600 transition-colors">
                       View report
                     </span>
                   </button>

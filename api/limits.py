@@ -1,82 +1,142 @@
-"""Plan enforcement — tier limits and model selection."""
+"""Plan enforcement — scanner/officer tier limits and model selection."""
 
-from api.auth import get_org
-from api.usage_log import count_cycles_this_month
+from api.auth import get_org, update_org
 from api.case_manager import list_cases
 
 
-# --- Plan definitions ---
+# --- Tier definitions ---
 
-PLANS = {
-    "free": {
-        "label": "Free",
+TIERS = {
+    "scanner": {
+        "label": "Grant Scanner",
         "price_monthly": 0,
-        "cycles_per_month": 2,
-        "active_cases": 1,
+        "opportunities_per_cycle": {
+            "high": 2,
+            "medium": 2,
+            "low": 1,
+        },
+        "max_open_cases": 1,
         "chat_messages_per_case": 5,
         "bots_bcd": False,
         "export_docx": False,
-        "evidence_retention_days": 30,
         "model": "claude-haiku-4-5-20251001",
     },
-    "starter": {
-        "label": "Starter",
+    "officer": {
+        "label": "Grant Officer",
         "price_monthly": 49,
-        "cycles_per_month": 30,
-        "active_cases": 5,
-        "chat_messages_per_case": 50,
-        "bots_bcd": True,
-        "export_docx": True,
-        "evidence_retention_days": 90,
-        "model": "claude-haiku-4-5-20251001",
-    },
-    "professional": {
-        "label": "Professional",
-        "price_monthly": 149,
-        "cycles_per_month": 30,
-        "active_cases": -1,  # unlimited
+        "opportunities_per_cycle": None,  # unlimited
+        "max_open_cases": -1,  # unlimited
         "chat_messages_per_case": -1,  # unlimited
         "bots_bcd": True,
         "export_docx": True,
-        "evidence_retention_days": 365,
         "model": "claude-sonnet-4-20250514",
     },
 }
 
+# Map old plan keys to new tier keys for backwards compat
+_PLAN_TO_TIER = {
+    "free": "scanner",
+    "starter": "officer",
+    "professional": "officer",
+}
 
-def get_plan(org_id: str) -> dict:
-    """Get the plan config for an org."""
+
+def get_tier_key(org_id: str) -> str:
+    """Get the tier key (scanner/officer) for an org."""
     org = get_org(org_id)
-    plan_key = org.get("plan", "free") if org else "free"
-    return PLANS.get(plan_key, PLANS["free"])
+    plan = org.get("plan", "free") if org else "free"
+    return _PLAN_TO_TIER.get(plan, plan if plan in TIERS else "scanner")
 
 
-def get_plan_key(org_id: str) -> str:
-    """Get the plan key (free/starter/professional) for an org."""
+def get_tier(org_id: str) -> dict:
+    """Get the tier config for an org."""
+    return TIERS.get(get_tier_key(org_id), TIERS["scanner"])
+
+
+def toggle_tier(org_id: str) -> str:
+    """Toggle between scanner and officer. Returns the new tier key."""
+    current = get_tier_key(org_id)
+    new_tier = "officer" if current == "scanner" else "scanner"
+    # Store as plan key for compat
+    plan_key = "free" if new_tier == "scanner" else "starter"
+    update_org(org_id, {"plan": plan_key})
+    return new_tier
+
+
+# --- Opportunity filtering ---
+
+def filter_opportunities_for_tier(opportunities: list, org_id: str) -> list:
+    """Filter opportunities based on tier limits.
+    Scanner: 2 high, 2 medium, 1 low.
+    Officer: all opportunities.
+    """
+    tier = get_tier(org_id)
+    limits = tier["opportunities_per_cycle"]
+    if limits is None:
+        return opportunities  # officer gets all
+
+    counts = {"high": 0, "medium": 0, "low": 0}
+    filtered = []
+    for opp in opportunities:
+        priority = opp.get("priority", "medium")
+        cap = limits.get(priority, 0)
+        if counts.get(priority, 0) < cap:
+            filtered.append(opp)
+            counts[priority] = counts.get(priority, 0) + 1
+    return filtered
+
+
+# --- Cycle timer ---
+
+def get_cycle_timer(org_id: str) -> dict | None:
+    """Get the current cycle timer state. Returns {triggered_at, expires_at, remaining_seconds} or None."""
+    from datetime import datetime, timezone, timedelta
     org = get_org(org_id)
-    return org.get("plan", "free") if org else "free"
-
-
-# --- Limit checks ---
-
-def check_cycle_limit(org_id: str) -> dict:
-    """Check if the org can run another cycle this month. Returns {allowed, used, limit, message}."""
-    plan = get_plan(org_id)
-    limit = plan["cycles_per_month"]
-    used = count_cycles_this_month(org_id)
-    allowed = used < limit
+    if not org:
+        return None
+    triggered_at = org.get("cycle_triggered_at")
+    if not triggered_at:
+        return None
+    triggered = datetime.fromisoformat(triggered_at)
+    expires = triggered + timedelta(days=7)
+    now = datetime.now(timezone.utc)
+    remaining = max(0, (expires - now).total_seconds())
     return {
-        "allowed": allowed,
-        "used": used,
-        "limit": limit,
-        "message": f"Cycle limit reached ({used}/{limit}). Upgrade for daily scanning." if not allowed else None,
+        "triggered_at": triggered_at,
+        "expires_at": expires.isoformat(),
+        "remaining_seconds": int(remaining),
+        "expired": remaining <= 0,
     }
 
 
+def trigger_cycle(org_id: str) -> dict:
+    """Trigger a new cycle. Returns the timer state."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    update_org(org_id, {"cycle_triggered_at": now})
+    return get_cycle_timer(org_id)
+
+
+def can_trigger_cycle(org_id: str) -> dict:
+    """Check if the org can trigger a new cycle. Returns {allowed, message, timer}."""
+    timer = get_cycle_timer(org_id)
+    if timer is None:
+        return {"allowed": True, "message": None, "timer": None}
+    if timer["expired"]:
+        return {"allowed": True, "message": None, "timer": timer}
+    return {
+        "allowed": False,
+        "message": "Cycle already active. Next cycle available when timer expires.",
+        "timer": timer,
+    }
+
+
+# --- Case limit checks ---
+
 def check_case_limit(org_id: str) -> dict:
-    """Check if the org can create another active case. Returns {allowed, active, limit, message}."""
-    plan = get_plan(org_id)
-    limit = plan["active_cases"]
+    """Check if the org can open another case. Returns {allowed, active, limit, message}."""
+    tier = get_tier(org_id)
+    limit = tier["max_open_cases"]
     if limit == -1:
         return {"allowed": True, "active": 0, "limit": -1, "message": None}
 
@@ -87,14 +147,14 @@ def check_case_limit(org_id: str) -> dict:
         "allowed": allowed,
         "active": active,
         "limit": limit,
-        "message": f"Active case limit reached ({active}/{limit}). Upgrade for more cases." if not allowed else None,
+        "message": f"Case limit reached ({active}/{limit}). Upgrade to Officer for unlimited cases." if not allowed else None,
     }
 
 
 def check_chat_limit(org_id: str, case_id: str) -> dict:
-    """Check if the case has chat messages remaining. Returns {allowed, used, limit, message}."""
-    plan = get_plan(org_id)
-    limit = plan["chat_messages_per_case"]
+    """Check if the case has chat messages remaining."""
+    tier = get_tier(org_id)
+    limit = tier["chat_messages_per_case"]
     if limit == -1:
         return {"allowed": True, "used": 0, "limit": -1, "message": None}
 
@@ -109,41 +169,41 @@ def check_chat_limit(org_id: str, case_id: str) -> dict:
         "allowed": allowed,
         "used": user_messages,
         "limit": limit,
-        "message": f"Chat limit reached ({user_messages}/{limit} messages). Upgrade for more." if not allowed else None,
+        "message": f"Chat limit reached ({user_messages}/{limit}). Upgrade to Officer for unlimited." if not allowed else None,
     }
 
 
 def check_feature_access(org_id: str, feature: str) -> dict:
-    """Check if the org has access to a feature. Returns {allowed, message}."""
-    plan = get_plan(org_id)
-    plan_key = get_plan_key(org_id)
+    """Check if the org has access to a feature."""
+    tier = get_tier(org_id)
+    tier_key = get_tier_key(org_id)
 
     feature_checks = {
-        "bots_bcd": plan.get("bots_bcd", False),
-        "export_docx": plan.get("export_docx", False),
+        "bots_bcd": tier.get("bots_bcd", False),
+        "export_docx": tier.get("export_docx", False),
     }
 
     allowed = feature_checks.get(feature, True)
     return {
         "allowed": allowed,
-        "plan": plan_key,
-        "message": f"This feature requires a paid plan. You're on {plan['label']}." if not allowed else None,
+        "tier": tier_key,
+        "message": f"This feature requires Grant Officer. You're on {tier['label']}." if not allowed else None,
     }
 
 
 # --- Model selection ---
 
 def get_model_for_org(org_id: str) -> str:
-    """Get the AI model for this org's plan tier."""
-    plan = get_plan(org_id)
-    return plan["model"]
+    """Get the AI model for this org's tier."""
+    tier = get_tier(org_id)
+    return tier["model"]
 
 
 def get_model_overrides(org_id: str) -> dict:
-    """Get model overrides for the cycle runner based on plan tier."""
+    """Get model overrides for the cycle runner based on tier."""
     model = get_model_for_org(org_id)
     return {
         "grant_watcher": model,
         "grant_analyst": model,
-        "grant_reporter": "claude-haiku-4-5-20251001",  # Reporter always uses Haiku (cheap)
+        "grant_reporter": "claude-haiku-4-5-20251001",
     }

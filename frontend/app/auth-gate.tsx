@@ -11,12 +11,14 @@ interface AuthContextType {
   logout: () => void;
   session: VerifyResponse | null;
   loading: boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   session: null,
   loading: true,
+  refreshSession: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -63,9 +65,16 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   };
 
+  const refreshSession = async () => {
+    const result = await verifySession();
+    if (result && result.valid) {
+      setSession(result);
+    }
+  };
+
   if (isPublic) {
     return (
-      <AuthContext.Provider value={{ logout: handleLogout, session, loading: false }}>
+      <AuthContext.Provider value={{ logout: handleLogout, session, loading: false, refreshSession }}>
         {children}
       </AuthContext.Provider>
     );
@@ -82,7 +91,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ logout: handleLogout, session, loading }}>
+    <AuthContext.Provider value={{ logout: handleLogout, session, loading, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );

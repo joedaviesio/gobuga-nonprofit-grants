@@ -229,3 +229,12 @@ def logout(token: str):
     sessions = _load_sessions()
     sessions.pop(token, None)
     _save_sessions(sessions)
+
+
+def verify_password(user_id: str, password: str) -> bool:
+    """Verify a user's password by user_id. Used for cycle trigger confirmation."""
+    users = _load_users()
+    user = users.get(user_id)
+    if not user:
+        return False
+    return bcrypt.checkpw(password.encode(), user["password_hash"].encode())

@@ -1,7 +1,9 @@
 const BASE = "/api";
-const BOT_BASE = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api`
-  : "http://localhost:8102/api";
+// In production, BOT_BASE should also go through the Next.js rewrite proxy
+// to avoid cross-origin issues. Only fall back to direct backend in local dev.
+const BOT_BASE = process.env.NEXT_PUBLIC_BOT_URL
+  ? `${process.env.NEXT_PUBLIC_BOT_URL}/api`
+  : (process.env.NEXT_PUBLIC_API_URL ? "/api" : "http://localhost:8102/api");
 
 // --- Auth helpers ---
 
@@ -80,6 +82,13 @@ export const login = async (email: string, password: string): Promise<AuthRespon
   return data;
 };
 
+export interface CycleTimer {
+  triggered_at: string;
+  expires_at: string;
+  remaining_seconds: number;
+  expired: boolean;
+}
+
 export interface VerifyResponse {
   valid: boolean;
   user_id: string;
@@ -87,6 +96,9 @@ export interface VerifyResponse {
   org_name: string;
   setup_complete: boolean;
   seeding_complete: boolean;
+  tier: "scanner" | "officer";
+  tier_label: string;
+  cycle_timer: CycleTimer | null;
 }
 
 export const verifySession = async (): Promise<VerifyResponse | null> => {
@@ -149,6 +161,18 @@ export interface OrgProfile {
 
 export const getOrgProfile = () => request<OrgProfile>("/org/profile");
 
+export const updateOrgProfile = (updates: {
+  name?: string;
+  country?: string;
+  website?: string;
+  sectors?: string[];
+  geographies?: string[];
+}) =>
+  request<OrgProfile>("/org/profile", {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+
 export const getOrgUsage = (date?: string) =>
   request<Record<string, unknown>>(`/org/usage${date ? `?date=${date}` : ""}`);
 
@@ -171,6 +195,9 @@ export const uploadOrgDocument = async (file: File, docType: string) => {
 export const listOrgUploads = () =>
   request<{ filename: string; size: number }[]>("/org/uploads");
 
+export const deleteOrgUpload = (filename: string) =>
+  request<{ deleted: string }>(`/org/uploads/${encodeURIComponent(filename)}`, { method: "DELETE" });
+
 export const completeSeedingStep = () =>
   request<{ ok: boolean }>("/org/seeding-complete", { method: "POST" });
 
@@ -184,6 +211,26 @@ export const createCheckout = (plan: string) =>
 
 export const getBillingPortal = () =>
   request<{ url: string }>("/billing/portal");
+
+// --- Tier ---
+
+export interface TierInfo {
+  tier: "scanner" | "officer";
+  tier_label: string;
+  cycle_timer: CycleTimer | null;
+}
+
+export const toggleTier = () =>
+  request<TierInfo>("/org/toggle-tier", { method: "POST" });
+
+export const getTierInfo = () =>
+  request<TierInfo & { can_trigger_cycle: boolean; trigger_message: string | null }>("/org/tier");
+
+export const triggerCycle = (password: string) =>
+  request<{ ok: boolean; cycle_timer: CycleTimer }>("/org/trigger-cycle", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
 
 // --- Types ---
 

@@ -36,7 +36,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
 
         kwargs = {
             "model": agent_config["model"],
-            "max_tokens": 4096,
+            "max_tokens": agent_config.get("max_tokens", 4096),
             "system": system_prompt,
             "messages": messages,
         }
@@ -85,7 +85,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
         messages.append({"role": "user", "content": tool_results})
 
     # Log usage
-    from api.bots import PRICING
+    from api.usage import PRICING
     model = agent_config["model"]
     prices = PRICING.get(model, PRICING["claude-haiku-4-5-20251001"])
     cost = round(

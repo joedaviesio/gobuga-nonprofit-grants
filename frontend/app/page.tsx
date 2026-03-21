@@ -9,10 +9,12 @@ import {
   openCaseFromOpportunity,
   runCycle,
   getCycleStatus,
+  triggerCycle,
   type Report,
   type Opportunity,
   type CaseSummary,
 } from "@/lib/api";
+import { useAuth } from "./auth-gate";
 import DOMPurify from "dompurify";
 import LoadingBar from "@/app/loading-bar";
 
@@ -85,14 +87,6 @@ function ReportView({
           <span className="text-xs text-amber-700">
             Viewing report from <strong>{report.date}</strong> (not the latest)
           </span>
-        </div>
-      )}
-
-      {/* Action Required */}
-      {report.sections["Action Required"] && (
-        <div className="card-gradient border border-slate-200 rounded-xl p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-800 mb-3">Action Required</h2>
-          <SimpleMarkdown text={report.sections["Action Required"]} />
         </div>
       )}
 
@@ -250,11 +244,17 @@ function getViewedCases(): Record<string, string> {
   }
 }
 
-function isCaseUnread(c: CaseSummary): boolean {
+function isNewOpenCase(c: CaseSummary): boolean {
+  if (c.status !== "open") return false;
   const viewed = getViewedCases();
   const lastSeen = viewed[c.case_id];
-  if (!lastSeen) return true;
-  return new Date(c.updated) > new Date(lastSeen);
+  if (!lastSeen) {
+    // Auto-dismiss cases older than 48h
+    const age = Date.now() - new Date(c.created).getTime();
+    if (age > 48 * 60 * 60 * 1000) return false;
+    return true;
+  }
+  return false;
 }
 
 function CasesView({ cases }: { cases: CaseSummary[] }) {
@@ -303,40 +303,21 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
         </p>
       ) : (
         <div className="space-y-2">
-          {filtered.map((c) => {
-            const unread = isCaseUnread(c);
-            return (
+          {filtered.map((c) => (
             <a
               key={c.case_id}
               href={`/case/${c.case_id}`}
-              className={`block p-4 rounded-xl bg-white transition-all hover:shadow-md ${
-                unread
-                  ? "border-2 border-red-200 shadow-sm"
-                  : "border border-slate-200 shadow-sm"
-              }`}
+              className="block p-4 rounded-xl bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {unread && (
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                    </span>
-                  )}
                   <span className="text-sm font-mono font-medium text-slate-700">
                     {c.case_id}
                   </span>
                   <span className="mx-2 text-slate-300">|</span>
                   <span className="text-sm text-slate-600">{c.grant_id}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {unread && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
-                      New
-                    </span>
-                  )}
-                  <StatusBadge status={c.status} />
-                </div>
+                <StatusBadge status={c.status} />
               </div>
               <div className="mt-1 flex gap-4 text-xs text-slate-400">
                 <span>{c.sections_count} sections</span>
@@ -344,8 +325,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
                 <span>updated {new Date(c.updated).toLocaleDateString()}</span>
               </div>
             </a>
-            );
-          })}
+          ))}
         </div>
       )}
     </div>
@@ -353,6 +333,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
 }
 
 export default function Dashboard() {
+  const { session, refreshSession } = useAuth();
   const [report, setReport] = useState<Report | null>(null);
   const [latestDate, setLatestDate] = useState<string | null>(null);
   const [reportDates, setReportDates] = useState<string[]>([]);
@@ -363,6 +344,8 @@ export default function Dashboard() {
   const [cycleStatus, setCycleStatus] = useState<string>("idle");
   const [cyclePhase, setCyclePhase] = useState<string | null>(null);
   const [watcherMsgIndex, setWatcherMsgIndex] = useState(0);
+  const [cyclePassword, setCyclePassword] = useState("");
+  const [triggerError, setTriggerError] = useState("");
 
   const watcherMessages = [
     "Scanning",
@@ -490,6 +473,41 @@ export default function Dashboard() {
     }
   };
 
+  const handleTriggerAndRunCycle = async () => {
+    setTriggerError("");
+    setCycleStatus("starting");
+    setCycleMessage("");
+
+    // Step 1: Trigger the cycle timer with password
+    try {
+      await triggerCycle(cyclePassword);
+      setCyclePassword("");
+      await refreshSession(); // update timer in header
+    } catch (err) {
+      setCycleStatus("idle");
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("403")) {
+        setTriggerError("Invalid password.");
+      } else if (msg.includes("409")) {
+        setTriggerError("Cycle already active.");
+      } else {
+        setTriggerError(msg);
+      }
+      return;
+    }
+
+    // Step 2: Run the actual cycle
+    try {
+      await runCycle();
+      setCycleMessage("Cycle started. Scanning for grant opportunities...");
+      startCyclePolling();
+    } catch (err) {
+      setCycleStatus("error");
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setCycleMessage(`Failed to start cycle: ${msg}`);
+    }
+  };
+
   const handleRunCycle = async () => {
     setCycleStatus("starting");
     setCycleMessage("");
@@ -500,11 +518,7 @@ export default function Dashboard() {
     } catch (err) {
       setCycleStatus("error");
       const msg = err instanceof Error ? err.message : "Unknown error";
-      if (msg.includes("403")) {
-        setCycleMessage("Invalid password.");
-      } else {
-        setCycleMessage(`Failed to start cycle: ${msg}`);
-      }
+      setCycleMessage(`Failed to start cycle: ${msg}`);
     }
   };
 
@@ -542,10 +556,10 @@ export default function Dashboard() {
         >
           Cases ({cases.length})
           {(() => {
-            const unreadCount = cases.filter(isCaseUnread).length;
-            return unreadCount > 0 ? (
+            const newOpen = cases.filter(isNewOpenCase).length;
+            return newOpen > 0 ? (
               <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-                {unreadCount}
+                {newOpen}
               </span>
             ) : null;
           })()}
@@ -625,12 +639,54 @@ export default function Dashboard() {
 
             {cycleStatus === "idle" || cycleStatus === "error" ? (
               <div className="space-y-3">
-                <button
-                  onClick={handleRunCycle}
-                  className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Run Cycle
-                </button>
+                {/* Password-gated cycle trigger */}
+                {(!session?.cycle_timer || session.cycle_timer.expired) ? (
+                  <>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Enter password to start cycle</label>
+                      <input
+                        type="password"
+                        value={cyclePassword}
+                        onChange={(e) => { setCyclePassword(e.target.value); setTriggerError(""); }}
+                        onKeyDown={(e) => e.key === "Enter" && cyclePassword && handleTriggerAndRunCycle()}
+                        placeholder="Your account password"
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400"
+                      />
+                    </div>
+                    {triggerError && (
+                      <p className="text-xs text-red-600">{triggerError}</p>
+                    )}
+                    <button
+                      onClick={handleTriggerAndRunCycle}
+                      disabled={!cyclePassword}
+                      className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      Run Cycle
+                    </button>
+                  </>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                        <span className="text-xs font-medium text-blue-700">Next cycle available in</span>
+                      </div>
+                      {session?.cycle_timer && (
+                        <span className="text-sm font-mono font-medium text-blue-600 tabular-nums">
+                          {(() => {
+                            const remaining = Math.max(0, Math.floor((new Date(session.cycle_timer.expires_at).getTime() - Date.now()) / 1000));
+                            const d = Math.floor(remaining / 86400);
+                            const h = Math.floor((remaining % 86400) / 3600);
+                            const m = Math.floor((remaining % 3600) / 60);
+                            if (d > 0) return `${d}d ${h}h ${m}m`;
+                            if (h > 0) return `${h}h ${m}m`;
+                            return `${m}m`;
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : cycleStatus === "starting" ? (
               <div className="py-4">

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, DM_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import AuthGate from "./auth-gate";
 import { HeaderLogout } from "./header-logout";
+import { HeaderTierLabel } from "./header-tier-label";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,7 +45,7 @@ export default function RootLayout({
           <header className="border-b border-stone-200 px-6 py-3 flex items-center justify-between">
             <a href="/" className="flex items-center gap-2">
               <span className="text-lg font-bold text-stone-800" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</span>
-              <span className="text-xs text-stone-400 font-[family-name:var(--font-dm-sans)]">Grant Scanner</span>
+              <HeaderTierLabel />
             </a>
             <HeaderLogout />
           </header>

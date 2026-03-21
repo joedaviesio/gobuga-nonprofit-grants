@@ -1,24 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, updateOrgProfile, type OrgProfile } from "@/lib/api";
+import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, updateOrgProfile, toggleTier, listOrgUploads, uploadOrgDocument, deleteOrgUpload, type OrgProfile } from "@/lib/api";
 import { GEOGRAPHIES } from "@/lib/geographies";
 import { SECTORS } from "@/lib/sectors";
 import LoadingBar from "@/app/loading-bar";
 import AuthGate, { useAuth } from "../auth-gate";
 
-const PLAN_INFO = {
-  free: { label: "Free", price: "$0/mo", features: ["2 scans/month", "1 active case", "5 chat messages/case"] },
-  starter: { label: "Starter", price: "$49/mo", features: ["Daily scans", "5 active cases", "50 chat messages/case", "DOCX export", "Parse & fill"] },
-  professional: { label: "Professional", price: "$149/mo", features: ["Daily scans", "Unlimited cases", "Unlimited chat", "DOCX export", "Parse & fill", "Premium models"] },
+const TIER_INFO = {
+  scanner: {
+    label: "Grant Scanner",
+    price: "Free",
+    features: ["1 cycle per week", "5 opportunities per cycle", "1 open case at a time", "5 chat messages/case"],
+  },
+  officer: {
+    label: "Grant Officer",
+    price: "$49 NZD/mo (~$29 USD)",
+    features: ["1 cycle per week", "All opportunities", "Unlimited open cases", "Unlimited chat", "DOCX export", "Parse & fill", "Premium models"],
+  },
 };
 
 function SettingsContent() {
-  const { session } = useAuth();
+  const { session, refreshSession } = useAuth();
   const [org, setOrg] = useState<OrgProfile | null>(null);
   const [usage, setUsage] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [togglingTier, setTogglingTier] = useState(false);
+
+  // Uploads state
+  const [uploads, setUploads] = useState<{ filename: string; size: number }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [uploadDocType, setUploadDocType] = useState("general");
 
   // Editing state
   const [editing, setEditing] = useState<string | null>(null); // "name" | "country" | "website" | "sectors" | "geographies"
@@ -32,9 +45,11 @@ function SettingsContent() {
     Promise.all([
       getOrgProfile().catch(() => null),
       getOrgUsage().catch(() => null),
-    ]).then(([o, u]) => {
+      listOrgUploads().catch(() => []),
+    ]).then(([o, u, files]) => {
       setOrg(o);
       setUsage(u);
+      setUploads(files);
       setLoading(false);
     });
   }, []);
@@ -146,28 +161,45 @@ function SettingsContent() {
     });
   };
 
-  const handleUpgrade = async (plan: string) => {
-    setUpgrading(plan);
+  const handleToggleTier = async () => {
+    setTogglingTier(true);
     try {
-      const result = await createCheckout(plan);
-      if (result.url) {
-        window.location.href = result.url;
-      }
+      await toggleTier();
+      await refreshSession();
+      const fresh = await getOrgProfile().catch(() => null);
+      if (fresh) setOrg(fresh);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to create checkout");
+      alert(err instanceof Error ? err.message : "Failed to toggle tier");
     } finally {
-      setUpgrading(null);
+      setTogglingTier(false);
     }
   };
 
-  const handleManageBilling = async () => {
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
     try {
-      const result = await getBillingPortal();
-      if (result.url) {
-        window.location.href = result.url;
-      }
+      await uploadOrgDocument(file, uploadDocType);
+      const fresh = await listOrgUploads().catch(() => []);
+      setUploads(fresh);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to open billing portal");
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteFile = async (filename: string) => {
+    setDeletingFile(filename);
+    try {
+      await deleteOrgUpload(filename);
+      setUploads((prev) => prev.filter((f) => f.filename !== filename));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingFile(null);
     }
   };
 
@@ -179,8 +211,8 @@ function SettingsContent() {
     );
   }
 
-  const currentPlan = org?.plan || "free";
-  const planInfo = PLAN_INFO[currentPlan as keyof typeof PLAN_INFO] || PLAN_INFO.free;
+  const currentTier = session?.tier || "scanner";
+  const tierInfo = TIER_INFO[currentTier] || TIER_INFO.scanner;
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -410,66 +442,113 @@ function SettingsContent() {
         </div>
       </div>
 
-      {/* Plan */}
+      {/* Organisation Data */}
       <div className="bg-white border border-stone-200 rounded-lg p-5">
-        <h2 className="text-sm font-bold text-stone-700 mb-3">Plan</h2>
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-sm font-medium text-stone-800">{planInfo.label}</span>
-          <span className="text-xs text-stone-400">{planInfo.price}</span>
+        <h2 className="text-sm font-bold text-stone-700 mb-1">Organisation Data</h2>
+        <p className="text-xs text-stone-400 mb-4">
+          Upload documents that inform your grant scanning cycles. These are used as context when identifying and assessing opportunities.
+        </p>
+
+        {/* Upload */}
+        <div className="flex items-center gap-2 mb-4">
+          <select
+            value={uploadDocType}
+            onChange={(e) => setUploadDocType(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:border-blue-400"
+          >
+            <option value="general">General</option>
+            <option value="annual-reports">Annual Reports</option>
+            <option value="mission-statements">Mission Statements</option>
+            <option value="organisational-reviews">Organisational Reviews</option>
+            <option value="previous-applications">Previous Applications</option>
+            <option value="financial-statements">Financial Statements</option>
+          </select>
+          <label className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
+            uploading ? "bg-stone-100 text-stone-400" : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}>
+            {uploading ? "Uploading..." : "Upload file"}
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleUploadFile}
+              disabled={uploading}
+              accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.md,.csv"
+            />
+          </label>
         </div>
+
+        {/* File list */}
+        {uploads.length === 0 ? (
+          <p className="text-xs text-stone-400">No documents uploaded yet.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {uploads.map((file) => (
+              <div key={file.filename} className="flex items-center justify-between py-1.5 px-3 bg-stone-50 rounded-md">
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg className="w-3.5 h-3.5 text-stone-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-xs text-stone-600 truncate">{file.filename}</span>
+                  <span className="text-xs text-stone-400 shrink-0">
+                    {file.size > 1024 * 1024
+                      ? `${(file.size / 1024 / 1024).toFixed(1)} MB`
+                      : `${Math.round(file.size / 1024)} KB`}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeleteFile(file.filename)}
+                  disabled={deletingFile === file.filename}
+                  className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 shrink-0 ml-2"
+                >
+                  {deletingFile === file.filename ? "..." : "Remove"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tier */}
+      <div className="bg-white border border-stone-200 rounded-lg p-5">
+        <h2 className="text-sm font-bold text-stone-700 mb-3">Service Tier</h2>
+
+        {/* Toggle switch */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-medium ${currentTier === "scanner" ? "text-stone-800" : "text-stone-400"}`}>
+              Scanner
+            </span>
+            <button
+              onClick={handleToggleTier}
+              disabled={togglingTier}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                currentTier === "officer" ? "bg-blue-600" : "bg-stone-300"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  currentTier === "officer" ? "translate-x-6" : ""
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-medium ${currentTier === "officer" ? "text-blue-600" : "text-stone-400"}`}>
+              Officer
+            </span>
+          </div>
+          <span className="text-xs text-stone-400">{tierInfo.price}</span>
+        </div>
+
         <ul className="space-y-1 mb-4">
-          {planInfo.features.map((f) => (
+          {tierInfo.features.map((f) => (
             <li key={f} className="text-xs text-stone-500 flex items-center gap-1.5">
               <span className="text-green-500">&#10003;</span> {f}
             </li>
           ))}
         </ul>
 
-        {currentPlan === "free" && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleUpgrade("starter")}
-              disabled={upgrading !== null}
-              className="px-4 py-2 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {upgrading === "starter" ? "..." : "Upgrade to Starter ($49/mo)"}
-            </button>
-            <button
-              onClick={() => handleUpgrade("professional")}
-              disabled={upgrading !== null}
-              className="px-4 py-2 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-900 disabled:opacity-50"
-            >
-              {upgrading === "professional" ? "..." : "Upgrade to Professional ($149/mo)"}
-            </button>
-          </div>
-        )}
-
-        {currentPlan === "starter" && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleUpgrade("professional")}
-              disabled={upgrading !== null}
-              className="px-4 py-2 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-900 disabled:opacity-50"
-            >
-              {upgrading === "professional" ? "..." : "Upgrade to Professional ($149/mo)"}
-            </button>
-            <button
-              onClick={handleManageBilling}
-              className="px-4 py-2 text-xs border border-stone-200 text-stone-600 rounded-md hover:bg-stone-50"
-            >
-              Manage billing
-            </button>
-          </div>
-        )}
-
-        {currentPlan === "professional" && (
-          <button
-            onClick={handleManageBilling}
-            className="px-4 py-2 text-xs border border-stone-200 text-stone-600 rounded-md hover:bg-stone-50"
-          >
-            Manage billing
-          </button>
-        )}
+        <p className="text-xs text-stone-400 italic">
+          Dev toggle — payment integration coming soon.
+        </p>
       </div>
 
       {/* Usage */}

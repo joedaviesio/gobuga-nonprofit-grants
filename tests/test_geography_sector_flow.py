@@ -375,6 +375,71 @@ def case_6_cycle_prompt_loading():
 
 
 # ─────────────────────────────────────────────────────────────────
+# CASE 7: Sub-country region selections
+# ─────────────────────────────────────────────────────────────────
+
+def case_7_sub_country_regions():
+    log("\n" + "=" * 70)
+    log("CASE 7: Sub-country region selections (New Zealand regions)")
+    log("=" * 70)
+
+    token, org_id = register_user("-c7")
+    check("Register OK", token is not None)
+    if not token:
+        return
+
+    # Test with specific NZ regions + a whole-country geography
+    regions = ["New Zealand > Auckland", "New Zealand > Canterbury", "New Zealand > Wellington"]
+    geographies = regions + ["Australia"]
+
+    r = do_setup(token, sectors=["Education"], geographies=geographies)
+    check("Setup OK", r.ok, r.text[:200] if not r.ok else "")
+    if not r.ok:
+        return
+
+    # Check org record stores prefixed strings
+    org = load_org_record(org_id)
+    check("Org has 4 geographies", org and len(org.get("geographies", [])) == 4)
+    for g in geographies:
+        check(f"Org record has '{g}'", org and g in org.get("geographies", []))
+
+    # Check prompts contain the region strings as bullet points
+    watcher = read_file(os.path.join("orgs", org_id, "prompts", "grant_watcher.md"))
+    check("Watcher prompt exists", watcher is not None)
+    for g in geographies:
+        check(f"Watcher has geography: {g}", watcher and f"- {g}" in watcher)
+
+    # Check profile contains the regions
+    profile = read_file(os.path.join("orgs", org_id, "org-profile.md"))
+    check("Profile exists", profile is not None)
+    for g in geographies:
+        check(f"Profile has geography: {g}", profile and g in profile)
+
+
+def case_7b_backward_compat_whole_country():
+    log("\n" + "=" * 70)
+    log("CASE 7b: Backward compatibility — whole country still works")
+    log("=" * 70)
+
+    token, org_id = register_user("-c7b")
+    check("Register OK", token is not None)
+    if not token:
+        return
+
+    # Existing format: just "New Zealand" (no regions)
+    r = do_setup(token, sectors=["Education"], geographies=["New Zealand"])
+    check("Setup OK", r.ok, r.text[:200] if not r.ok else "")
+    if not r.ok:
+        return
+
+    org = load_org_record(org_id)
+    check("Org record has 'New Zealand'", org and org.get("geographies") == ["New Zealand"])
+
+    watcher = read_file(os.path.join("orgs", org_id, "prompts", "grant_watcher.md"))
+    check("Watcher has '- New Zealand'", watcher and "- New Zealand" in watcher)
+
+
+# ─────────────────────────────────────────────────────────────────
 # Runner
 # ─────────────────────────────────────────────────────────────────
 
@@ -385,6 +450,8 @@ ALL_CASES = {
     4: ("Org status field", case_4_org_status),
     5: ("Prompt substitution integrity", case_5_prompt_substitution),
     6: ("Cycle prompt loading", case_6_cycle_prompt_loading),
+    7: ("Sub-country regions", case_7_sub_country_regions),
+    8: ("Backward compat whole country", case_7b_backward_compat_whole_country),
 }
 
 

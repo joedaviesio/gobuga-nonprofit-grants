@@ -1,0 +1,17 @@
+export const SECTORS = [
+  "Access to justice",
+  "AI for public good",
+  "Digital inclusion",
+  "Education",
+  "Health & wellbeing",
+  "Environment & climate",
+  "Community development",
+  "Arts & culture",
+  "Youth & children",
+  "Human rights",
+  "Disability services",
+  "Housing & homelessness",
+  "Food security",
+  "Economic empowerment",
+  "Technology & innovation",
+];

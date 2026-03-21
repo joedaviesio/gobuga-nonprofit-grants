@@ -42,12 +42,24 @@ app = FastAPI(
     version="0.2.0",
 )
 
+_app_url = os.environ.get("APP_URL", "http://localhost:3002")
+_allowed_origins = [
+    _app_url,
+    # Always allow localhost for development
+    "http://localhost:3002",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Redirect HTTP → HTTPS in production (when APP_URL is https)
+if _app_url.startswith("https"):
+    from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 
 @app.exception_handler(Exception)
@@ -130,6 +142,10 @@ def api_verify(request: Request):
     if not session:
         raise HTTPException(401, "Invalid or expired session")
     org = get_org(session["org_id"])
+    from api.limits import get_tier_key, get_tier, get_cycle_timer
+    tier_key = get_tier_key(session["org_id"])
+    tier = get_tier(session["org_id"])
+    cycle_timer = get_cycle_timer(session["org_id"])
     return {
         "valid": True,
         "user_id": session["user_id"],
@@ -137,6 +153,9 @@ def api_verify(request: Request):
         "org_name": org["name"] if org else "",
         "setup_complete": org.get("setup_complete", False) if org else False,
         "seeding_complete": org.get("seeding_complete", True) if org else True,
+        "tier": tier_key,
+        "tier_label": tier["label"],
+        "cycle_timer": cycle_timer,
     }
 
 
@@ -173,6 +192,48 @@ def api_org_setup(req: OrgSetupRequest, org_id: str = Depends(get_current_org)):
         raise HTTPException(500, f"Setup failed: {e}")
 
 
+class OrgUpdateRequest(BaseModel):
+    name: str | None = None
+    country: str | None = None
+    website: str | None = None
+    sectors: list[str] | None = None
+    geographies: list[str] | None = None
+
+
+@app.patch("/api/org/profile")
+def api_org_update(req: OrgUpdateRequest, org_id: str = Depends(get_current_org)):
+    """Update org profile fields and regenerate profile/prompts."""
+    org = get_org(org_id)
+    if not org:
+        raise HTTPException(404, "Org not found")
+
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(400, "No fields to update")
+
+    # Merge with existing org data for regeneration
+    merged = {**org, **updates}
+    update_org(org_id, updates)
+
+    # Regenerate profile and prompts with merged data
+    try:
+        from api.org_setup import setup_org
+        setup_org(org_id, {
+            "org_name": merged.get("name", ""),
+            "country": merged.get("country", ""),
+            "website": merged.get("website", ""),
+            "charitable_status": merged.get("charitable_status", ""),
+            "mission": merged.get("mission", ""),
+            "org_status": merged.get("org_status", ""),
+            "sectors": merged.get("sectors", []),
+            "geographies": merged.get("geographies", []),
+        })
+    except Exception as e:
+        print(f"[Profile update] Regeneration failed: {e}\n{traceback.format_exc()}")
+
+    return {**get_org(org_id), "profile_text": ""}
+
+
 @app.get("/api/org/profile")
 def api_org_profile(org_id: str = Depends(get_current_org)):
     """Get org info and profile."""
@@ -205,6 +266,7 @@ ALLOWED_DOC_TYPES = [
     "organisational-reviews",
     "previous-applications",
     "financial-statements",
+    "general",
 ]
 
 
@@ -245,11 +307,85 @@ def api_org_uploads(org_id: str = Depends(get_current_org)):
     return files
 
 
+@app.delete("/api/org/uploads/{filename}")
+def api_org_delete_upload(filename: str, org_id: str = Depends(get_current_org)):
+    """Delete an uploaded org document."""
+    from api.tenant import org_data_dir
+    org_dir = os.path.join(org_data_dir(org_id), "org")
+    filepath = os.path.join(org_dir, filename)
+    if not Path(filepath).resolve().is_relative_to(Path(org_dir).resolve()):
+        raise HTTPException(400, "Invalid filename")
+    if not os.path.exists(filepath):
+        raise HTTPException(404, f"File not found: {filename}")
+    os.remove(filepath)
+    return {"deleted": filename}
+
+
 @app.post("/api/org/seeding-complete")
 def api_seeding_complete(org_id: str = Depends(get_current_org)):
     """Mark org seeding as complete."""
     update_org(org_id, {"seeding_complete": True})
     return {"ok": True}
+
+
+# --- Tier management ---
+
+@app.post("/api/org/toggle-tier")
+def api_toggle_tier(org_id: str = Depends(get_current_org)):
+    """Toggle between scanner and officer tiers (dev toggle)."""
+    from api.limits import toggle_tier, get_tier, get_cycle_timer
+    new_tier_key = toggle_tier(org_id)
+    tier = get_tier(org_id)
+    cycle_timer = get_cycle_timer(org_id)
+    return {
+        "tier": new_tier_key,
+        "tier_label": tier["label"],
+        "cycle_timer": cycle_timer,
+    }
+
+
+@app.get("/api/org/tier")
+def api_get_tier(org_id: str = Depends(get_current_org)):
+    """Get current tier info and cycle timer."""
+    from api.limits import get_tier_key, get_tier, get_cycle_timer, can_trigger_cycle
+    tier_key = get_tier_key(org_id)
+    tier = get_tier(org_id)
+    cycle_timer = get_cycle_timer(org_id)
+    can_trigger = can_trigger_cycle(org_id)
+    return {
+        "tier": tier_key,
+        "tier_label": tier["label"],
+        "cycle_timer": cycle_timer,
+        "can_trigger_cycle": can_trigger["allowed"],
+        "trigger_message": can_trigger["message"],
+    }
+
+
+class TriggerCycleRequest(BaseModel):
+    password: str
+
+
+@app.post("/api/org/trigger-cycle")
+def api_trigger_cycle(req: TriggerCycleRequest, session: dict = Depends(get_current_session)):
+    """Trigger a new cycle with password verification."""
+    from api.limits import can_trigger_cycle, trigger_cycle
+    from api.auth import verify_password
+
+    org_id = session["org_id"]
+    user_id = session["user_id"]
+
+    # Verify password
+    if not verify_password(user_id, req.password):
+        raise HTTPException(403, "Invalid password")
+
+    # Check if cycle can be triggered
+    check = can_trigger_cycle(org_id)
+    if not check["allowed"]:
+        raise HTTPException(409, check["message"])
+
+    # Trigger the cycle
+    timer = trigger_cycle(org_id)
+    return {"ok": True, "cycle_timer": timer}
 
 
 # --- Request models ---
@@ -296,6 +432,10 @@ def api_list_cases(org_id: str = Depends(get_current_org)):
 
 @app.post("/api/cases")
 def api_create_case(req: CreateCaseRequest, org_id: str = Depends(get_current_org)):
+    from api.limits import check_case_limit
+    limit_check = check_case_limit(org_id)
+    if not limit_check["allowed"]:
+        raise HTTPException(403, limit_check["message"])
     case = create_case(org_id, req.grant_id, req.grant_brief, req.officer)
     return case
 
@@ -455,6 +595,8 @@ def api_latest_report(org_id: str = Depends(get_current_org)):
     report = load_latest_report(org_id)
     if report is None:
         raise HTTPException(404, "No reports found")
+    from api.limits import filter_opportunities_for_tier
+    report["opportunities"] = filter_opportunities_for_tier(report.get("opportunities", []), org_id)
     return report
 
 
@@ -463,6 +605,8 @@ def api_get_report(cycle_date: str, org_id: str = Depends(get_current_org)):
     report = load_report(org_id, cycle_date)
     if report is None:
         raise HTTPException(404, f"No report for {cycle_date}")
+    from api.limits import filter_opportunities_for_tier
+    report["opportunities"] = filter_opportunities_for_tier(report.get("opportunities", []), org_id)
     return report
 
 
@@ -474,6 +618,11 @@ class CreateCaseFromOpportunity(BaseModel):
 @app.post("/api/reports/open-case")
 def api_open_case_from_opportunity(req: CreateCaseFromOpportunity, org_id: str = Depends(get_current_org)):
     """Create a case directly from a report opportunity."""
+    from api.limits import check_case_limit
+    limit_check = check_case_limit(org_id)
+    if not limit_check["allowed"]:
+        raise HTTPException(403, limit_check["message"])
+
     report = load_report(org_id, req.cycle_date)
     if report is None:
         raise HTTPException(404, f"No report for {req.cycle_date}")

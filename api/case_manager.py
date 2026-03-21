@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from api.case_codes import infer_geo_code, infer_sector_code
 from api.store import load_json, save_json
 from api.tenant import org_cases_dir
 
@@ -14,8 +15,12 @@ def _cases_dir(org_id: str) -> str:
     return org_cases_dir(org_id)
 
 
-def _next_case_id(org_id: str) -> str:
-    """Generate next sequential case ID."""
+def _next_case_id(org_id: str, grant_brief: dict) -> str:
+    """Generate next case ID with sector and geography codes.
+
+    Format: CASE-{SECTOR}-{GEO}-{YY}{SEQ:03d}
+    Example: CASE-EDU-NZ-26001
+    """
     cases_dir = _cases_dir(org_id)
     os.makedirs(cases_dir, exist_ok=True)
     existing = [
@@ -32,8 +37,10 @@ def _next_case_id(org_id: str) -> str:
             except ValueError:
                 pass
         seq = max(nums, default=0) + 1
-    year = datetime.now(timezone.utc).year
-    return f"CASE-{year}-{seq:04d}"
+    year = datetime.now(timezone.utc).year % 100
+    sector = infer_sector_code(grant_brief)
+    geo = infer_geo_code(grant_brief)
+    return f"CASE-{sector}-{geo}-{year}{seq:03d}"
 
 
 def _case_dir(org_id: str, case_id: str) -> str:
@@ -50,7 +57,7 @@ def _uploads_dir(org_id: str, case_id: str) -> str:
 
 def _new_case(org_id: str, grant_id: str, grant_brief: dict, officer: str = "grants_officer") -> dict:
     """Create the default case structure."""
-    case_id = _next_case_id(org_id)
+    case_id = _next_case_id(org_id, grant_brief)
     now = datetime.now(timezone.utc).isoformat()
     return {
         "case_id": case_id,

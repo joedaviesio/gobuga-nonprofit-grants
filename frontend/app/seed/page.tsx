@@ -5,6 +5,7 @@ import { uploadOrgDocument, listOrgUploads, completeSeedingStep, getToken, verif
 import LoadingBar from "@/app/loading-bar";
 
 const DOC_TYPES = [
+  { key: "general", label: "General" },
   { key: "annual-reports", label: "Annual Reports" },
   { key: "mission-statements", label: "Mission Statements" },
   { key: "organisational-reviews", label: "Organisational Reviews" },

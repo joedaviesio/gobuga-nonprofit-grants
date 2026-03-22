@@ -378,8 +378,12 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         disabled={!isClickable}
                         onClick={async () => {
                           if (!isClickable) return;
-                          const updated = await updateCase(id, { status: s.value });
-                          setCaseData(updated);
+                          try {
+                            const updated = await updateCase(id, { status: s.value });
+                            setCaseData(updated);
+                          } catch (err) {
+                            setErrorModal(err instanceof Error ? err.message : "Failed to update case");
+                          }
                         }}
                         className={`flex-1 py-1 text-[10px] font-medium rounded transition-colors ${
                           isActive
@@ -401,9 +405,13 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                 <div className="flex items-center justify-between">
                   <button
                     onClick={async () => {
-                      const newStatus = isClosed ? "open" : "closed";
-                      const updated = await updateCase(id, { status: newStatus });
-                      setCaseData(updated);
+                      try {
+                        const newStatus = isClosed ? "open" : "closed";
+                        const updated = await updateCase(id, { status: newStatus });
+                        setCaseData(updated);
+                      } catch (err) {
+                        setErrorModal(err instanceof Error ? err.message : "Failed to update case");
+                      }
                     }}
                     className={`text-[10px] ${
                       isClosed

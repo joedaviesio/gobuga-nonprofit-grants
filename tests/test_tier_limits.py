@@ -79,11 +79,10 @@ def setup_auth():
 
 
 def set_tier(tier_key):
-    """Toggle tier until we land on the desired one."""
-    r = requests.get(f"{API}/api/org/tier", headers=auth_headers(TOKEN))
-    current = r.json().get("tier", "scanner")
-    if current != tier_key:
-        requests.post(f"{API}/api/org/toggle-tier", headers=auth_headers(TOKEN))
+    """Set tier via direct org update (toggle is one-way to starter now)."""
+    from api.auth import update_org
+    plan_key = "free" if tier_key == "scanner" else "starter"
+    update_org(ORG_ID, {"plan": plan_key})
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +93,7 @@ def case_1():
     from api.limits import filter_opportunities_for_tier, TIERS
 
     scanner = TIERS["scanner"]
-    limits = scanner["opportunity_limits"]
+    limits = scanner["opportunities_per_cycle"]
     check("Scanner allows 2 high", limits.get("high") == 2)
     check("Scanner allows 2 medium", limits.get("medium") == 2)
     check("Scanner allows 1 low", limits.get("low") == 1)
@@ -137,7 +136,7 @@ def case_2():
 
     # Create first case — should succeed
     r = requests.post(f"{API}/api/cases",
-                      json={"grant_id": "test-grant-1", "grant_brief": "Test brief 1"},
+                      json={"grant_id": "test-grant-1", "grant_brief": {"title": "Test brief 1"}},
                       headers=json_headers(TOKEN))
     check("First case created (scanner)", r.status_code == 200,
           f"Got {r.status_code}: {r.text[:200]}")
@@ -146,7 +145,7 @@ def case_2():
 
     # Create second case — should be blocked
     r2 = requests.post(f"{API}/api/cases",
-                       json={"grant_id": "test-grant-2", "grant_brief": "Test brief 2"},
+                       json={"grant_id": "test-grant-2", "grant_brief": {"title": "Test brief 2"}},
                        headers=json_headers(TOKEN))
     check("Second case blocked (scanner limit=1)", r2.status_code in (403, 429),
           f"Got {r2.status_code}: {r2.text[:200]}")
@@ -164,7 +163,7 @@ def case_3():
     from api.limits import TIERS
 
     scanner = TIERS["scanner"]
-    check("Scanner chat limit is 5", scanner.get("chat_messages_per_case") == 5)
+    check("Scanner chat limit is 5", scanner["chat_messages_per_case"] == 5)
 
     if not TOKEN:
         check("Auth available", False, "No token")
@@ -174,7 +173,7 @@ def case_3():
 
     # Create a case for chat testing
     r = requests.post(f"{API}/api/cases",
-                      json={"grant_id": "test-chat-limit", "grant_brief": "Chat limit test"},
+                      json={"grant_id": "test-chat-limit", "grant_brief": {"title": "Chat limit test"}},
                       headers=json_headers(TOKEN))
     if r.status_code != 200:
         check("Case created for chat test", False, f"Got {r.status_code}")
@@ -202,9 +201,9 @@ def case_4():
     from api.limits import TIERS, filter_opportunities_for_tier
 
     officer = TIERS["officer"]
-    check("Officer has no opportunity limits", officer.get("opportunity_limits") is None)
-    check("Officer has no case limit", officer.get("max_open_cases") is None)
-    check("Officer has no chat limit", officer.get("chat_messages_per_case") is None)
+    check("Officer has no opportunity limits", officer.get("opportunities_per_cycle") is None)
+    check("Officer has no case limit", officer.get("max_open_cases") == -1)
+    check("Officer has no chat limit", officer.get("chat_messages_per_case") == -1)
     check("Officer has export_docx", officer.get("export_docx") is True)
     check("Officer has bots_bcd", officer.get("bots_bcd") is True)
 
@@ -231,21 +230,24 @@ def case_4():
 def case_5():
     log("\n=== Case 5: Cycle timer cooldown ===")
     from api.limits import trigger_cycle, can_trigger_cycle, get_cycle_timer
-    from api.tenant import ensure_org_dirs
-    import shutil
 
-    org_id = "_test_timer"
-    ensure_org_dirs(org_id)
+    if not ORG_ID:
+        check("Auth available for timer test", False, "No ORG_ID")
+        return
+
+    # Clear any existing timer first
+    from api.auth import update_org
+    update_org(ORG_ID, {"cycle_triggered_at": None})
 
     # Trigger a cycle
-    timer = trigger_cycle(org_id)
+    timer = trigger_cycle(ORG_ID)
     check("Trigger returns timer", timer is not None and "triggered_at" in timer)
     check("Timer has expires_at", "expires_at" in timer)
     check("Timer has remaining_seconds", "remaining_seconds" in timer)
     check("Timer not expired immediately", timer.get("expired") is False)
 
     # Check cooldown blocks re-trigger
-    result = can_trigger_cycle(org_id)
+    result = can_trigger_cycle(ORG_ID)
     check("Cannot re-trigger within cooldown", result.get("allowed") is False,
           f"Got: {result}")
     check("Cooldown message present", "message" in result and len(result["message"]) > 0)
@@ -257,8 +259,8 @@ def case_5():
           abs(remaining - seven_days) < 60,
           f"Got {remaining}s, expected ~{seven_days}s")
 
-    # Clean up
-    shutil.rmtree(os.path.join(PROJECT_ROOT, "orgs", org_id), ignore_errors=True)
+    # Clean up timer
+    update_org(ORG_ID, {"cycle_triggered_at": None})
 
 
 # ---------------------------------------------------------------------------

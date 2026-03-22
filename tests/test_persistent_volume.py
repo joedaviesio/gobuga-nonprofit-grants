@@ -178,11 +178,14 @@ def case_3():
 def case_4():
     log("\n=== Case 4: Usage log persistence ===")
     from api.tenant import ensure_org_dirs, org_logs_dir, org_root
-    from api.usage_log import log_usage, read_usage
+    from api.usage_log import log_usage, read_usage, NZ
+    from datetime import datetime
 
     org_id = "_test_vol_usage"
-    test_date = "2099-12-02"
     ensure_org_dirs(org_id)
+
+    # log_usage always writes to today's NZ date, not cycle_date
+    today_nz = datetime.now(NZ).strftime("%Y-%m-%d")
 
     log_usage(org_id, "grant_watcher", {
         "input_tokens": 100,
@@ -190,18 +193,18 @@ def case_4():
         "api_calls": 1,
         "cost_usd": 0.001,
         "model": "claude-haiku-4-5-20251001",
-    }, cycle_date=test_date)
+    })
 
     logs_dir = org_logs_dir(org_id)
-    log_file = os.path.join(logs_dir, f"usage-{test_date}.jsonl")
+    log_file = os.path.join(logs_dir, f"usage-{today_nz}.jsonl")
     check("Usage log file created", os.path.isfile(log_file),
           f"Expected: {log_file}")
 
-    records = read_usage(org_id, test_date)
+    records = read_usage(org_id, today_nz)
     check("Usage records readable", len(records) >= 1)
     if records:
-        check("Usage record has caller", records[0].get("caller") == "grant_watcher")
-        check("Usage record has cost", "cost_usd" in records[0])
+        check("Usage record has caller", records[-1].get("caller") == "grant_watcher")
+        check("Usage record has cost", "cost_usd" in records[-1])
 
     # Cleanup
     shutil.rmtree(org_root(org_id), ignore_errors=True)

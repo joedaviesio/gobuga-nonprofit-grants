@@ -54,13 +54,9 @@ def get_tier(org_id: str) -> dict:
 
 
 def toggle_tier(org_id: str) -> str:
-    """Toggle between scanner and officer. Returns the new tier key."""
-    current = get_tier_key(org_id)
-    new_tier = "officer" if current == "scanner" else "scanner"
-    # Store as plan key for compat
-    plan_key = "free" if new_tier == "scanner" else "starter"
-    update_org(org_id, {"plan": plan_key})
-    return new_tier
+    """Activate starter (officer) tier. Downgrades are handled by Stripe webhooks."""
+    update_org(org_id, {"plan": "starter"})
+    return "officer"
 
 
 # --- Opportunity filtering ---

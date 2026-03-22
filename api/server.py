@@ -72,6 +72,32 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+@app.get("/api/debug/connectivity")
+def debug_connectivity():
+    """Temporary: test outbound network connectivity."""
+    import anthropic
+    results = {}
+    # Test 1: Can we resolve DNS?
+    import socket
+    try:
+        ip = socket.getaddrinfo("api.anthropic.com", 443)[0][4][0]
+        results["dns"] = f"ok ({ip})"
+    except Exception as e:
+        results["dns"] = f"fail: {e}"
+    # Test 2: Can we reach Anthropic?
+    try:
+        client = anthropic.Anthropic()
+        r = client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=5, messages=[{"role": "user", "content": "hi"}])
+        results["anthropic"] = f"ok: {r.content[0].text}"
+    except Exception as e:
+        results["anthropic"] = f"fail: {e}"
+    # Test 3: ANTHROPIC_API_KEY set?
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    results["api_key_set"] = bool(key)
+    results["api_key_prefix"] = key[:10] + "..." if key else "empty"
+    return results
+
+
 # --- Auth middleware ---
 
 def _extract_token(request: Request) -> str:

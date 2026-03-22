@@ -56,10 +56,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Redirect HTTP → HTTPS in production (when APP_URL is https)
-if _app_url.startswith("https"):
-    from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
-    app.add_middleware(HTTPSRedirectMiddleware)
+# Note: HTTPS enforcement is handled by Railway's edge proxy.
+# HTTPSRedirectMiddleware breaks CORS on Railway because internal
+# traffic arrives as HTTP even when the external URL is HTTPS.
 
 
 @app.exception_handler(Exception)

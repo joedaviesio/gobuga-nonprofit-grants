@@ -17,6 +17,7 @@ import {
   type DatabankEntry,
 } from "@/lib/api";
 import DOMPurify from "dompurify";
+import ErrorModal from "@/app/error-modal";
 
 const API_BASE = "/api";
 
@@ -105,6 +106,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   const [sidebarTab, setSidebarTab] = useState<"brief" | "databank" | "draft">("brief");
   const [totalUsage, setTotalUsage] = useState({ input_tokens: 0, output_tokens: 0, api_calls: 0, cost_usd: 0 });
   const [submissionFilename, setSubmissionFilename] = useState("");
+  const [errorModal, setErrorModal] = useState<string | null>(null);
 
   const trackUsage = (usage: { input_tokens?: number; output_tokens?: number; api_calls?: number; cost_usd?: number } | undefined) => {
     if (!usage) return;
@@ -182,7 +184,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
         downloadBlob(new Blob([JSON.stringify(result.content, null, 2)], { type: "application/json" }), `${id}-draft.json`);
       }
     } catch (err) {
-      alert(`Export failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+      setErrorModal(err instanceof Error ? err.message : "Export failed");
     }
   };
 
@@ -334,6 +336,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-49px)]">
+      <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
       {/* Hidden file inputs */}
       <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.xlsx,.xls,.html,.htm,.txt,.csv" onChange={handleUploadFile} />
       <input ref={submissionInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.xlsx,.xls" onChange={handleUploadSubmission} />

@@ -15,7 +15,7 @@ import json
 import time
 import requests
 
-API = os.environ.get("API_URL", "http://localhost:8101")
+API = os.environ.get("API_URL", "http://localhost:8102")
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
 TOKEN = None

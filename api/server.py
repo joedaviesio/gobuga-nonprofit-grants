@@ -451,6 +451,14 @@ def api_get_case(case_id: str, org_id: str = Depends(get_current_org)):
 @app.patch("/api/cases/{case_id}")
 def api_update_case(case_id: str, req: UpdateCaseRequest, org_id: str = Depends(get_current_org)):
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    # Reopening a case counts against the open-case limit
+    if updates.get("status") == "open":
+        from api.limits import check_case_limit
+        existing = load_case(org_id, case_id)
+        if existing and existing.get("status") != "open":
+            limit_check = check_case_limit(org_id)
+            if not limit_check["allowed"]:
+                raise HTTPException(403, limit_check["message"])
     case = update_case(org_id, case_id, updates)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")

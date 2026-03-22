@@ -212,17 +212,20 @@ export default function SetupPage() {
 
             <div>
               <label className="block text-xs font-medium text-stone-700 mb-1">Country</label>
-              <input
-                type="text"
+              <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:border-blue-400 text-stone-900 ${
                   basicAttempted && missingCountry ? "border-red-300 bg-red-50/50" : "border-stone-300"
                 }`}
-                placeholder="e.g. New Zealand"
-              />
+              >
+                <option value="">Select your country</option>
+                {GEOGRAPHIES.map((geo) => (
+                  <option key={geo.name} value={geo.name}>{geo.name}</option>
+                ))}
+              </select>
               {basicAttempted && missingCountry && (
-                <p className="text-xs text-red-600 mt-1">Enter your country</p>
+                <p className="text-xs text-red-600 mt-1">Select your country</p>
               )}
             </div>
 

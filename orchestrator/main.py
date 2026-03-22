@@ -65,6 +65,21 @@ def _load_prompt(org_id: str, agent_config: dict, state: dict, prior_outputs: di
                 dep_section += f"\n### {dep_id}\n```\n{prior_outputs[dep_id].get('raw_text', 'No output')}\n```\n"
         parts.append(dep_section)
 
+        # Include evidence saved by dependency agents
+        dep_evidence = load_evidence_for_date(org_id, date)
+        dep_agent_ids = set(deps)
+        relevant = [e for e in dep_evidence if e.get("agent") in dep_agent_ids]
+        if relevant:
+            ev_section = "\n\n---\n## Evidence From Prior Phases\n"
+            for ev in relevant:
+                ev_section += (
+                    f"\n### {ev.get('id', 'unknown')} — {ev.get('title', 'Untitled')}\n"
+                    f"**Agent:** {ev.get('agent')} | **Severity:** {ev.get('severity', 'unknown')} | **Type:** {ev.get('type', 'unknown')}\n"
+                    f"**Source:** {ev.get('source_url', 'N/A')}\n"
+                    f"```\n{ev.get('content', 'No content')}\n```\n"
+                )
+            parts.append(ev_section)
+
     # Include input data files
     data_section = _load_input_data(org_id)
     if data_section:

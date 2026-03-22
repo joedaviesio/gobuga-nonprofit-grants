@@ -57,7 +57,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
                 tool_calls.append(block)
 
         if text_parts:
-            final_text = "\n".join(text_parts)
+            final_text += ("\n" if final_text else "") + "\n".join(text_parts)
 
         if not tool_calls or response.stop_reason == "end_turn":
             break

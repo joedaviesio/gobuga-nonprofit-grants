@@ -3,8 +3,9 @@
 import os
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-ORGS_DIR = os.path.join(PROJECT_ROOT, "orgs")
-PLATFORM_DIR = os.path.join(PROJECT_ROOT, "platform")
+_DATA_ROOT = os.environ.get("GOBUGA_DATA_DIR", PROJECT_ROOT)
+ORGS_DIR = os.path.join(_DATA_ROOT, "orgs")
+PLATFORM_DIR = os.path.join(_DATA_ROOT, "platform")
 
 
 # --- Org-scoped paths ---

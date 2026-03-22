@@ -5,6 +5,7 @@ import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, updateOrg
 import { GEOGRAPHIES } from "@/lib/geographies";
 import { SECTORS } from "@/lib/sectors";
 import LoadingBar from "@/app/loading-bar";
+import ErrorModal from "@/app/error-modal";
 import AuthGate, { useAuth } from "../auth-gate";
 
 const TIER_INFO = {
@@ -32,6 +33,7 @@ function SettingsContent() {
   const [uploading, setUploading] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [uploadDocType, setUploadDocType] = useState("general");
+  const [errorModal, setErrorModal] = useState<string | null>(null);
 
   // Editing state
   const [editing, setEditing] = useState<string | null>(null); // "name" | "country" | "website" | "sectors" | "geographies"
@@ -95,7 +97,7 @@ function SettingsContent() {
       if (fresh) setOrg(fresh);
       cancelEdit();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      setErrorModal(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -169,7 +171,7 @@ function SettingsContent() {
       const fresh = await getOrgProfile().catch(() => null);
       if (fresh) setOrg(fresh);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to toggle tier");
+      setErrorModal(err instanceof Error ? err.message : "Failed to toggle tier");
     } finally {
       setTogglingTier(false);
     }
@@ -184,7 +186,7 @@ function SettingsContent() {
       const fresh = await listOrgUploads().catch(() => []);
       setUploads(fresh);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Upload failed");
+      setErrorModal(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -197,7 +199,7 @@ function SettingsContent() {
       await deleteOrgUpload(filename);
       setUploads((prev) => prev.filter((f) => f.filename !== filename));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      setErrorModal(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setDeletingFile(null);
     }
@@ -216,6 +218,7 @@ function SettingsContent() {
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+      <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
       <h1 className="text-lg font-bold text-stone-800">Settings</h1>
 
       {/* Org Profile */}

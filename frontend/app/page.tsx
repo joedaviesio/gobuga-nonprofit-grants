@@ -17,6 +17,7 @@ import {
 import { useAuth } from "./auth-gate";
 import DOMPurify from "dompurify";
 import LoadingBar from "@/app/loading-bar";
+import ErrorModal from "@/app/error-modal";
 
 function PriorityBadge({ priority }: { priority: string }) {
   const colors =
@@ -346,6 +347,7 @@ export default function Dashboard() {
   const [watcherMsgIndex, setWatcherMsgIndex] = useState(0);
   const [cyclePassword, setCyclePassword] = useState("");
   const [triggerError, setTriggerError] = useState("");
+  const [errorModal, setErrorModal] = useState<string | null>(null);
 
   const watcherMessages = [
     "Scanning",
@@ -447,7 +449,7 @@ export default function Dashboard() {
       setCases(updatedCases);
       window.location.href = `/case/${newCase.case_id}`;
     } catch (err) {
-      alert(`Failed to create case: ${err instanceof Error ? err.message : "Unknown error"}`);
+      setErrorModal(err instanceof Error ? err.message : "Something went wrong.");
       setOpeningCase(null);
     }
   };
@@ -458,7 +460,7 @@ export default function Dashboard() {
       setReport(r);
       setActiveView("brief");
     } catch (err) {
-      alert(`Failed to load report: ${err instanceof Error ? err.message : "Unknown error"}`);
+      setErrorModal(err instanceof Error ? err.message : "Something went wrong.");
     }
   };
 
@@ -534,6 +536,7 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
+      <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
       {/* Nav tabs */}
       <div className="flex items-center gap-4 mb-6 border-b border-slate-200 pb-3">
         <button

@@ -1,6 +1,4 @@
 .env
-initial-sequence.md
-COST-ESTIMATES.md
 __pycache__/
 *.pyc
 .DS_Store
@@ -25,3 +23,8 @@ data/
 sessions.json
 .gstack/
 plan/
+
+# Planning & reference docs (not wired into the app)
+*.md
+!CLAUDE.md
+!templates/prompts/*.md

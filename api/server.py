@@ -84,17 +84,32 @@ def debug_connectivity():
         results["dns"] = f"ok ({ip})"
     except Exception as e:
         results["dns"] = f"fail: {e}"
-    # Test 2: Can we reach Anthropic?
+    # Test 2: Raw HTTPS connection
+    try:
+        import httpx
+        r = httpx.get("https://api.anthropic.com/v1/models", headers={"x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""), "anthropic-version": "2023-06-01"}, timeout=10)
+        results["httpx_direct"] = f"ok ({r.status_code})"
+    except Exception as e:
+        import traceback as tb
+        results["httpx_direct"] = f"fail: {type(e).__name__}: {e}"
+        results["httpx_traceback"] = tb.format_exc()[-500:]
+    # Test 3: Anthropic SDK
     try:
         client = anthropic.Anthropic()
         r = client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=5, messages=[{"role": "user", "content": "hi"}])
         results["anthropic"] = f"ok: {r.content[0].text}"
     except Exception as e:
-        results["anthropic"] = f"fail: {e}"
-    # Test 3: ANTHROPIC_API_KEY set?
+        import traceback as tb
+        results["anthropic"] = f"fail: {type(e).__name__}: {e}"
+        results["anthropic_traceback"] = tb.format_exc()[-500:]
+    # Test 4: ANTHROPIC_API_KEY set?
     key = os.environ.get("ANTHROPIC_API_KEY", "")
     results["api_key_set"] = bool(key)
     results["api_key_prefix"] = key[:10] + "..." if key else "empty"
+    # Test 5: Python/SSL info
+    import ssl, sys
+    results["python_version"] = sys.version
+    results["openssl_version"] = ssl.OPENSSL_VERSION
     return results
 
 

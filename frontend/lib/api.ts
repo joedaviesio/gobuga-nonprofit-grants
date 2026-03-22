@@ -134,6 +134,7 @@ export interface OrgSetupData {
   country: string;
   website?: string;
   charitable_status?: string;
+  org_status?: string;
   mission?: string;
   sectors?: string[];
   geographies?: string[];

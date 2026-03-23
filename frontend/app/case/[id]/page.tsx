@@ -214,8 +214,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setBotStatus("done");
       setStatusMessage(`Added ${sanitizedName} to data bank.`);
     } catch (err) {
-      setBotStatus("error");
-      setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("403")) {
+        setErrorModal(msg);
+        setBotStatus("idle");
+        setStatusMessage("");
+      } else {
+        setBotStatus("error");
+        setStatusMessage(`Error: ${msg}`);
+      }
     }
   };
 
@@ -242,8 +249,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
         (result.needs_review > 0 ? ` ${result.needs_review} need review.` : " Ready to export!")
       );
     } catch (err) {
-      setBotStatus("error");
-      setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("403")) {
+        setErrorModal(msg);
+        setBotStatus("idle");
+        setStatusMessage("");
+      } else {
+        setBotStatus("error");
+        setStatusMessage(`Error: ${msg}`);
+      }
     }
   };
 
@@ -260,8 +274,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setBotStatus("idle");
       setStatusMessage("");
     } catch (err) {
-      setBotStatus("error");
-      setStatusMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("403")) {
+        setErrorModal(msg);
+        setBotStatus("idle");
+        setStatusMessage("");
+      } else {
+        setBotStatus("error");
+        setStatusMessage(`Error: ${msg}`);
+      }
     }
   };
 
@@ -301,17 +322,30 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setBotStatus("idle");
       setStatusMessage("");
     } catch (err) {
-      setQaMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last && last.role === "assistant" && !last.content) {
-          updated[updated.length - 1] = { ...last, content: `Error: ${err instanceof Error ? err.message : "Unknown error"}` };
-        } else {
-          updated.push({ role: "assistant", content: `Error: ${err instanceof Error ? err.message : "Unknown error"}` });
-        }
-        return updated;
-      });
-      setBotStatus("error");
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      if (errMsg.includes("403")) {
+        // Remove the empty assistant message we added for streaming
+        setQaMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last && last.role === "assistant" && !last.content) updated.pop();
+          return updated;
+        });
+        setErrorModal(errMsg);
+        setBotStatus("idle");
+      } else {
+        setQaMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last && last.role === "assistant" && !last.content) {
+            updated[updated.length - 1] = { ...last, content: `Error: ${errMsg}` };
+          } else {
+            updated.push({ role: "assistant", content: `Error: ${errMsg}` });
+          }
+          return updated;
+        });
+        setBotStatus("error");
+      }
       setStatusMessage("");
     }
   };

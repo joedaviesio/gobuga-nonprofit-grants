@@ -479,6 +479,10 @@ def api_chat(case_id: str, req: ChatRequest, org_id: str = Depends(get_current_o
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_chat_limit
+    chat_check = check_chat_limit(org_id, case_id)
+    if not chat_check["allowed"]:
+        raise HTTPException(403, chat_check["message"])
     result = chat(org_id, case_id, req.message)
     if "error" in result:
         raise HTTPException(400, result["error"])
@@ -539,6 +543,12 @@ def api_export(case_id: str, req: ExportRequest, org_id: str = Depends(get_curre
         raise HTTPException(404, f"Case {case_id} not found")
 
     FILE_FORMATS = {"docx", "doc", "pdf", "xlsx", "xls"}
+
+    if req.format in ("docx", "doc"):
+        from api.limits import check_feature_access
+        access = check_feature_access(org_id, "export_docx")
+        if not access["allowed"]:
+            raise HTTPException(403, access["message"])
 
     if req.format == "markdown":
         content = export_markdown(org_id, case_id)
@@ -795,6 +805,10 @@ def api_bot_parse(case_id: str, req: ParseDocumentRequest, org_id: str = Depends
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_feature_access
+    access = check_feature_access(org_id, "bots_bcd")
+    if not access["allowed"]:
+        raise HTTPException(403, access["message"])
     try:
         result = bot_b_parse_document(org_id, case_id, req.filename)
     except Exception as e:
@@ -811,6 +825,10 @@ def api_bot_fill(case_id: str, org_id: str = Depends(get_current_org)):
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_feature_access
+    access = check_feature_access(org_id, "bots_bcd")
+    if not access["allowed"]:
+        raise HTTPException(403, access["message"])
     try:
         result = bot_c_fill_sections(org_id, case_id)
     except Exception as e:
@@ -827,6 +845,10 @@ def api_bot_parse_and_fill(case_id: str, req: ParseDocumentRequest, org_id: str 
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_feature_access
+    access = check_feature_access(org_id, "bots_bcd")
+    if not access["allowed"]:
+        raise HTTPException(403, access["message"])
     try:
         parse_result = bot_b_parse_document(org_id, case_id, req.filename)
         if "error" in parse_result:
@@ -865,6 +887,10 @@ def api_bot_questions(case_id: str, org_id: str = Depends(get_current_org)):
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_feature_access
+    access = check_feature_access(org_id, "bots_bcd")
+    if not access["allowed"]:
+        raise HTTPException(403, access["message"])
     try:
         result = bot_d_analyze_gaps(org_id, case_id)
     except Exception as e:
@@ -885,6 +911,10 @@ def api_bot_answer(case_id: str, req: AnswerRequest, org_id: str = Depends(get_c
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_feature_access
+    access = check_feature_access(org_id, "bots_bcd")
+    if not access["allowed"]:
+        raise HTTPException(403, access["message"])
     try:
         result = bot_d_process_answer(org_id, case_id, req.message)
     except Exception as e:
@@ -901,6 +931,10 @@ def api_bot_answer_stream(case_id: str, req: AnswerRequest, org_id: str = Depend
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    from api.limits import check_feature_access
+    access = check_feature_access(org_id, "bots_bcd")
+    if not access["allowed"]:
+        raise HTTPException(403, access["message"])
     return StreamingResponse(
         bot_d_process_answer_stream(org_id, case_id, req.message),
         media_type="text/event-stream",

@@ -22,6 +22,41 @@ logs/
 data/
 sessions.json
 .gstack/
+.agents/
+.venv/
+skills/
+skills-lock.json
+
+# Agent tool dirs
+.adal/
+.agent/
+.augment/
+.claude/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
 plan/
 
 # Planning & reference docs (not wired into the app)

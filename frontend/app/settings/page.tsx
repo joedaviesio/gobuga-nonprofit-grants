@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, updateOrgProfile, toggleTier, listOrgUploads, uploadOrgDocument, deleteOrgUpload, type OrgProfile } from "@/lib/api";
+import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, type OrgProfile } from "@/lib/api";
 import { GEOGRAPHIES } from "@/lib/geographies";
 import { SECTORS } from "@/lib/sectors";
 import LoadingBar from "@/app/loading-bar";
@@ -26,7 +26,8 @@ function SettingsContent() {
   const [org, setOrg] = useState<OrgProfile | null>(null);
   const [usage, setUsage] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [togglingTier, setTogglingTier] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
   // Uploads state
   const [uploads, setUploads] = useState<{ filename: string; size: number }[]>([]);
@@ -163,17 +164,39 @@ function SettingsContent() {
     });
   };
 
-  const handleToggleTier = async () => {
-    setTogglingTier(true);
+  // Handle ?checkout=success/cancel query params
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    if (checkout === "success") {
+      setCheckoutMessage("Upgrade successful! Welcome to Grant Officer.");
+      refreshSession();
+      // Clean up URL
+      window.history.replaceState({}, "", "/settings");
+    } else if (checkout === "cancel") {
+      setCheckoutMessage(null);
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, []);
+
+  const handleUpgrade = async () => {
+    setCheckingOut(true);
     try {
-      await toggleTier();
-      await refreshSession();
-      const fresh = await getOrgProfile().catch(() => null);
-      if (fresh) setOrg(fresh);
+      const { url } = await createCheckout("starter");
+      window.location.href = url;
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Failed to toggle tier");
-    } finally {
-      setTogglingTier(false);
+      setErrorModal(err instanceof Error ? err.message : "Failed to start checkout");
+      setCheckingOut(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      const { url } = await getBillingPortal();
+      window.location.href = url;
+    } catch (err) {
+      setErrorModal(err instanceof Error ? err.message : "Failed to open billing portal");
     }
   };
 
@@ -515,43 +538,77 @@ function SettingsContent() {
       <div className="bg-white border border-stone-200 rounded-lg p-5">
         <h2 className="text-sm font-bold text-stone-700 mb-3">Service Tier</h2>
 
-        {/* Toggle switch */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <span className={`text-sm font-medium ${currentTier === "scanner" ? "text-stone-800" : "text-stone-400"}`}>
-              Scanner
-            </span>
-            <button
-              onClick={handleToggleTier}
-              disabled={togglingTier}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                currentTier === "officer" ? "bg-blue-600" : "bg-stone-300"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  currentTier === "officer" ? "translate-x-6" : ""
-                }`}
-              />
-            </button>
-            <span className={`text-sm font-medium ${currentTier === "officer" ? "text-blue-600" : "text-stone-400"}`}>
-              Officer
-            </span>
+        {checkoutMessage && (
+          <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-xs text-green-700">
+            {checkoutMessage}
           </div>
-          <span className="text-xs text-stone-400">{tierInfo.price}</span>
-        </div>
+        )}
 
-        <ul className="space-y-1 mb-4">
-          {tierInfo.features.map((f) => (
-            <li key={f} className="text-xs text-stone-500 flex items-center gap-1.5">
-              <span className="text-green-500">&#10003;</span> {f}
-            </li>
-          ))}
-        </ul>
+        {currentTier === "scanner" ? (
+          <>
+            {/* Current plan */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium text-stone-800">{TIER_INFO.scanner.label}</span>
+                <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Current</span>
+              </div>
+              <ul className="space-y-1 mb-4">
+                {TIER_INFO.scanner.features.map((f) => (
+                  <li key={f} className="text-xs text-stone-500 flex items-center gap-1.5">
+                    <span className="text-green-500">&#10003;</span> {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-        <p className="text-xs text-stone-400 italic">
-          Dev toggle — payment integration coming soon.
-        </p>
+            {/* Upgrade card */}
+            <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-800">{TIER_INFO.officer.label}</span>
+                <span className="text-sm font-bold text-blue-700">{TIER_INFO.officer.price}</span>
+              </div>
+              <ul className="space-y-1 mb-3">
+                {TIER_INFO.officer.features.map((f) => (
+                  <li key={f} className="text-xs text-blue-700 flex items-center gap-1.5">
+                    <span className="text-blue-500">&#10003;</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={handleUpgrade}
+                disabled={checkingOut}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+              >
+                {checkingOut ? "Redirecting to checkout..." : "Upgrade to Grant Officer"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Active plan */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium text-blue-700">{TIER_INFO.officer.label}</span>
+                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Active</span>
+              </div>
+              <span className="text-xs text-stone-500">{TIER_INFO.officer.price}</span>
+              <ul className="space-y-1 mt-2">
+                {TIER_INFO.officer.features.map((f) => (
+                  <li key={f} className="text-xs text-stone-500 flex items-center gap-1.5">
+                    <span className="text-green-500">&#10003;</span> {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <button
+              onClick={handleManageBilling}
+              className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
+            >
+              Manage billing
+            </button>
+          </>
+        )}
       </div>
 
       {/* Usage */}

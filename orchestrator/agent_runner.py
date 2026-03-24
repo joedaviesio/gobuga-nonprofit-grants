@@ -59,9 +59,11 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
         if text_parts:
             final_text += ("\n" if final_text else "") + "\n".join(text_parts)
 
-        if not tool_calls or response.stop_reason == "end_turn":
+        if not tool_calls:
             break
 
+        # Process tool calls before checking stop_reason — ensures all
+        # save_evidence calls are executed even on the model's final turn.
         assistant_content = response.content
         tool_results = []
 
@@ -83,6 +85,9 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
 
         messages.append({"role": "assistant", "content": assistant_content})
         messages.append({"role": "user", "content": tool_results})
+
+        if response.stop_reason == "end_turn":
+            break
 
     # Log usage
     from api.usage import PRICING

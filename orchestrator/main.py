@@ -184,6 +184,21 @@ def run_cycle(org_id: str, cycle_date: str | None = None, model_overrides: dict 
                     except Exception as e:
                         print(f"  ✗ {agent_cfg['name']} failed: {e}")
                         all_outputs[agent_cfg["id"]] = {"raw_text": f"Error: {e}", "agent_id": agent_cfg["id"]}
+
+            # Retry watcher once if it produced zero evidence
+            watcher_evidence = load_evidence_for_date(org_id, cycle_date)
+            watcher_ids = {cfg["id"] for cfg in phase_agents}
+            watcher_items = [e for e in watcher_evidence if e.get("agent") in watcher_ids]
+            if not watcher_items:
+                print("  ⚠ Watcher produced zero evidence — retrying once...")
+                for agent_cfg in phase_agents:
+                    try:
+                        prompt = _load_prompt(org_id, agent_cfg, state, all_outputs, cycle_date)
+                        output = run_agent(org_id, agent_cfg, prompt, cycle_date)
+                        all_outputs[agent_cfg["id"]] = output
+                        print(f"  ✓ {agent_cfg['name']} retry complete")
+                    except Exception as e:
+                        print(f"  ✗ {agent_cfg['name']} retry failed: {e}")
         else:
             for agent_cfg in phase_agents:
                 print(f"  Running {agent_cfg['name']}...")

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from api.auth import register, login, verify_session, logout, get_org, update_org
+from api.auth import register, login, verify_session, logout, get_org, update_org, request_password_reset, reset_password
 from api.case_manager import (
     create_case,
     load_case,
@@ -165,6 +165,30 @@ def api_logout(request: Request):
     token = _extract_token(request)
     logout(token)
     return {"ok": True}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+
+@app.post("/api/auth/forgot-password")
+def api_forgot_password(req: ForgotPasswordRequest):
+    """Request a password reset email."""
+    return request_password_reset(req.email)
+
+
+@app.post("/api/auth/reset-password")
+def api_reset_password(req: ResetPasswordRequest):
+    """Reset password using a valid reset token."""
+    try:
+        return reset_password(req.token, req.password)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 
 # --- Org setup ---

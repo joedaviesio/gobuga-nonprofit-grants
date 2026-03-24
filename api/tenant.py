@@ -64,6 +64,10 @@ def sessions_path() -> str:
     return os.path.join(PLATFORM_DIR, "sessions.json")
 
 
+def password_resets_path() -> str:
+    return os.path.join(PLATFORM_DIR, "password_resets.json")
+
+
 # --- Directory creation ---
 
 def ensure_org_dirs(org_id: str) -> str:

@@ -116,6 +116,32 @@ export const verifySession = async (): Promise<VerifyResponse | null> => {
   }
 };
 
+export const requestPasswordReset = async (email: string): Promise<{ ok: boolean }> => {
+  const res = await fetch(`${BASE}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ detail: "Request failed" }));
+    throw new Error(data.detail || "Request failed");
+  }
+  return res.json();
+};
+
+export const resetPassword = async (token: string, password: string): Promise<{ ok: boolean }> => {
+  const res = await fetch(`${BASE}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ detail: "Reset failed" }));
+    throw new Error(data.detail || "Reset failed");
+  }
+  return res.json();
+};
+
 export const logout = async () => {
   const token = getToken();
   if (token) {

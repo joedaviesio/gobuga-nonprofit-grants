@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { verifySession, logout, getToken, clearToken, type VerifyResponse } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
 
-const PUBLIC_PATHS = ["/login", "/register", "/setup", "/seed"];
+const PUBLIC_PATHS = ["/login", "/register", "/setup", "/seed", "/forgot-password", "/reset-password"];
 
 interface AuthContextType {
   logout: () => void;

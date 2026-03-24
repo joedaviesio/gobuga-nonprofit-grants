@@ -15,9 +15,11 @@ from api.tenant import (
     users_path,
     orgs_path,
     sessions_path,
+    password_resets_path,
 )
 
 SESSION_TTL = 60 * 60 * 24 * 30  # 30 days
+RESET_TTL = 60 * 15  # 15 minutes
 
 
 # --- Low-level JSON store ---
@@ -238,3 +240,86 @@ def verify_password(user_id: str, password: str) -> bool:
     if not user:
         return False
     return bcrypt.checkpw(password.encode(), user["password_hash"].encode())
+
+
+# --- Password resets ---
+
+def _load_resets() -> dict:
+    """Returns {token: reset_record}. Prunes expired/used entries."""
+    data = _load_json(password_resets_path()) or {}
+    now = time.time()
+    valid = {k: v for k, v in data.items() if v.get("expires_at", 0) > now and not v.get("used")}
+    if len(valid) != len(data):
+        _save_json(password_resets_path(), valid)
+    return valid
+
+
+def _save_resets(resets: dict):
+    _save_json(password_resets_path(), resets)
+
+
+def request_password_reset(email: str) -> dict:
+    """
+    Generate a reset token and send email. Always returns {"ok": True}
+    regardless of whether the email exists (prevents enumeration).
+    """
+    import os
+    from api.email import send_reset_email
+
+    email = email.strip().lower()
+    user = _find_user_by_email(email)
+
+    if user:
+        token = secrets.token_urlsafe(32)
+        resets = _load_resets()
+        resets[token] = {
+            "user_id": user["user_id"],
+            "expires_at": time.time() + RESET_TTL,
+            "used": False,
+            "created": datetime.now(timezone.utc).isoformat(),
+        }
+        _save_resets(resets)
+
+        app_url = os.environ.get("APP_URL", "http://localhost:3002").rstrip("/")
+        reset_url = f"{app_url}/reset-password?token={token}"
+        try:
+            send_reset_email(email, reset_url)
+        except Exception as e:
+            print(f"[AUTH] Failed to send reset email to {email}: {e}")
+
+    return {"ok": True}
+
+
+def reset_password(token: str, new_password: str) -> dict:
+    """
+    Reset a user's password using a valid reset token.
+    Raises ValueError on invalid/expired token or bad password.
+    """
+    if len(new_password) < 8:
+        raise ValueError("Password must be at least 8 characters")
+
+    resets = _load_resets()
+    record = resets.get(token)
+    if not record:
+        raise ValueError("Invalid or expired reset link")
+
+    if record.get("used"):
+        raise ValueError("This reset link has already been used")
+
+    if record.get("expires_at", 0) < time.time():
+        raise ValueError("This reset link has expired")
+
+    user_id = record["user_id"]
+    users = _load_users()
+    if user_id not in users:
+        raise ValueError("Account not found")
+
+    pw_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    users[user_id]["password_hash"] = pw_hash
+    _save_users(users)
+
+    # Mark token as used
+    record["used"] = True
+    _save_resets(resets)
+
+    return {"ok": True}

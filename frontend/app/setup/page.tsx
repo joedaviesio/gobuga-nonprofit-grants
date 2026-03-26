@@ -182,21 +182,21 @@ export default function SetupPage() {
     const canAdvance = !missingName && !missingCountry;
 
     return (
-      <div className="min-h-screen bg-stone-50 py-12">
+      <div className="min-h-screen auth-bg py-12 relative overflow-hidden">
         <GradientMesh />
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto relative z-10">
           <div className="text-center mb-8">
             <h1 className="text-xl font-bold text-stone-900">Set up your organisation</h1>
-            <p className="text-sm text-stone-600 mt-1">Step 1 of 2: Tell us about your org</p>
+            <p className="text-sm text-stone-700 mt-1">Step 1 of 2: Tell us about your org</p>
           </div>
 
-          <div className="bg-white border border-stone-200 rounded-lg p-6 space-y-4">
+          <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-4 shadow-lg">
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-xs text-red-700">{error}</div>
+              <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700">{error}</div>
             )}
 
             <div>
-              <label className="block text-xs font-medium text-stone-700 mb-1">Organisation name</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Organisation name</label>
               <input
                 type="text"
                 value={orgName}
@@ -211,7 +211,7 @@ export default function SetupPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-700 mb-1">Country</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Country</label>
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
@@ -230,7 +230,7 @@ export default function SetupPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-700 mb-2">Organisation status</label>
+              <label className="block text-sm font-medium text-stone-700 mb-2">Organisation status</label>
               <div className="flex gap-2">
                 {([
                   { value: "nonprofit", label: "Non-profit" },
@@ -243,8 +243,8 @@ export default function SetupPage() {
                     onClick={() => setOrgStatus(opt.value)}
                     className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
                       orgStatus === opt.value
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-stone-700 border-stone-300 hover:border-blue-400"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-stone-800 border-stone-300 hover:border-blue-400"
                     }`}
                   >
                     {opt.label}
@@ -252,7 +252,7 @@ export default function SetupPage() {
                 ))}
               </div>
               {orgStatus === "forprofit" && (
-                <p className="mt-2 text-xs text-amber-600">
+                <p className="mt-2 text-sm text-amber-700">
                   GoBuga is designed for non-profit organisations. Some grant opportunities may not be applicable to for-profit entities.
                 </p>
               )}
@@ -266,7 +266,7 @@ export default function SetupPage() {
                 }
                 setStep("sectors");
               }}
-              className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="w-full px-4 py-2.5 text-sm btn-gradient rounded-md"
             >
               Next: Sectors & Geographies
             </button>
@@ -278,18 +278,18 @@ export default function SetupPage() {
 
   if (step === "sectors") {
     return (
-      <div className="min-h-screen bg-stone-50 py-12">
+      <div className="min-h-screen auth-bg py-12 relative overflow-hidden">
         <GradientMesh />
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto relative z-10">
           <div className="text-center mb-8">
             <h1 className="text-xl font-bold text-stone-900">Sectors & Geographies</h1>
-            <p className="text-sm text-stone-600 mt-1">Step 2 of 2: What grants should we look for?</p>
+            <p className="text-sm text-stone-700 mt-1">Step 2 of 2: What grants should we look for?</p>
           </div>
 
-          <div className="bg-white border border-stone-200 rounded-lg p-6 space-y-6">
+          <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-6 shadow-lg">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-medium text-stone-700">Funding sectors (select all that apply)</label>
+                <label className="block text-sm font-medium text-stone-700">Funding sectors (select all that apply)</label>
                 {attempted && missingSectors && (
                   <span className="text-xs text-red-600 animate-pulse">Select at least one</span>
                 )}
@@ -303,8 +303,8 @@ export default function SetupPage() {
                     onClick={() => toggleSector(s)}
                     className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
                       sectors.includes(s)
-                        ? "bg-blue-50 border-blue-300 text-blue-700"
-                        : "bg-white border-stone-200 text-stone-600 hover:border-stone-400"
+                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                        : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                     }`}
                   >
                     {s}
@@ -315,7 +315,7 @@ export default function SetupPage() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-medium text-stone-700">Target geographies</label>
+                <label className="block text-sm font-medium text-stone-700">Target geographies</label>
                 {attempted && missingGeographies && (
                   <span className="text-xs text-amber-600">Recommended: pick at least one</span>
                 )}
@@ -337,8 +337,8 @@ export default function SetupPage() {
                         onClick={() => toggleGeo(geo.name)}
                         className={`px-3 py-1.5 text-xs rounded-full border transition-colors self-start ${
                           geographies.includes(geo.name)
-                            ? "bg-blue-50 border-blue-300 text-blue-700"
-                            : "bg-white border-stone-200 text-stone-600 hover:border-stone-400"
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                            : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                         }`}
                       >
                         {geo.name}
@@ -351,7 +351,7 @@ export default function SetupPage() {
                       <div className="flex items-center justify-between mb-2">
                         <button
                           onClick={() => toggleExpand(geo.name)}
-                          className="flex items-center gap-1.5 text-xs font-medium text-stone-800 hover:text-stone-900 transition-colors"
+                          className="flex items-center gap-1.5 text-sm font-medium text-stone-800 hover:text-stone-900 transition-colors"
                         >
                           <svg
                             className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -388,8 +388,8 @@ export default function SetupPage() {
                               onClick={() => toggleRegion(geo.name, region, geo.regions!)}
                               className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                                 isRegionSelected(geo.name, region)
-                                  ? "bg-blue-50 border-blue-300 text-blue-700"
-                                  : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
+                                  ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                                  : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                               }`}
                             >
                               {region}
@@ -410,16 +410,16 @@ export default function SetupPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep("basics")}
-                className="px-4 py-2 text-sm border border-stone-200 text-stone-700 rounded-md hover:bg-stone-50"
+                className="px-4 py-2.5 text-sm border border-stone-300 text-stone-800 rounded-md hover:bg-stone-100 transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={handleContinue}
-                className={`flex-1 px-4 py-2 text-sm rounded-md transition-colors ${
+                className={`flex-1 px-4 py-2.5 text-sm rounded-md transition-colors ${
                   canContinue
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-blue-600/50 text-white/80 cursor-default"
+                    ? "btn-gradient"
+                    : "bg-stone-300 text-stone-500 cursor-default"
                 }`}
               >
                 {loading ? "Setting up..." : "Continue"}

@@ -74,18 +74,21 @@ export default function SeedPage() {
   const uploadCount = Object.keys(uploads).length;
 
   return (
-    <div className="min-h-screen bg-stone-50 py-12">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen auth-bg py-12 relative overflow-hidden">
+      <div className="orb orb-yellow" style={{ top: '10%', right: '5%' }} />
+      <div className="orb orb-blue" style={{ bottom: '15%', left: '10%' }} />
+
+      <div className="max-w-lg mx-auto relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-xl font-bold text-stone-800">Seed your organisation data</h1>
-          <p className="text-sm text-stone-500 mt-1">
+          <h1 className="text-xl font-bold text-stone-900">Seed your organisation data</h1>
+          <p className="text-sm text-stone-700 mt-1">
             Upload key documents to help us understand your organisation better.
             This is optional — you can skip and add them later.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-xs text-red-700 mb-4">{error}</div>
+          <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700 mb-4">{error}</div>
         )}
 
         <div className="space-y-3">
@@ -96,12 +99,12 @@ export default function SeedPage() {
             return (
               <div
                 key={dt.key}
-                className="bg-white border border-stone-200 rounded-lg p-4 flex items-center justify-between"
+                className="card-gradient border border-stone-200/60 backdrop-blur-sm p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-stone-700">{dt.label}</p>
+                  <p className="text-sm font-medium text-stone-800">{dt.label}</p>
                   {uploaded && (
-                    <p className="text-xs text-stone-400 truncate mt-0.5">
+                    <p className="text-xs text-stone-600 truncate mt-0.5">
                       {uploaded.filename} ({Math.round(uploaded.size / 1024)}KB)
                     </p>
                   )}
@@ -126,10 +129,10 @@ export default function SeedPage() {
                 ) : (
                   <button
                     onClick={() => fileInputRefs.current[dt.key]?.click()}
-                    className={`ml-3 px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                    className={`ml-3 px-3 py-1.5 text-sm rounded-md border transition-colors ${
                       uploaded
-                        ? "bg-green-50 border-green-200 text-green-700"
-                        : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
+                        ? "bg-green-50 border-green-300 text-green-700 font-medium"
+                        : "bg-white border-stone-300 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                     }`}
                   >
                     {uploaded ? "Replace" : "Upload"}
@@ -143,13 +146,13 @@ export default function SeedPage() {
         <div className="mt-6 flex gap-3">
           <button
             onClick={handleContinue}
-            className="px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-md hover:bg-stone-50"
+            className="px-4 py-2.5 text-sm border border-stone-300 text-stone-700 rounded-md hover:bg-stone-100 transition-colors"
           >
             Skip for now
           </button>
           <button
             onClick={handleContinue}
-            className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="flex-1 px-4 py-2.5 text-sm btn-gradient rounded-md"
           >
             Continue to Dashboard{uploadCount > 0 ? ` (${uploadCount} uploaded)` : ""}
           </button>

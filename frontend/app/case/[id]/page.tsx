@@ -369,7 +369,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   );
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-49px)]">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-49px)] app-bg">
       <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
       {/* Hidden file inputs */}
       <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.docx,.doc,.xlsx,.xls,.html,.htm,.txt,.csv" onChange={handleUploadFile} />
@@ -379,7 +379,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-stone-200 flex flex-col bg-white overflow-y-auto md:max-h-none max-h-[40vh]">
         {/* Case header */}
         <div className="p-4 border-b border-stone-200">
-          <div className="text-xs font-mono text-stone-400">{caseData.case_id}</div>
+          <div className="text-xs font-mono text-stone-600">{caseData.case_id}</div>
           <div className="text-sm font-medium text-stone-700 mt-1">{caseData.grant_id}</div>
           {/* Status stepper */}
           {(() => {
@@ -423,9 +423,9 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           isActive
                             ? `${s.color} text-white`
                             : isPast
-                            ? "bg-stone-200 text-stone-500"
+                            ? "bg-stone-200 text-stone-700"
                             : isClickable
-                            ? "bg-stone-100 text-stone-500 hover:bg-stone-200 cursor-pointer"
+                            ? "bg-stone-100 text-stone-700 hover:bg-stone-200 cursor-pointer"
                             : "bg-stone-50 text-stone-300 cursor-default"
                         }`}
                         title={isClickable ? `Set to ${s.label}` : ""}
@@ -450,19 +450,19 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                     className={`text-[10px] ${
                       isClosed
                         ? "text-blue-500 hover:text-blue-700"
-                        : "text-stone-400 hover:text-stone-600"
+                        : "text-stone-600 hover:text-stone-600"
                     }`}
                   >
                     {isClosed ? "Reopen case" : "Close case"}
                   </button>
                   {typeof brief.deadline === "string" && !isNaN(new Date(brief.deadline as string).getTime()) && (
-                    <span className="text-[10px] text-stone-400">
+                    <span className="text-[10px] text-stone-600">
                       Due {new Date(brief.deadline as string).toLocaleDateString()}
                     </span>
                   )}
                 </div>
                 {isClosed && (
-                  <div className="text-[10px] px-2 py-1 bg-stone-100 rounded text-stone-500 text-center">
+                  <div className="text-[10px] px-2 py-1 bg-stone-100 rounded text-stone-700 text-center">
                     Case closed
                   </div>
                 )}
@@ -481,7 +481,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               className={`flex-1 py-2 text-xs font-medium ${
                 sidebarTab === tab
                   ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-stone-400 hover:text-stone-600"
+                  : "text-stone-600 hover:text-stone-600"
               }`}
             >
               {tab === "brief" ? "Brief" :
@@ -502,7 +502,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
 
                 return (
                   <div key={k}>
-                    <div className="font-medium text-stone-500 mb-0.5">{k.replace(/_/g, " ")}</div>
+                    <div className="font-medium text-stone-700 mb-0.5">{k.replace(/_/g, " ")}</div>
                     <div className="text-stone-700">
                       {Array.isArray(v) ? (
                         v.every((item) => typeof item === "string") ? (
@@ -541,7 +541,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {sidebarTab === "databank" && (
             <div className="space-y-2">
               {databank.length === 0 ? (
-                <p className="text-xs text-stone-400">Data bank is empty. Upload files or answer questions to populate it.</p>
+                <p className="text-xs text-stone-600">Data bank is empty. Upload files or answer questions to populate it.</p>
               ) : (
                 (() => {
                   const byCategory: Record<string, DatabankEntry[]> = {};
@@ -552,11 +552,11 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   });
                   return Object.entries(byCategory).map(([cat, entries]) => (
                     <div key={cat}>
-                      <div className="text-xs font-medium text-stone-500 mb-1 capitalize">{cat.replace(/_/g, " ")}</div>
+                      <div className="text-xs font-medium text-stone-700 mb-1 capitalize">{cat.replace(/_/g, " ")}</div>
                       {entries.map((e) => (
                         <div key={e.id} className="p-2 mb-1 bg-stone-50 rounded text-xs">
                           <div className="font-medium text-stone-700">{e.key.replace(/_/g, " ")}</div>
-                          <div className="text-stone-500 mt-0.5 line-clamp-2">{e.value}</div>
+                          <div className="text-stone-700 mt-0.5 line-clamp-2">{e.value}</div>
                           <div className="text-[10px] text-stone-300 mt-0.5">{e.source}</div>
                         </div>
                       ))}
@@ -567,7 +567,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {/* Uploads list */}
               {(caseData.uploads?.length || 0) > 0 && (
                 <div className="pt-2 mt-2 border-t border-stone-100">
-                  <div className="text-xs font-medium text-stone-500 mb-1">Documents ({caseData.uploads.length})</div>
+                  <div className="text-xs font-medium text-stone-700 mb-1">Documents ({caseData.uploads.length})</div>
                   {caseData.uploads.map((u, i) => (
                     <div key={i} className="flex items-center gap-1 text-xs text-stone-600 py-0.5">
                       <span className={`inline-block w-1.5 h-1.5 rounded-full ${
@@ -587,7 +587,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {sidebarTab === "draft" && (
             <div className="space-y-2">
               {sectionNames.length === 0 ? (
-                <p className="text-xs text-stone-400">No sections drafted yet. Upload a submission form to get started.</p>
+                <p className="text-xs text-stone-600">No sections drafted yet. Upload a submission form to get started.</p>
               ) : (
                 sectionNames.map((name) => {
                   const sec = sections[name];
@@ -601,12 +601,12 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           sec.status === "complete" ? "bg-green-100 text-green-700" :
                           sec.status === "review" ? "bg-amber-100 text-amber-700" :
                           sec.status === "blocked" ? "bg-red-100 text-red-700" :
-                          "bg-stone-100 text-stone-500"
+                          "bg-stone-100 text-stone-700"
                         }`}>
                           {sec.status}
                         </span>
                       </div>
-                      <div className="text-xs text-stone-400 mt-1">
+                      <div className="text-xs text-stone-600 mt-1">
                         {sec.content ? `${sec.content.split(" ").length} words` : "empty"}
                       </div>
                     </div>
@@ -615,7 +615,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               )}
               {sectionNames.length > 0 && (
                 <div className="space-y-2 mt-3">
-                  <div className="text-xs font-medium text-stone-500">Export</div>
+                  <div className="text-xs font-medium text-stone-700">Export</div>
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => handleExport("pdf")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">PDF</button>
                     <button onClick={() => handleExport("docx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
@@ -658,7 +658,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   className="text-left p-4 rounded-lg border-2 border-amber-200 bg-amber-50 hover:border-amber-400 transition-colors"
                 >
                   <div className="text-sm font-medium text-stone-800">Upload a file</div>
-                  <div className="text-xs text-stone-500 mt-1">Add documents to the case data bank</div>
+                  <div className="text-xs text-stone-700 mt-1">Add documents to the case data bank</div>
                 </button>
 
                 {/* Upload submission */}
@@ -667,7 +667,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   className="text-left p-4 rounded-lg border-2 border-teal-200 bg-teal-50 hover:border-teal-400 transition-colors"
                 >
                   <div className="text-sm font-medium text-stone-800">Upload submission</div>
-                  <div className="text-xs text-stone-500 mt-1">Upload a grant application doc to parse and fill</div>
+                  <div className="text-xs text-stone-700 mt-1">Upload a grant application doc to parse and fill</div>
                 </button>
 
                 {/* Ask questions */}
@@ -679,7 +679,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   className="text-left p-4 rounded-lg border-2 border-purple-200 bg-purple-50 hover:border-purple-400 transition-colors"
                 >
                   <div className="text-sm font-medium text-stone-800">Ask questions</div>
-                  <div className="text-xs text-stone-500 mt-1">Chatbot guides you to fill data gaps</div>
+                  <div className="text-xs text-stone-700 mt-1">Chatbot guides you to fill data gaps</div>
                 </button>
               </div>
             </div>
@@ -696,7 +696,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   setStatusMessage("");
                   setQaMessages([]);
                 }}
-                className="text-xs text-stone-400 hover:text-stone-600"
+                className="text-xs text-stone-600 hover:text-stone-600"
               >
                 &larr; Back to options
               </button>
@@ -705,7 +705,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {flowPath === "upload_file" && (
                 <div className="bg-white border border-amber-200 rounded-lg shadow-sm p-5">
                   <h3 className="text-sm font-bold text-stone-800 mb-1">Upload a file</h3>
-                  <p className="text-xs text-stone-500 mb-4">
+                  <p className="text-xs text-stone-700 mb-4">
                     Upload documents one at a time. Each file will be analyzed and key information added to the case data bank.
                   </p>
 
@@ -722,7 +722,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                       )}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-500 hover:border-amber-400 hover:text-amber-600 transition-colors"
+                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-700 hover:border-amber-400 hover:text-amber-600 transition-colors"
                       >
                         Click to select a file
                       </button>
@@ -735,7 +735,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {flowPath === "upload_submission" && (
                 <div className="bg-white border border-teal-200 rounded-lg shadow-sm p-5">
                   <h3 className="text-sm font-bold text-stone-800 mb-1">Upload submission form</h3>
-                  <p className="text-xs text-stone-500 mb-4">
+                  <p className="text-xs text-stone-700 mb-4">
                     Upload the grant application document. It will be parsed into sections and automatically filled from the data bank.
                   </p>
 
@@ -790,7 +790,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           setBotStatus("idle");
                           setStatusMessage("");
                         }}
-                        className="text-xs text-stone-400 hover:text-stone-600"
+                        className="text-xs text-stone-600 hover:text-stone-600"
                       >
                         Upload another submission
                       </button>
@@ -804,7 +804,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                       )}
                       <button
                         onClick={() => submissionInputRef.current?.click()}
-                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-500 hover:border-teal-400 hover:text-teal-600 transition-colors"
+                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-700 hover:border-teal-400 hover:text-teal-600 transition-colors"
                       >
                         Click to select submission form (.pdf, .docx, .doc, .xlsx, .xls)
                       </button>
@@ -818,7 +818,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                 <div className="bg-white border border-purple-200 rounded-lg shadow-sm flex flex-col font-[family-name:var(--font-dm-sans)]" style={{ minHeight: "400px" }}>
                   <div className="p-4 border-b border-purple-100">
                     <h3 className="text-sm font-bold text-stone-800">Information gathering</h3>
-                    <p className="text-xs text-stone-500">Answer questions to fill gaps in the data bank</p>
+                    <p className="text-xs text-stone-700">Answer questions to fill gaps in the data bank</p>
                   </div>
 
                   {/* Q&A messages */}

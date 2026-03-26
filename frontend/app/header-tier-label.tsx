@@ -5,12 +5,12 @@ import { useAuth } from "./auth-gate";
 export function HeaderTierLabel() {
   const { session } = useAuth();
 
-  const label = session?.tier_label || "Grant Scanner";
   const isOfficer = session?.tier === "officer";
+  const label = isOfficer ? (session?.tier_label || "Grant Officer") : "Helps with grants";
 
   return (
-    <span className={`text-xs font-[family-name:var(--font-dm-sans)] ${
-      isOfficer ? "text-blue-500" : "text-stone-400"
+    <span className={`text-xs font-medium font-[family-name:var(--font-dm-sans)] ${
+      isOfficer ? "text-blue-600" : "text-stone-600"
     }`}>
       {label}
     </span>

@@ -17,7 +17,7 @@ const TIER_INFO = {
   officer: {
     label: "Grant Officer",
     price: "$49 NZD/mo (~$29 USD)",
-    features: ["1 cycle per week", "All opportunities", "Unlimited open cases", "Unlimited chat", "DOCX export", "Parse & fill", "Premium models"],
+    features: ["1 cycle per week", "All opportunities", "Unlimited open cases", "Unlimited chat", "DOCX export", "Parse & fill."],
   },
 };
 
@@ -230,8 +230,10 @@ function SettingsContent() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <LoadingBar label="Loading settings..." />
+      <div className="min-h-screen app-bg">
+        <div className="max-w-3xl mx-auto px-6 py-8">
+          <LoadingBar label="Loading settings..." />
+        </div>
       </div>
     );
   }
@@ -240,17 +242,18 @@ function SettingsContent() {
   const tierInfo = TIER_INFO[currentTier] || TIER_INFO.scanner;
 
   return (
+    <div className="min-h-screen app-bg">
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
       <h1 className="text-lg font-bold text-stone-800">Settings</h1>
 
       {/* Org Profile */}
-      <div className="bg-white border border-stone-200 rounded-lg p-5">
+      <div className="card-gradient border border-stone-200 p-5">
         <h2 className="text-sm font-bold text-stone-700 mb-3">Organisation</h2>
         <div className="space-y-2 text-sm">
           {/* Name */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-500">Name</span>
+            <span className="text-stone-700">Name</span>
             {editing === "name" ? (
               <div className="flex items-center gap-2">
                 <input
@@ -263,7 +266,7 @@ function SettingsContent() {
                 <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
               </div>
             ) : (
               <button onClick={() => startEdit("name")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -274,7 +277,7 @@ function SettingsContent() {
 
           {/* Country */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-500">Country</span>
+            <span className="text-stone-700">Country</span>
             {editing === "country" ? (
               <div className="flex items-center gap-2">
                 <input
@@ -287,7 +290,7 @@ function SettingsContent() {
                 <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
               </div>
             ) : (
               <button onClick={() => startEdit("country")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -298,7 +301,7 @@ function SettingsContent() {
 
           {/* Website */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-500">Website</span>
+            <span className="text-stone-700">Website</span>
             {editing === "website" ? (
               <div className="flex items-center gap-2">
                 <input
@@ -312,7 +315,7 @@ function SettingsContent() {
                 <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
               </div>
             ) : (
               <button onClick={() => startEdit("website")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -324,7 +327,7 @@ function SettingsContent() {
           {/* Sectors */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-stone-500">Sectors</span>
+              <span className="text-stone-700">Sectors</span>
               {editing !== "sectors" && (
                 <button onClick={() => startEdit("sectors")} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
                   Edit
@@ -341,7 +344,7 @@ function SettingsContent() {
                       className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                         editSectors.includes(s)
                           ? "bg-blue-50 border-blue-300 text-blue-700"
-                          : "bg-white border-stone-200 text-stone-400 hover:border-stone-300"
+                          : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
                       }`}
                     >
                       {s}
@@ -352,14 +355,14 @@ function SettingsContent() {
                   <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                     {saving ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={cancelEdit} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
+                  <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {org?.sectors && org.sectors.length > 0 ? org.sectors.map((s) => (
                   <span key={s} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{s}</span>
-                )) : <span className="text-xs text-stone-400">-</span>}
+                )) : <span className="text-xs text-stone-600">-</span>}
               </div>
             )}
           </div>
@@ -367,7 +370,7 @@ function SettingsContent() {
           {/* Geographies */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-stone-500">Geographies</span>
+              <span className="text-stone-700">Geographies</span>
               {editing !== "geographies" && (
                 <button onClick={() => startEdit("geographies")} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
                   Edit
@@ -399,7 +402,7 @@ function SettingsContent() {
                                 ? "bg-blue-50 border-blue-300 text-blue-700"
                                 : hasAnyRegionSelected
                                   ? "bg-blue-50/50 border-blue-200 text-blue-600"
-                                  : "bg-white border-stone-200 text-stone-400 hover:border-stone-300"
+                                  : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
                             }`}
                           >
                             {geo.name}
@@ -407,7 +410,7 @@ function SettingsContent() {
                           {hasRegions && (
                             <button
                               onClick={() => toggleExpand(geo.name)}
-                              className="p-0.5 text-stone-400 hover:text-stone-600 transition-colors"
+                              className="p-0.5 text-stone-600 hover:text-stone-600 transition-colors"
                             >
                               <svg
                                 className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -430,7 +433,7 @@ function SettingsContent() {
                                 className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
                                   isEditRegionSelected(geo.name, region)
                                     ? "bg-blue-50 border-blue-300 text-blue-700"
-                                    : "bg-white border-stone-200 text-stone-400 hover:border-stone-300"
+                                    : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
                                 }`}
                               >
                                 {region}
@@ -446,7 +449,7 @@ function SettingsContent() {
                   <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                     {saving ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={cancelEdit} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
+                  <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
                 </div>
               </div>
             ) : (
@@ -461,7 +464,7 @@ function SettingsContent() {
                       </>
                     ) : g}
                   </span>
-                )) : <span className="text-xs text-stone-400">-</span>}
+                )) : <span className="text-xs text-stone-600">-</span>}
               </div>
             )}
           </div>
@@ -469,9 +472,9 @@ function SettingsContent() {
       </div>
 
       {/* Organisation Data */}
-      <div className="bg-white border border-stone-200 rounded-lg p-5">
+      <div className="card-gradient border border-stone-200 p-5">
         <h2 className="text-sm font-bold text-stone-700 mb-1">Organisation Data</h2>
-        <p className="text-xs text-stone-400 mb-4">
+        <p className="text-xs text-stone-600 mb-4">
           Upload documents that inform your grant scanning cycles. These are used as context when identifying and assessing opportunities.
         </p>
 
@@ -490,7 +493,7 @@ function SettingsContent() {
             <option value="financial-statements">Financial Statements</option>
           </select>
           <label className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
-            uploading ? "bg-stone-100 text-stone-400" : "bg-blue-600 text-white hover:bg-blue-700"
+            uploading ? "bg-stone-100 text-stone-600" : "bg-blue-600 text-white hover:bg-blue-700"
           }`}>
             {uploading ? "Uploading..." : "Upload file"}
             <input
@@ -505,17 +508,17 @@ function SettingsContent() {
 
         {/* File list */}
         {uploads.length === 0 ? (
-          <p className="text-xs text-stone-400">No documents uploaded yet.</p>
+          <p className="text-xs text-stone-600">No documents uploaded yet.</p>
         ) : (
           <div className="space-y-1.5">
             {uploads.map((file) => (
               <div key={file.filename} className="flex items-center justify-between py-1.5 px-3 bg-stone-50 rounded-md">
                 <div className="flex items-center gap-2 min-w-0">
-                  <svg className="w-3.5 h-3.5 text-stone-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-3.5 h-3.5 text-stone-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                   <span className="text-xs text-stone-600 truncate">{file.filename}</span>
-                  <span className="text-xs text-stone-400 shrink-0">
+                  <span className="text-xs text-stone-600 shrink-0">
                     {file.size > 1024 * 1024
                       ? `${(file.size / 1024 / 1024).toFixed(1)} MB`
                       : `${Math.round(file.size / 1024)} KB`}
@@ -535,7 +538,7 @@ function SettingsContent() {
       </div>
 
       {/* Tier */}
-      <div className="bg-white border border-stone-200 rounded-lg p-5">
+      <div className="card-gradient border border-stone-200 p-5">
         <h2 className="text-sm font-bold text-stone-700 mb-3">Service Tier</h2>
 
         {checkoutMessage && (
@@ -550,11 +553,11 @@ function SettingsContent() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-medium text-stone-800">{TIER_INFO.scanner.label}</span>
-                <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Current</span>
+                <span className="text-xs bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">Current</span>
               </div>
               <ul className="space-y-1 mb-4">
                 {TIER_INFO.scanner.features.map((f) => (
-                  <li key={f} className="text-xs text-stone-500 flex items-center gap-1.5">
+                  <li key={f} className="text-xs text-stone-700 flex items-center gap-1.5">
                     <span className="text-green-500">&#10003;</span> {f}
                   </li>
                 ))}
@@ -577,7 +580,7 @@ function SettingsContent() {
               <button
                 onClick={handleUpgrade}
                 disabled={checkingOut}
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 text-sm font-medium btn-gradient rounded-md disabled:opacity-50"
               >
                 {checkingOut ? "Redirecting to checkout..." : "Upgrade to Grant Officer"}
               </button>
@@ -591,10 +594,10 @@ function SettingsContent() {
                 <span className="text-sm font-medium text-blue-700">{TIER_INFO.officer.label}</span>
                 <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Active</span>
               </div>
-              <span className="text-xs text-stone-500">{TIER_INFO.officer.price}</span>
+              <span className="text-xs text-stone-700">{TIER_INFO.officer.price}</span>
               <ul className="space-y-1 mt-2">
                 {TIER_INFO.officer.features.map((f) => (
-                  <li key={f} className="text-xs text-stone-500 flex items-center gap-1.5">
+                  <li key={f} className="text-xs text-stone-700 flex items-center gap-1.5">
                     <span className="text-green-500">&#10003;</span> {f}
                   </li>
                 ))}
@@ -613,28 +616,29 @@ function SettingsContent() {
 
       {/* Usage */}
       {usage && (
-        <div className="bg-white border border-stone-200 rounded-lg p-5">
+        <div className="card-gradient border border-stone-200 p-5">
           <h2 className="text-sm font-bold text-stone-700 mb-3">Today's Usage</h2>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-lg font-bold text-stone-800">{(usage as Record<string, number>).total_calls || 0}</div>
-              <div className="text-xs text-stone-400">API Calls</div>
+              <div className="text-xs text-stone-600">API Calls</div>
             </div>
             <div>
               <div className="text-lg font-bold text-stone-800">
                 {(((usage as Record<string, number>).total_input_tokens || 0) / 1000).toFixed(1)}K
               </div>
-              <div className="text-xs text-stone-400">Input Tokens</div>
+              <div className="text-xs text-stone-600">Input Tokens</div>
             </div>
             <div>
               <div className="text-lg font-bold text-stone-800">
                 {(((usage as Record<string, number>).total_output_tokens || 0) / 1000).toFixed(1)}K
               </div>
-              <div className="text-xs text-stone-400">Output Tokens</div>
+              <div className="text-xs text-stone-600">Output Tokens</div>
             </div>
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

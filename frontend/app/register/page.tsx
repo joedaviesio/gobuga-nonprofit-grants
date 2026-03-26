@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { registerAccount, getToken } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
+import PasswordInput from "@/app/password-input";
 
 function validateEmail(v: string): string {
   if (!v.trim()) return "Email is required";
@@ -13,6 +14,12 @@ function validateEmail(v: string): string {
 function validatePassword(v: string): string {
   if (!v) return "Password is required";
   if (v.length < 8) return "Password must be at least 8 characters";
+  return "";
+}
+
+function validateConfirmPassword(password: string, confirm: string): string {
+  if (!confirm) return "Please confirm your password";
+  if (confirm !== password) return "Passwords don't match";
   return "";
 }
 
@@ -37,6 +44,7 @@ function validateUrl(v: string): string {
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [orgName, setOrgName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +56,7 @@ export default function RegisterPage() {
     websiteUrl: validateUrl(websiteUrl),
     email: validateEmail(email),
     password: validatePassword(password),
+    confirmPassword: validateConfirmPassword(password, confirmPassword),
   };
 
   const hasErrors = Object.values(fieldErrors).some(Boolean);
@@ -57,7 +66,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ orgName: true, websiteUrl: true, email: true, password: true });
+    setTouched({ orgName: true, websiteUrl: true, email: true, password: true, confirmPassword: true });
     if (hasErrors) return;
     setError("");
     setLoading(true);
@@ -72,78 +81,96 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50">
-      <div className="w-full max-w-md px-4 py-16">
+    <div className="min-h-screen flex items-center justify-center auth-bg relative overflow-hidden">
+      {/* Floating orbs */}
+      <div className="orb orb-blue" style={{ top: '5%', right: '20%' }} />
+      <div className="orb orb-yellow" style={{ bottom: '15%', left: '10%' }} />
+      <div className="orb orb-red" style={{ top: '40%', left: '5%' }} />
+
+      <div className="w-full max-w-md px-4 py-16 relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-stone-800" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
-          <p className="text-sm text-stone-500 mt-1 font-[family-name:var(--font-dm-sans)]">Create your free account</p>
+          <h1 className="text-3xl font-bold text-stone-900" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
+          <p className="text-sm text-stone-700 mt-2 font-[family-name:var(--font-dm-sans)]">Create your free account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-lg p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="card-gradient border border-stone-200/60 backdrop-blur-sm p-8 space-y-6 shadow-lg">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-xs text-red-700">
+            <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Organisation name</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Organisation name</label>
             <input
               type="text"
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
               onBlur={() => markTouched("orgName")}
               autoFocus
-              className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none ${touched.orgName && fieldErrors.orgName ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
+              className={`w-full px-3 py-2.5 text-sm border rounded-md focus:outline-none text-stone-900 ${touched.orgName && fieldErrors.orgName ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
               placeholder="Your Nonprofit"
             />
             {touched.orgName && fieldErrors.orgName && (
-              <p className="text-xs text-red-500 mt-1">{fieldErrors.orgName}</p>
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.orgName}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Website or social media URL</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Website or social media URL</label>
             <input
               type="text"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
               onBlur={() => markTouched("websiteUrl")}
-              className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none ${touched.websiteUrl && fieldErrors.websiteUrl ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
+              className={`w-full px-3 py-2.5 text-sm border rounded-md focus:outline-none text-stone-900 ${touched.websiteUrl && fieldErrors.websiteUrl ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
               placeholder="yourorg.com"
             />
             {touched.websiteUrl && fieldErrors.websiteUrl && (
-              <p className="text-xs text-red-500 mt-1">{fieldErrors.websiteUrl}</p>
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.websiteUrl}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Email</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => markTouched("email")}
-              className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none ${touched.email && fieldErrors.email ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
+              className={`w-full px-3 py-2.5 text-sm border rounded-md focus:outline-none text-stone-900 ${touched.email && fieldErrors.email ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
               placeholder="you@org.com"
             />
             {touched.email && fieldErrors.email && (
-              <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Password</label>
-            <input
-              type="password"
+            <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               onBlur={() => markTouched("password")}
-              className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none ${touched.password && fieldErrors.password ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
+              className={`px-3 py-2.5 text-sm border rounded-md focus:outline-none text-stone-900 ${touched.password && fieldErrors.password ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
               placeholder="Min 8 characters"
             />
             {touched.password && fieldErrors.password && (
-              <p className="text-xs text-red-500 mt-1">{fieldErrors.password}</p>
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.password}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Confirm password</label>
+            <PasswordInput
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              onBlur={() => markTouched("confirmPassword")}
+              className={`px-3 py-2.5 text-sm border rounded-md focus:outline-none text-stone-900 ${touched.confirmPassword && fieldErrors.confirmPassword ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
+              placeholder="Re-enter your password"
+            />
+            {touched.confirmPassword && fieldErrors.confirmPassword && (
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.confirmPassword}</p>
             )}
           </div>
 
@@ -153,19 +180,19 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || hasErrors}
-            className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="w-full px-4 py-2.5 text-sm btn-gradient rounded-md disabled:opacity-50"
           >
             {loading ? "Creating account..." : "Create account"}
           </button>
 
-          <p className="text-xs text-stone-400 text-center">
+          <p className="text-sm text-stone-600 text-center">
             Free plan includes 2 scans/month and 1 active case.
           </p>
         </form>
 
-        <p className="text-center text-xs text-stone-400 mt-4">
+        <p className="text-center text-sm text-stone-600 mt-4">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-600 hover:underline">
+          <a href="/login" className="text-blue-600 hover:underline font-medium">
             Sign in
           </a>
         </p>

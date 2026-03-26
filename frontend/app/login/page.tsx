@@ -3,15 +3,13 @@
 import { useState } from "react";
 import { login, getToken } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
+import PasswordInput from "@/app/password-input";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // If already logged in with a valid session, redirect
-  // (Don't just check token exists — it may be expired/invalid)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,45 +30,49 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center auth-bg relative overflow-hidden">
+      {/* Floating orbs */}
+      <div className="orb orb-blue" style={{ top: '10%', left: '15%' }} />
+      <div className="orb orb-yellow" style={{ top: '60%', right: '10%' }} />
+      <div className="orb orb-red" style={{ bottom: '20%', left: '50%' }} />
+
+      <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-stone-800" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
-          <p className="text-sm text-stone-500 mt-1 font-[family-name:var(--font-dm-sans)]">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-stone-900" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
+          <p className="text-sm text-stone-700 mt-2 font-[family-name:var(--font-dm-sans)]">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-lg p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-4 shadow-lg">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-xs text-red-700">
+            <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Email</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="w-full px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
+              className="w-full px-3 py-2.5 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400 text-stone-900"
               placeholder="you@org.com"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-stone-600">Password</label>
-              <a href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</a>
+              <label className="block text-sm font-medium text-stone-700">Password</label>
+              <a href="/forgot-password" className="text-xs text-blue-600 hover:underline font-medium">Forgot password?</a>
             </div>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               required
               placeholder="Your password"
-              className="w-full px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
+              className="px-3 py-2.5 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400 text-stone-900"
             />
           </div>
 
@@ -80,15 +82,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="w-full px-4 py-2.5 text-sm btn-gradient rounded-md disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
-        <p className="text-center text-xs text-stone-400 mt-4">
+        <p className="text-center text-sm text-stone-600 mt-4">
           No account?{" "}
-          <a href="/register" className="text-blue-600 hover:underline">
+          <a href="/register" className="text-blue-600 hover:underline font-medium">
             Create one for free
           </a>
         </p>

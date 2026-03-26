@@ -66,9 +66,9 @@ export function HeaderLogout() {
         </span>
       )}
       {session.org_name && (
-        <span className="text-xs text-slate-400 hidden sm:inline">{session.org_name}</span>
+        <span className="text-xs text-stone-700 hidden sm:inline font-medium">{session.org_name}</span>
       )}
-      <a href="/settings" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+      <a href="/settings" className="text-xs text-stone-600 hover:text-blue-600 transition-colors font-medium">
         Settings
       </a>
       <span className="flex items-center gap-1.5">
@@ -80,7 +80,7 @@ export function HeaderLogout() {
       </span>
       <button
         onClick={logout}
-        className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+        className="text-xs text-stone-600 hover:text-red-600 transition-colors font-medium"
       >
         Sign out
       </button>

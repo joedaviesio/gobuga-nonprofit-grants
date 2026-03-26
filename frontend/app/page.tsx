@@ -24,7 +24,7 @@ function PriorityBadge({ priority }: { priority: string }) {
     priority === "high"
       ? "bg-red-50 text-red-600 border border-red-200"
       : priority === "low"
-      ? "bg-slate-50 text-slate-500 border border-slate-200"
+      ? "bg-slate-50 text-slate-700 border border-slate-200"
       : "bg-amber-50 text-amber-600 border border-amber-200";
   return (
     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
       : status === "rejected"
       ? "bg-red-50 text-red-600 border border-red-200"
       : status === "closed"
-      ? "bg-slate-100 text-slate-500 border border-slate-200"
+      ? "bg-slate-100 text-slate-700 border border-slate-200"
       : "bg-slate-50 text-slate-600 border border-slate-200";
   return (
     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
@@ -113,7 +113,7 @@ function ReportView({
               {sorted.map((opp) => (
             <div
               key={opp.id}
-              className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow${opp.expired ? " opacity-50" : ""}`}
+              className={`card-gradient border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow${opp.expired ? " opacity-50" : ""}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
@@ -126,7 +126,7 @@ function ReportView({
                   {opp.description && (
                     <p className="text-xs text-slate-600 mt-1">{opp.description}</p>
                   )}
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-400">
+                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-600">
                     {opp.deadline && <span>Deadline: {opp.deadline}</span>}
                     {opp.amount && <span>Amount: {opp.amount}</span>}
                     {opp.funder && <span>Funder: {opp.funder}</span>}
@@ -134,7 +134,7 @@ function ReportView({
                   {opp.details.length > 0 && (
                     <ul className="mt-2 space-y-0.5">
                       {opp.details.map((d, i) => (
-                        <li key={i} className="text-xs text-slate-500">
+                        <li key={i} className="text-xs text-slate-700">
                           - {d}
                         </li>
                       ))}
@@ -166,7 +166,7 @@ function ReportView({
                   });
                   if (opp.expired) {
                     return (
-                      <span className="shrink-0 px-3 py-1.5 text-xs bg-slate-100 text-slate-400 rounded-lg">
+                      <span className="shrink-0 px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg">
                         Expired
                       </span>
                     );
@@ -185,7 +185,7 @@ function ReportView({
                     <button
                       onClick={() => onOpenCase(opp)}
                       disabled={openingCase === opp.id}
-                      className="shrink-0 px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      className="shrink-0 px-4 py-1.5 text-xs btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                     >
                       {openingCase === opp.id ? "Creating..." : "Open Case"}
                     </button>
@@ -210,13 +210,13 @@ function ReportView({
       {/* Pipeline + Gaps */}
       <div className="grid grid-cols-2 gap-4">
         {report.sections["Pipeline Update"] && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="card-gradient border border-slate-200 p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-800 mb-3">Pipeline</h2>
             <SimpleMarkdown text={report.sections["Pipeline Update"]} />
           </div>
         )}
         {report.sections["Gaps & Recommendations"] && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="card-gradient border border-slate-200 p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-800 mb-3">Gaps</h2>
             <SimpleMarkdown text={report.sections["Gaps & Recommendations"]} />
           </div>
@@ -231,7 +231,7 @@ const CASE_TABS = [
   { key: "submitted", label: "Submitted", color: "text-amber-600 border-amber-600" },
   { key: "accepted", label: "Accepted", color: "text-green-600 border-green-600" },
   { key: "rejected", label: "Rejected", color: "text-red-600 border-red-600" },
-  { key: "closed", label: "Closed", color: "text-slate-500 border-slate-500" },
+  { key: "closed", label: "Closed", color: "text-slate-700 border-slate-500" },
 ] as const;
 
 type CaseTab = (typeof CASE_TABS)[number]["key"];
@@ -288,7 +288,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
             className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               tab === t.key
                 ? t.color
-                : "text-slate-400 border-transparent hover:text-slate-600"
+                : "text-slate-600 border-transparent hover:text-slate-600"
             }`}
           >
             {t.label} ({counts[t.key]})
@@ -297,7 +297,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-slate-400 py-4">
+        <p className="text-sm text-slate-600 py-4">
           {cases.length === 0
             ? "No cases yet. Open one from the Daily Brief."
             : `No ${tab} cases.`}
@@ -308,7 +308,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
             <a
               key={c.case_id}
               href={`/case/${c.case_id}`}
-              className="block p-4 rounded-xl bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md"
+              className="block p-4 rounded-xl card-gradient border border-slate-200 shadow-sm transition-all hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -320,7 +320,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
                 </div>
                 <StatusBadge status={c.status} />
               </div>
-              <div className="mt-1 flex gap-4 text-xs text-slate-400">
+              <div className="mt-1 flex gap-4 text-xs text-slate-600">
                 <span>{c.sections_count} sections</span>
                 <span>{c.uploads_count} uploads</span>
                 <span>updated {new Date(c.updated).toLocaleDateString()}</span>
@@ -526,8 +526,10 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        <LoadingBar label="Loading dashboard..." />
+      <div className="min-h-screen app-bg">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <LoadingBar label="Loading dashboard..." />
+        </div>
       </div>
     );
   }
@@ -535,6 +537,7 @@ export default function Dashboard() {
   const isHistorical = report != null && latestDate != null && report.date !== latestDate;
 
   return (
+    <div className="min-h-screen app-bg">
     <div className="max-w-5xl mx-auto px-6 py-8">
       <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
       {/* Nav tabs */}
@@ -544,7 +547,7 @@ export default function Dashboard() {
           className={`text-sm font-medium pb-1 transition-colors ${
             activeView === "brief"
               ? "text-slate-900 border-b-2 border-slate-900"
-              : "text-slate-400 hover:text-slate-600"
+              : "text-slate-600 hover:text-slate-600"
           }`}
         >
           Daily Brief
@@ -554,7 +557,7 @@ export default function Dashboard() {
           className={`text-sm font-medium pb-1 transition-colors ${
             activeView === "cases"
               ? "text-slate-900 border-b-2 border-slate-900"
-              : "text-slate-400 hover:text-slate-600"
+              : "text-slate-600 hover:text-slate-600"
           }`}
         >
           Cases ({cases.length})
@@ -572,13 +575,13 @@ export default function Dashboard() {
           className={`text-sm font-medium pb-1 transition-colors ${
             activeView === "cycle"
               ? "text-slate-900 border-b-2 border-slate-900"
-              : "text-slate-400 hover:text-slate-600"
+              : "text-slate-600 hover:text-slate-600"
           }`}
         >
           Run Cycle
         </button>
         {report && (
-          <span className="ml-auto text-xs text-slate-400">
+          <span className="ml-auto text-xs text-slate-600">
             {isHistorical ? `Viewing: ${report.date}` : `Last scan: ${report.date}`}
             {" "}&middot; {report.evidence_count} evidence items
           </span>
@@ -593,10 +596,10 @@ export default function Dashboard() {
               <div className="mx-auto mb-6 w-64 h-32 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
                 <div className="pixel-gradient w-full h-full" />
               </div>
-              <p className="text-sm text-slate-400">No reports yet. Run a cycle first.</p>
+              <p className="text-sm text-slate-600">No reports yet. Run a cycle first.</p>
               <button
                 onClick={() => setActiveView("cycle")}
-                className="mt-4 px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="mt-4 px-5 py-2 text-sm btn-gradient rounded-lg transition-colors"
               >
                 Go to Run Cycle
               </button>
@@ -634,9 +637,9 @@ export default function Dashboard() {
       {activeView === "cycle" && (
         <div className="max-w-lg mx-auto space-y-6">
           {/* Run controls */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+          <div className="card-gradient border border-slate-200 p-6 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-800 mb-1">Run Grant Scanning Cycle</h2>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-700 mb-4">
               Scans for opportunities, assesses fit, and compiles your daily brief. Takes around 3 minutes.
             </p>
 
@@ -646,7 +649,7 @@ export default function Dashboard() {
                 {(!session?.cycle_timer || session.cycle_timer.expired) ? (
                   <>
                     <div>
-                      <label className="block text-xs text-slate-500 mb-1">Enter password to start cycle</label>
+                      <label className="block text-xs text-slate-700 mb-1">Enter password to start cycle</label>
                       <input
                         type="password"
                         value={cyclePassword}
@@ -662,7 +665,7 @@ export default function Dashboard() {
                     <button
                       onClick={handleTriggerAndRunCycle}
                       disabled={!cyclePassword}
-                      className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                     >
                       Run Cycle
                     </button>
@@ -743,8 +746,8 @@ export default function Dashboard() {
                               )}
                               <span className={`text-xs ${
                                 isActive ? "text-slate-700 font-medium" :
-                                isDone ? "text-slate-400" :
-                                "text-slate-400"
+                                isDone ? "text-slate-600" :
+                                "text-slate-600"
                               }`}>
                                 {phase.label}{isActive ? ` — ${phase.desc}...` : isDone ? ` — done` : ""}
                               </span>
@@ -756,7 +759,7 @@ export default function Dashboard() {
                   );
                 })()}
 
-                <p className="text-xs text-slate-400 mt-4">
+                <p className="text-xs text-slate-600 mt-4">
                   Takes around 3 minutes. You can switch to other tabs while it runs.
                 </p>
               </div>
@@ -771,7 +774,7 @@ export default function Dashboard() {
                     handleViewLatest();
                     setCycleStatus("idle");
                   }}
-                  className="w-full px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mt-2"
+                  className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg transition-colors mt-2"
                 >
                   View Daily Brief
                 </button>
@@ -782,7 +785,7 @@ export default function Dashboard() {
               <p className={`text-xs mt-3 ${
                 cycleStatus === "error" ? "text-red-600" :
                 cycleStatus === "complete" ? "text-green-600" :
-                "text-slate-500"
+                "text-slate-700"
               }`}>
                 {cycleMessage}
               </p>
@@ -790,10 +793,10 @@ export default function Dashboard() {
           </div>
 
           {/* Cycle History */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="card-gradient border border-slate-200 p-5 shadow-sm">
             <h3 className="text-xs font-semibold text-slate-700 mb-3">Cycle History</h3>
             {reportDates.length === 0 ? (
-              <p className="text-xs text-slate-400">No cycles have been run yet.</p>
+              <p className="text-xs text-slate-600">No cycles have been run yet.</p>
             ) : (
               <div className="space-y-1">
                 {[...reportDates].sort((a, b) => b.localeCompare(a)).map((date) => (
@@ -813,7 +816,7 @@ export default function Dashboard() {
                         <span className="text-xs text-green-600 font-medium">latest</span>
                       )}
                     </div>
-                    <span className="text-xs text-slate-400 group-hover:text-slate-600 transition-colors">
+                    <span className="text-xs text-slate-600 group-hover:text-slate-600 transition-colors">
                       View report
                     </span>
                   </button>
@@ -823,6 +826,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

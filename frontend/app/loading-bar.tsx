@@ -15,7 +15,7 @@ export default function LoadingBar({
         />
       </div>
       {label && (
-        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-xs text-slate-700">{label}</p>
       )}
     </div>
   );

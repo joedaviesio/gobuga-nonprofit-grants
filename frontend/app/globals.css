@@ -85,7 +85,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
 }
-.card-gradient::before {
+.card-gradient-top::before {
   content: '';
   position: absolute;
   top: 0;
@@ -139,6 +139,109 @@ body {
 
 .animate-loading-bar {
   animation: loading-bar 1.5s ease-in-out infinite;
+}
+
+/* Animated gradient background for auth pages */
+.auth-bg {
+  background: linear-gradient(135deg,
+    #eef2ff 0%,
+    #e0e7ff 12%,
+    #fce7f3 25%,
+    #fdf2f8 37%,
+    #fef3c7 50%,
+    #fffbeb 62%,
+    #d1fae5 75%,
+    #ecfdf5 87%,
+    #eef2ff 100%
+  );
+  background-size: 600% 600%;
+  animation: auth-bg-shift 16s ease-in-out infinite;
+}
+
+@keyframes auth-bg-shift {
+  0% { background-position: 0% 50%; }
+  16% { background-position: 50% 0%; }
+  33% { background-position: 100% 50%; }
+  50% { background-position: 50% 100%; }
+  66% { background-position: 0% 50%; }
+  83% { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Gradient button */
+.btn-gradient {
+  background: linear-gradient(135deg, var(--brand-blue), #7c5cc5, var(--brand-red));
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease-in-out infinite;
+  color: white;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn-gradient:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.btn-gradient:active {
+  transform: translateY(0);
+}
+.btn-gradient:disabled {
+  opacity: 0.5;
+  transform: none;
+}
+
+/* Subtle animated background for app pages (dashboard, settings, case) */
+.app-bg {
+  background: linear-gradient(135deg,
+    #f8fafc 0%,
+    #f0f4ff 20%,
+    #fdf4f8 40%,
+    #fefce8 60%,
+    #f0fdf4 80%,
+    #f8fafc 100%
+  );
+  background-size: 400% 400%;
+  animation: app-bg-shift 25s ease-in-out infinite;
+}
+
+@keyframes app-bg-shift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Floating orbs for auth backgrounds */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: orb-float 12s ease-in-out infinite;
+}
+.orb-blue {
+  background: var(--brand-blue);
+  width: 300px;
+  height: 300px;
+}
+.orb-yellow {
+  background: var(--brand-yellow);
+  width: 250px;
+  height: 250px;
+  animation-delay: -4s;
+  animation-duration: 16s;
+}
+.orb-red {
+  background: var(--brand-red);
+  width: 200px;
+  height: 200px;
+  animation-delay: -8s;
+  animation-duration: 14s;
+}
+
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
 }
 
 /* Focus states per style guide */

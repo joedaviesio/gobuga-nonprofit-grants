@@ -638,6 +638,22 @@ function SettingsContent() {
           </div>
         </div>
       )}
+
+      {/* Privacy & Data Policy */}
+      <div className="card-gradient border border-stone-200 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-stone-700">Privacy & Data Policy</h2>
+            <p className="text-xs text-stone-600 mt-0.5">How we collect, use, and protect your data.</p>
+          </div>
+          <a
+            href="/privacy"
+            className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
+          >
+            View policy
+          </a>
+        </div>
+      </div>
     </div>
     </div>
   );

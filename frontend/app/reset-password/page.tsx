@@ -118,7 +118,7 @@ export default function ResetPasswordPage() {
 
       <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-stone-900" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
+          <h1 className="text-3xl font-bold text-stone-900 [text-shadow:_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white,_1px_1px_0_white]" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
           <p className="text-sm text-stone-700 mt-2 font-[family-name:var(--font-dm-sans)]">Set a new password</p>
         </div>
 

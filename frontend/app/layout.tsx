@@ -26,8 +26,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "GoBuga",
-  description: "AI-powered grant scanning and submission platform for nonprofits",
+  title: "gobuga",
+  description: "Helps with nonprofit grants",
 };
 
 export default function RootLayout({

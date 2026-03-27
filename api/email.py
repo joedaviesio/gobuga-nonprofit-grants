@@ -10,7 +10,7 @@ load_dotenv()
 def send_reset_email(to_email: str, reset_url: str):
     """Send a password reset email. Logs to stdout if RESEND_API_KEY is not set."""
     api_key = os.getenv("RESEND_API_KEY")
-    from_addr = os.getenv("RESEND_FROM", "GoBuga <noreply@gobuga.org>")
+    from_addr = os.getenv("RESEND_FROM", "gobuga <noreply@gobuga.org>")
 
     if not api_key:
         print(f"[EMAIL] No RESEND_API_KEY — reset link for {to_email}:\n  {reset_url}")
@@ -22,7 +22,7 @@ def send_reset_email(to_email: str, reset_url: str):
     resend.Emails.send({
         "from": from_addr,
         "to": [to_email],
-        "subject": "Reset your GoBuga password",
+        "subject": "Reset your gobuga password",
         "html": (
             f"<p>Hi,</p>"
             f"<p>We received a request to reset your password.</p>"

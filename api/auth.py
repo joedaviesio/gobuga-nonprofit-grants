@@ -272,6 +272,8 @@ def request_password_reset(email: str) -> dict:
     if user:
         token = secrets.token_urlsafe(32)
         resets = _load_resets()
+        # Invalidate any existing unused tokens for this user
+        resets = {k: v for k, v in resets.items() if v.get("user_id") != user["user_id"]}
         resets[token] = {
             "user_id": user["user_id"],
             "expires_at": time.time() + RESET_TTL,

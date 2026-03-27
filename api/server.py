@@ -191,6 +191,32 @@ def api_reset_password(req: ResetPasswordRequest):
         raise HTTPException(400, str(e))
 
 
+# --- Test helper (requires ALLOW_TEST_ENDPOINTS=1) ---
+
+@app.get("/api/test/latest-reset-token")
+def api_latest_reset_token(email: str):
+    """Return the latest unused reset token for an email. Only available when ALLOW_TEST_ENDPOINTS=1."""
+    import os
+    if os.environ.get("ALLOW_TEST_ENDPOINTS") != "1":
+        raise HTTPException(404, "Not found")
+    from api.auth import _find_user_by_email, _load_json, password_resets_path
+    user = _find_user_by_email(email)
+    if not user:
+        raise HTTPException(404, "No user")
+    data = _load_json(password_resets_path()) or {}
+    import time
+    candidates = [
+        (k, v) for k, v in data.items()
+        if v.get("user_id") == user["user_id"]
+        and not v.get("used")
+        and v.get("expires_at", 0) > time.time()
+    ]
+    if not candidates:
+        raise HTTPException(404, "No active token")
+    latest = max(candidates, key=lambda x: x[1].get("created", ""))
+    return {"token": latest[0]}
+
+
 # --- Org setup ---
 
 class OrgSetupRequest(BaseModel):

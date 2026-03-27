@@ -80,25 +80,19 @@ def register_test_user():
 
 def mint_reset_token_via_api():
     """
-    Request a password reset and retrieve the token from the backend store.
-    In production we can't read the JSON file directly, so we use a
-    two-step approach: call forgot-password, then check if the backend
-    exposes the token in any way. If not, we fall back to direct store
-    access (works when running against local / Railway shell).
+    Request a password reset and retrieve the token.
+    1. Try the test endpoint (requires ALLOW_TEST_ENDPOINTS=1 on server)
+    2. Fall back to reading the local store file
     """
     # Trigger the reset email
     requests.post(f"{API}/api/auth/forgot-password", json={"email": TEST_EMAIL})
 
-    # Try the internal debug endpoint (only available in dev)
-    r = requests.get(f"{API}/api/debug/password-resets")
+    # Try the test endpoint
+    r = requests.get(f"{API}/api/test/latest-reset-token", params={"email": TEST_EMAIL})
     if r.status_code == 200:
-        resets = r.json()
-        # Find the most recent token for our test user
-        for token, record in sorted(resets.items(), key=lambda x: x[1].get("created", ""), reverse=True):
-            if not record.get("used"):
-                return token
+        return r.json().get("token")
 
-    # Fallback: read the store file directly (local dev or Railway shell)
+    # Fallback: read the store file directly (local dev only)
     store_paths = [
         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "platform", "password_resets.json"),
         "/data/password_resets.json",  # Railway persistent volume
@@ -116,7 +110,8 @@ def mint_reset_token_via_api():
 
 
 def inject_expired_token():
-    """Write a fake expired token directly into the store (local only)."""
+    """Write a fake expired token directly into the store (local only).
+    Returns None when running against a remote API."""
     import json
     from datetime import datetime, timezone
 

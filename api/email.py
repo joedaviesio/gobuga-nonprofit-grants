@@ -10,7 +10,7 @@ load_dotenv()
 def send_reset_email(to_email: str, reset_url: str):
     """Send a password reset email. Logs to stdout if RESEND_API_KEY is not set."""
     api_key = os.getenv("RESEND_API_KEY")
-    from_addr = os.getenv("RESEND_FROM", "GoBuga <noreply@gobuga.app>")
+    from_addr = os.getenv("RESEND_FROM", "GoBuga <noreply@gobuga.org>")
 
     if not api_key:
         print(f"[EMAIL] No RESEND_API_KEY — reset link for {to_email}:\n  {reset_url}")

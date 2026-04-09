@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Gobuga Billboard — 1920x960</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1920px;
+    height: 960px;
+    overflow: hidden;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .billboard {
+    width: 1920px;
+    height: 960px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Splash gradient using brand colors */
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(93,120,197,0.45) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 70%, rgba(226,80,99,0.40) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,206,49,0.30) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 80% at 60% 20%, rgba(124,92,197,0.25) 0%, transparent 50%),
+      linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+  }
+
+  /* Header: gobuga with white text-stroke border */
+  .header {
+    font-size: 180px;
+    font-weight: 900;
+    letter-spacing: -4px;
+    color: #ffffff;
+    text-transform: lowercase;
+    -webkit-text-stroke: 3px #ffffff;
+    text-shadow:
+      0 0 40px rgba(255,255,255,0.15),
+      0 4px 12px rgba(0,0,0,0.4);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+
+  /* Subheader: blue */
+  .subheader {
+    font-size: 64px;
+    font-weight: 600;
+    color: #5d78c5;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(93,120,197,0.4);
+    margin-bottom: 0;
+  }
+
+  /* URL beneath subheader */
+  .url {
+    font-size: 36px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 4px;
+    margin-top: 24px;
+  }
+
+  /* NZ domestic technology stamp */
+  .stamp {
+    position: absolute;
+    bottom: 70px;
+    right: 80px;
+    border: 3px solid rgba(255,206,49,0.8);
+    border-radius: 8px;
+    padding: 14px 28px;
+    transform: rotate(-4deg);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,206,49,0.9);
+    background: rgba(255,206,49,0.08);
+    text-shadow: 0 1px 6px rgba(255,206,49,0.3);
+  }
+
+  /* Subtle decorative gradient bar at top */
+  .top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #5d78c5, #ffce31, #e25063);
+  }
+
+  /* Subtle decorative gradient bar at bottom */
+  .bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #e25063, #ffce31, #5d78c5);
+  }
+</style>
+</head>
+<body>
+  <div class="billboard">
+    <div class="top-bar"></div>
+    <div class="header">gobuga</div>
+    <div class="subheader">Helps with grants</div>
+    <div class="url">gobuga.org</div>
+    <div class="stamp">NZ Domestic Technology</div>
+    <div class="bottom-bar"></div>
+  </div>
+</body>
+</html>

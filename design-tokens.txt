@@ -1,0 +1,182 @@
+GOBUGA DESIGN TOKENS
+====================
+Generated: 2026-04-09
+
+
+FONTS
+-----
+
+Primary Stack:
+  - clother (via Adobe Typekit: https://use.typekit.net/czn0xnx.css)
+  - Inter (weights: 300, 400, 500, 600, 700)
+  - system-ui, -apple-system, sans-serif (fallbacks)
+
+Secondary:
+  - Open Sans (weights: 400, 500, 600)
+  - DM Sans (weights: 400, 500, 600, 700) — used in billboards
+  - Geist (weights: 700, 900) — used in billboards
+  - Geist Mono — monospace variable font
+
+CSS Variables:
+  --font-sans: 'clother', 'Inter', system-ui, -apple-system, sans-serif
+  --font-serif: Georgia, serif
+  --font-geist-sans
+  --font-geist-mono
+  --font-dm-sans
+  --font-inter
+
+
+COLORS
+------
+
+Brand Colors:
+  --brand-blue:    #5d78c5
+  --brand-yellow:  #ffce31
+  --brand-red:     #e25063
+
+Core:
+  --background:    #ffffff
+  --foreground:    #0f172a
+  --primary:       #000000
+  --primary-light: #333333
+
+Tailwind Palette (colors actively used in components):
+
+  Stone:
+    stone-50, stone-100, stone-200, stone-300
+    stone-500, stone-600, stone-700, stone-800, stone-900
+
+  Slate:
+    slate-50, slate-100, slate-200, slate-300
+    slate-500, slate-600, slate-700, slate-800, slate-900
+
+  Blue:
+    blue-50, blue-100, blue-200
+    blue-500, blue-600, blue-700, blue-800
+
+  Red:
+    red-50
+    red-400, red-500, red-600, red-700
+
+  Amber:
+    amber-50
+    amber-200, amber-400
+    amber-600, amber-700, amber-800
+
+  Green:
+    green-50
+    green-400, green-500, green-600, green-700
+
+  Purple:
+    purple-50
+    purple-100, purple-200, purple-400
+    purple-600, purple-700
+
+  Teal:
+    teal-50
+    teal-200, teal-400
+    teal-600, teal-700
+
+Transparent / RGBA:
+  rgba(0, 0, 0, 0.2)           — scrollbar track
+  rgba(0, 0, 0, 0.3)           — scrollbar hover
+  rgba(0, 0, 0, 0.6)           — billboard URL text
+  rgba(93, 120, 197, 0.08)     — brand blue soft
+  rgba(255, 206, 49, 0.08)     — brand yellow soft
+  rgba(226, 80, 99, 0.08)      — brand red soft
+  rgba(59, 130, 246, 0.08)     — setup page blue radial
+  rgba(139, 92, 246, 0.06)     — setup page purple radial
+  rgba(14, 165, 233, 0.05)     — setup page cyan radial
+
+Billboard-specific:
+  #3a3a3a                      — light billboard header
+  #22c55e                      — stamp border (light)
+  #16a34a                      — stamp text (light)
+  #0d0d1a                      — dark billboard base
+  #1a1a2e                      — dark billboard mid
+  #16213e                      — dark billboard mid
+  #0f3460                      — dark billboard accent
+  rgba(110, 231, 183, 0.45)    — emerald radial glow
+  rgba(255, 255, 255, 0.7)     — dark billboard URL text
+  rgba(255, 206, 49, 0.8)      — dark billboard stamp border
+  rgba(255, 206, 49, 0.9)      — dark billboard stamp text
+
+Misc hex:
+  #FAF9F6                      — off-white code background
+  #7c5cc5                      — purple (button gradient midpoint)
+  #f1f5f9, #e2e8f0             — pixel gradient edges (slate tones)
+
+
+GRADIENTS
+---------
+
+.brand-gradient
+  linear-gradient(90deg, var(--brand-blue), var(--brand-yellow), var(--brand-red))
+
+.brand-gradient-soft
+  linear-gradient(135deg, rgba(93,120,197,0.08), rgba(255,206,49,0.08), rgba(226,80,99,0.08))
+
+.brand-gradient-border
+  linear-gradient(90deg, var(--brand-blue), var(--brand-yellow), var(--brand-red))
+
+.card-gradient-top::before
+  linear-gradient(90deg, var(--brand-blue), var(--brand-yellow), var(--brand-red))
+
+.text-gradient
+  linear-gradient(135deg, var(--brand-blue), var(--brand-red))
+
+.pixel-gradient
+  linear-gradient(90deg,
+    #f1f5f9 0%, #e2e8f0 8%, #5d78c5 18%, #ffce31 38%,
+    #e25063 58%, #5d78c5 78%, #e2e8f0 90%, #f1f5f9 100%)
+
+.auth-bg
+  linear-gradient(135deg,
+    #eef2ff 0%, #e0e7ff 12%, #fce7f3 25%, #fdf2f8 37%,
+    #fef3c7 50%, #fffbeb 62%, #d1fae5 75%, #ecfdf5 87%, #eef2ff 100%)
+
+.btn-gradient
+  linear-gradient(135deg, var(--brand-blue), #7c5cc5, var(--brand-red))
+
+.app-bg
+  linear-gradient(135deg,
+    #f8fafc 0%, #f0f4ff 20%, #fdf4f8 40%,
+    #fefce8 60%, #f0fdf4 80%, #f8fafc 100%)
+
+Billboard dark background
+  linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%)
+
+Billboard decorative bars
+  linear-gradient(90deg, #5d78c5, #ffce31, #e25063)
+  linear-gradient(90deg, #e25063, #ffce31, #5d78c5)  (reversed)
+
+Radial gradients (setup page):
+  radialGradient cx="20%" cy="30%" r="50%"  — rgba(59,130,246,0.08) to transparent
+  radialGradient cx="80%" cy="70%" r="50%"  — rgba(139,92,246,0.06) to transparent
+  radialGradient cx="60%" cy="20%" r="40%"  — rgba(14,165,233,0.05) to transparent
+
+Radial gradients (billboard backgrounds):
+  radial-gradient(ellipse 90% 70% at 10% 20%, rgba(93,120,197,0.50), transparent 55%)
+  radial-gradient(ellipse 80% 60% at 90% 80%, rgba(226,80,99,0.45), transparent 55%)
+  radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255,206,49,0.40), transparent 50%)
+  radial-gradient(ellipse 60% 50% at 80% 15%, rgba(255,206,49,0.30), transparent 45%)
+  radial-gradient(ellipse 60% 50% at 25% 85%, rgba(93,120,197,0.28), transparent 45%)
+  radial-gradient(ellipse 50% 40% at 60% 70%, rgba(226,80,99,0.20), transparent 50%)
+  radial-gradient(ellipse 70% 55% at 55% 90%, rgba(110,231,183,0.45), transparent 50%)
+  radial-gradient(ellipse 55% 45% at 5% 60%,  rgba(110,231,183,0.30), transparent 50%)
+
+
+ANIMATED GRADIENT CLASSES
+-------------------------
+
+  gradient-shift      — 4s ease-in-out infinite
+  auth-bg-shift       — 16s ease-in-out infinite
+  app-bg-shift        — 25s ease-in-out infinite
+  pixel-drift         — 6s ease-in-out infinite
+  loading-bar         — 1.5s ease-in-out infinite
+  orb-float           — 12s ease-in-out infinite
+
+Orb background colors:
+  .orb-blue:   var(--brand-blue)   #5d78c5
+  .orb-yellow: var(--brand-yellow) #ffce31
+  .orb-red:    var(--brand-red)    #e25063

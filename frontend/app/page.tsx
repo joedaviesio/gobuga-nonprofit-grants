@@ -15,7 +15,6 @@ import {
   type CaseSummary,
 } from "@/lib/api";
 import { useAuth } from "./auth-gate";
-import DOMPurify from "dompurify";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 
@@ -51,18 +50,6 @@ function StatusBadge({ status }: { status: string }) {
       {status}
     </span>
   );
-}
-
-function SimpleMarkdown({ text }: { text: string }) {
-  const html = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-blue-600 underline hover:text-blue-800">$1</a>')
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/^- (.+)$/gm, "<li>$1</li>")
-    .replace(/\n/g, "<br>");
-  return <div className="prose text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
 }
 
 // --- Report View Component ---
@@ -199,29 +186,6 @@ function ReportView({
         })()}
       </div>
 
-      {/* Donor Intelligence */}
-      {report.sections["Donor Intelligence"] && (
-        <div className="card-gradient border border-slate-200 rounded-xl p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-800 mb-3">Donor Intelligence</h2>
-          <SimpleMarkdown text={report.sections["Donor Intelligence"]} />
-        </div>
-      )}
-
-      {/* Pipeline + Gaps */}
-      <div className="grid grid-cols-2 gap-4">
-        {report.sections["Pipeline Update"] && (
-          <div className="card-gradient border border-slate-200 p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800 mb-3">Pipeline</h2>
-            <SimpleMarkdown text={report.sections["Pipeline Update"]} />
-          </div>
-        )}
-        {report.sections["Gaps & Recommendations"] && (
-          <div className="card-gradient border border-slate-200 p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800 mb-3">Gaps</h2>
-            <SimpleMarkdown text={report.sections["Gaps & Recommendations"]} />
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -299,7 +263,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
       {filtered.length === 0 ? (
         <p className="text-sm text-slate-600 py-4">
           {cases.length === 0
-            ? "No cases yet. Open one from the Daily Brief."
+            ? "No cases yet. Open one from Opportunities."
             : `No ${tab} cases.`}
         </p>
       ) : (
@@ -550,7 +514,7 @@ export default function Dashboard() {
               : "text-slate-600 hover:text-slate-600"
           }`}
         >
-          Daily Brief
+          Opportunities
         </button>
         <button
           onClick={() => setActiveView("cases")}
@@ -776,7 +740,7 @@ export default function Dashboard() {
                   }}
                   className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg transition-colors mt-2"
                 >
-                  View Daily Brief
+                  View Opportunities
                 </button>
               </div>
             ) : null}

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Gobuga Billboard Light — 1920x960</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Geist:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1920px;
+    height: 960px;
+    max-height: 960px;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    font-family: 'DM Sans', 'Inter', sans-serif;
+  }
+
+  .billboard {
+    width: 1920px;
+    height: 960px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* White base with splash brand colors */
+    background:
+      radial-gradient(ellipse 90% 70% at 10% 20%, rgba(93,120,197,0.50) 0%, transparent 55%),
+      radial-gradient(ellipse 80% 60% at 90% 80%, rgba(226,80,99,0.45) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255,206,49,0.40) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 50% at 80% 15%, rgba(255,206,49,0.30) 0%, transparent 45%),
+      radial-gradient(ellipse 60% 50% at 25% 85%, rgba(93,120,197,0.28) 0%, transparent 45%),
+      radial-gradient(ellipse 50% 40% at 60% 70%, rgba(226,80,99,0.20) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 55% at 55% 90%, rgba(110,231,183,0.45) 0%, transparent 50%),
+      radial-gradient(ellipse 55% 45% at 5% 60%, rgba(110,231,183,0.30) 0%, transparent 50%),
+      #ffffff;
+  }
+
+  /* Header: gobuga — black fill, white stroke border */
+  .header {
+    font-family: 'Geist', sans-serif;
+    font-size: 180px;
+    font-weight: 900;
+    letter-spacing: -4px;
+    color: #3a3a3a;
+    text-transform: lowercase;
+    -webkit-text-stroke: 3px #ffffff;
+    paint-order: stroke fill;
+    text-shadow:
+      0 0 30px rgba(0,0,0,0.06),
+      0 4px 12px rgba(0,0,0,0.08);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+
+  /* Subheader: black with white stroke */
+  .subheader {
+    font-size: 44px;
+    font-weight: 600;
+    color: #5d78c5;
+    letter-spacing: 2px;
+    -webkit-text-stroke: 1.5px #ffffff;
+    paint-order: stroke fill;
+    margin-bottom: 0;
+  }
+
+  /* URL beneath subheader */
+  .url {
+    font-size: 36px;
+    font-weight: 500;
+    color: rgba(0,0,0,0.6);
+    letter-spacing: 4px;
+    margin-top: 24px;
+  }
+
+  /* NZ domestic technology stamp */
+  .stamp {
+    position: absolute;
+    bottom: 70px;
+    right: 80px;
+    border: 3px solid #22c55e;
+    border-radius: 8px;
+    padding: 14px 28px;
+    transform: rotate(-4deg);
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #16a34a;
+    background: rgba(34,197,94,0.08);
+  }
+</style>
+</head>
+<body>
+  <div class="billboard">
+    <div class="header">gobuga</div>
+    <div class="subheader">Helps with grants</div>
+    <div class="url">gobuga.org</div>
+    <div class="stamp">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="50" height="42" style="vertical-align: middle; margin-right: 12px;">
+        <!-- Kiwi bird body -->
+        <ellipse cx="55" cy="58" rx="38" ry="28" fill="currentColor" opacity="0.85"/>
+        <!-- Kiwi beak -->
+        <path d="M93 52 Q110 48 120 42 Q112 52 93 56 Z" fill="currentColor" opacity="0.85"/>
+        <!-- Kiwi legs -->
+        <line x1="42" y1="82" x2="38" y2="98" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+        <line x1="55" y1="84" x2="52" y2="98" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+        <!-- Kiwi eye -->
+        <circle cx="82" cy="48" r="3" fill="white"/>
+        <!-- Feather texture lines -->
+        <path d="M30 50 Q45 45 60 50" fill="none" stroke="white" stroke-width="1.5" opacity="0.3"/>
+        <path d="M28 60 Q45 55 65 58" fill="none" stroke="white" stroke-width="1.5" opacity="0.3"/>
+        <path d="M32 68 Q48 64 62 67" fill="none" stroke="white" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+      Kiwi Tech
+    </div>
+  </div>
+</body>
+</html>

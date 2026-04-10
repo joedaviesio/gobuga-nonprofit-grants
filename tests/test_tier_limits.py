@@ -119,7 +119,34 @@ def case_1():
     check("Filtered high <= 2", high_count <= 2, f"Got {high_count}")
     check("Filtered medium <= 2", med_count <= 2, f"Got {med_count}")
     check("Filtered low <= 1", low_count <= 1, f"Got {low_count}")
-    check("Total filtered <= 5", len(filtered) <= 5, f"Got {len(filtered)}")
+    check("Total filtered == 5", len(filtered) == 5, f"Got {len(filtered)}")
+
+    # --- Backfill: when a priority bucket is short, extras fill the gap ---
+    # Only 1 high available, 0 low — should still return 5 total
+    sparse_opps = [
+        {"id": "opp-h0", "priority": "high", "title": "High 0"},
+        {"id": "opp-m0", "priority": "medium", "title": "Med 0"},
+        {"id": "opp-m1", "priority": "medium", "title": "Med 1"},
+        {"id": "opp-m2", "priority": "medium", "title": "Med 2"},
+        {"id": "opp-m3", "priority": "medium", "title": "Med 3"},
+        {"id": "opp-m4", "priority": "medium", "title": "Med 4"},
+    ]
+    sparse_filtered = filter_opportunities_for_tier(sparse_opps, org_id)
+    check("Backfill: still returns 5 when buckets are short",
+          len(sparse_filtered) == 5, f"Got {len(sparse_filtered)}")
+    sparse_high = sum(1 for o in sparse_filtered if o["priority"] == "high")
+    sparse_med = sum(1 for o in sparse_filtered if o["priority"] == "medium")
+    check("Backfill: takes the 1 available high", sparse_high == 1, f"Got {sparse_high}")
+    check("Backfill: fills remaining slots with medium", sparse_med == 4, f"Got {sparse_med}")
+
+    # Fewer than 5 total available — returns all of them
+    tiny_opps = [
+        {"id": "opp-m0", "priority": "medium", "title": "Med 0"},
+        {"id": "opp-m1", "priority": "medium", "title": "Med 1"},
+    ]
+    tiny_filtered = filter_opportunities_for_tier(tiny_opps, org_id)
+    check("Undersupply: returns all when < 5 available",
+          len(tiny_filtered) == 2, f"Got {len(tiny_filtered)}")
 
 
 # ---------------------------------------------------------------------------

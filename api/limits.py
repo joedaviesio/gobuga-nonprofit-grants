@@ -63,7 +63,8 @@ def toggle_tier(org_id: str) -> str:
 
 def filter_opportunities_for_tier(opportunities: list, org_id: str) -> list:
     """Filter opportunities based on tier limits.
-    Scanner: 2 high, 2 medium, 1 low.
+    Scanner: prefers 2 high, 2 medium, 1 low — but always returns up to 5
+    by backfilling from remaining opportunities if a priority bucket is short.
     Officer: all opportunities.
     """
     tier = get_tier(org_id)
@@ -71,14 +72,27 @@ def filter_opportunities_for_tier(opportunities: list, org_id: str) -> list:
     if limits is None:
         return opportunities  # officer gets all
 
+    total_cap = sum(limits.values())
+
+    # Pass 1: fill each priority bucket up to its cap
     counts = {"high": 0, "medium": 0, "low": 0}
     filtered = []
+    remaining = []
     for opp in opportunities:
         priority = opp.get("priority", "medium")
         cap = limits.get(priority, 0)
         if counts.get(priority, 0) < cap:
             filtered.append(opp)
             counts[priority] = counts.get(priority, 0) + 1
+        else:
+            remaining.append(opp)
+
+    # Pass 2: backfill from remaining opportunities if under total cap
+    for opp in remaining:
+        if len(filtered) >= total_cap:
+            break
+        filtered.append(opp)
+
     return filtered
 
 

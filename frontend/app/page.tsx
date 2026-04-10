@@ -313,27 +313,81 @@ export default function Dashboard() {
   const [triggerError, setTriggerError] = useState("");
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
-  const watcherMessages = [
-    "Scanning",
-    "Checking",
-    "Crawling",
-    "Indexing",
-    "Parsing",
-    "Matching",
-    "Reviewing",
-    "Pulling",
-    "Screening",
-    "Cross-referencing",
-  ];
+  const phaseMessages: Record<string, string[]> = {
+    watcher: [
+      "Scanning grant databases",
+      "Checking federal listings",
+      "Crawling foundation sites",
+      "Indexing new postings",
+      "Parsing eligibility criteria",
+      "Matching to your profile",
+      "Reviewing deadlines",
+      "Pulling application details",
+      "Screening requirements",
+      "Cross-referencing sources",
+    ],
+    analyst: [
+      "Evaluating fit scores",
+      "Comparing requirements",
+      "Analyzing eligibility",
+      "Ranking opportunities",
+      "Checking budget alignment",
+      "Scoring mission fit",
+      "Reviewing past awards",
+      "Assessing competitiveness",
+    ],
+    reporter: [
+      "Compiling brief",
+      "Summarizing top picks",
+      "Writing recommendations",
+      "Formatting results",
+      "Preparing opportunity cards",
+      "Generating insights",
+    ],
+    saving: [
+      "Saving report",
+      "Storing opportunities",
+      "Finalizing results",
+    ],
+  };
+
+  const [phaseMessageKey, setPhaseMessageKey] = useState(0);
+  const [itemsFound, setItemsFound] = useState(0);
+  const [prevPhase, setPrevPhase] = useState<string | null>(null);
+  const [phaseJustCompleted, setPhaseJustCompleted] = useState<string | null>(null);
 
   useEffect(() => {
-    if (cyclePhase !== "watcher") return;
-    setWatcherMsgIndex(0);
+    if (cycleStatus !== "running") return;
+    setPhaseMessageKey(0);
     const interval = setInterval(() => {
-      setWatcherMsgIndex((i) => (i + 1) % watcherMessages.length);
-    }, 3500);
+      setPhaseMessageKey((i) => i + 1);
+    }, 2000);
     return () => clearInterval(interval);
+  }, [cyclePhase, cycleStatus]);
+
+  // Simulate activity counter ticking up during the cycle
+  useEffect(() => {
+    if (cycleStatus !== "running") { setItemsFound(0); return; }
+    const interval = setInterval(() => {
+      setItemsFound((n) => {
+        if (cyclePhase === "watcher") return n + Math.ceil(Math.random() * 3);
+        if (cyclePhase === "analyst") return n + (Math.random() > 0.6 ? 1 : 0);
+        return n;
+      });
+    }, 800);
+    return () => clearInterval(interval);
+  }, [cycleStatus, cyclePhase]);
+
+  // Track phase transitions for flash animation
+  useEffect(() => {
+    if (cyclePhase && prevPhase && cyclePhase !== prevPhase) {
+      setPhaseJustCompleted(prevPhase);
+      const t = setTimeout(() => setPhaseJustCompleted(null), 800);
+      return () => clearTimeout(t);
+    }
+    setPrevPhase(cyclePhase);
   }, [cyclePhase]);
+
   const [cycleMessage, setCycleMessage] = useState("");
 
   const startCyclePolling = () => {
@@ -664,56 +718,78 @@ export default function Dashboard() {
               </div>
             ) : cycleStatus === "running" ? (
               <div className="py-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-3 h-3 rounded-full animate-pulse brand-gradient" />
-                  <span className="text-sm font-medium text-slate-700">Cycle running</span>
+                {/* Header with live dot and activity counter */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full brand-gradient live-dot" />
+                    <span className="text-sm font-medium text-slate-700">Cycle running</span>
+                  </div>
+                  {itemsFound > 0 && (
+                    <span key={itemsFound} className="text-xs font-mono font-medium text-slate-500 tabular-nums counter-tick">
+                      {itemsFound} items scanned
+                    </span>
+                  )}
                 </div>
 
-                {/* Progress bar */}
+                {/* Progress bar with shimmer */}
                 {(() => {
                   const phases = [
-                    { key: "watcher", label: "Watcher", desc: watcherMessages[watcherMsgIndex] },
-                    { key: "analyst", label: "Analyst", desc: "Assessing fit" },
-                    { key: "reporter", label: "Reporter", desc: "Compiling brief" },
-                    { key: "saving", label: "Saving", desc: "Saving report" },
+                    { key: "watcher", label: "Watcher" },
+                    { key: "analyst", label: "Analyst" },
+                    { key: "reporter", label: "Reporter" },
+                    { key: "saving", label: "Saving" },
                   ];
                   const currentIndex = phases.findIndex((p) => p.key === cyclePhase);
-                  const progress = currentIndex === -1 ? 5 : Math.min(((currentIndex + 0.5) / phases.length) * 100, 100);
+                  const progress = currentIndex === -1 ? 3 : Math.min(((currentIndex + 0.5) / phases.length) * 100, 98);
+                  const msgs = cyclePhase ? (phaseMessages[cyclePhase] || []) : [];
+                  const currentMsg = msgs.length > 0 ? msgs[phaseMessageKey % msgs.length] : "";
 
                   return (
                     <div>
-                      {/* Gradient progress bar */}
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
+                      {/* Gradient progress bar with shimmer */}
+                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
                         <div
-                          className="h-full rounded-full transition-all duration-1000 ease-out brand-gradient"
+                          className="h-full rounded-full transition-all duration-1000 ease-out brand-gradient progress-shimmer"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
 
+                      {/* Live rotating message */}
+                      {currentMsg && (
+                        <p key={`${cyclePhase}-${phaseMessageKey}`} className="text-[11px] text-slate-400 mb-4 cycle-msg-enter">
+                          {currentMsg}...
+                        </p>
+                      )}
+
                       {/* Phase steps */}
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {phases.map((phase, i) => {
                           const isDone = currentIndex > i;
                           const isActive = currentIndex === i;
+                          const justDone = phaseJustCompleted === phase.key;
                           return (
-                            <div key={phase.key} className="flex items-center gap-2.5">
+                            <div
+                              key={phase.key}
+                              className={`flex items-center gap-2.5 px-2 py-1 ${justDone ? "phase-just-done" : ""}`}
+                            >
                               {isDone ? (
                                 <span className="text-green-500 text-sm w-4 text-center">&#10003;</span>
                               ) : isActive ? (
                                 <div className="w-4 flex justify-center">
-                                  <div className="w-2 h-2 rounded-full animate-pulse brand-gradient" />
+                                  <div className="w-2.5 h-2.5 rounded-full brand-gradient live-dot" />
                                 </div>
                               ) : (
                                 <div className="w-4 flex justify-center">
                                   <div className="w-2 h-2 bg-slate-200 rounded-full" />
                                 </div>
                               )}
-                              <span className={`text-xs ${
-                                isActive ? "text-slate-700 font-medium" :
-                                isDone ? "text-slate-600" :
-                                "text-slate-600"
+                              <span className={`text-xs transition-colors duration-300 ${
+                                isActive ? "text-slate-800 font-semibold" :
+                                isDone ? "text-green-600 font-medium" :
+                                "text-slate-400"
                               }`}>
-                                {phase.label}{isActive ? ` — ${phase.desc}...` : isDone ? ` — done` : ""}
+                                {phase.label}
+                                {isDone && " — done"}
                               </span>
                             </div>
                           );
@@ -723,22 +799,27 @@ export default function Dashboard() {
                   );
                 })()}
 
-                <p className="text-xs text-slate-600 mt-4">
-                  Takes around 3 minutes. You can switch to other tabs while it runs.
+                <p className="text-[11px] text-slate-400 mt-4">
+                  ~3 min. You can switch tabs while it runs.
                 </p>
               </div>
             ) : cycleStatus === "complete" ? (
-              <div className="py-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full" />
-                  <span className="text-sm font-medium text-green-700">Cycle complete</span>
+              <div className="py-4 cycle-complete-enter">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <span className="text-green-500 text-lg">&#10003;</span>
+                    <span className="text-sm font-semibold text-green-800">Cycle complete</span>
+                  </div>
+                  {cycleMessage && (
+                    <p className="text-xs text-green-600 ml-7">{cycleMessage}</p>
+                  )}
                 </div>
                 <button
                   onClick={() => {
                     handleViewLatest();
                     setCycleStatus("idle");
                   }}
-                  className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg transition-colors mt-2"
+                  className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg transition-colors"
                 >
                   View Opportunities
                 </button>

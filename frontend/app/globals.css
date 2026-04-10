@@ -244,6 +244,83 @@ body {
   66% { transform: translate(-20px, 15px) scale(0.95); }
 }
 
+/* Cycle UI — shimmer overlay on progress bar */
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.progress-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: shimmer-slide 1.5s ease-in-out infinite;
+}
+
+/* Cycle UI — message crossfade */
+@keyframes msg-in {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.cycle-msg-enter {
+  animation: msg-in 0.3s ease-out;
+}
+
+/* Cycle UI — phase complete flash */
+@keyframes phase-done {
+  0% { background: rgba(34,197,94,0.15); }
+  100% { background: transparent; }
+}
+.phase-just-done {
+  animation: phase-done 0.8s ease-out;
+  border-radius: 6px;
+}
+
+/* Cycle UI — completion burst */
+@keyframes completion-scale {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.cycle-complete-enter {
+  animation: completion-scale 0.5s ease-out;
+}
+
+/* Cycle UI — counter tick */
+@keyframes counter-bump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.counter-tick {
+  animation: counter-bump 0.3s ease-out;
+}
+
+/* Cycle UI — live dot */
+@keyframes live-ping {
+  0% { transform: scale(1); opacity: 1; }
+  75% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.live-dot {
+  position: relative;
+}
+.live-dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: live-ping 1.5s ease-out infinite;
+}
+
 /* Focus states per style guide */
 input:focus, textarea:focus, button:focus {
   outline: none;

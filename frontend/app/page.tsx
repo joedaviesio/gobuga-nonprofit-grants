@@ -316,7 +316,7 @@ export default function Dashboard() {
   const phaseMessages: Record<string, string[]> = {
     watcher: [
       "Scanning grant databases",
-      "Checking federal listings",
+      "Checking government listings",
       "Crawling foundation sites",
       "Indexing new postings",
       "Parsing eligibility criteria",

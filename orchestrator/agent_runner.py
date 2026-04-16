@@ -30,6 +30,9 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
     total_input = 0
     total_output = 0
     api_calls = 0
+    save_evidence_calls = 0
+    reminder_sent = False
+    requires_evidence = "save_evidence" in agent_config.get("tools", [])
 
     while iterations < max_iter:
         iterations += 1
@@ -60,6 +63,20 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
             final_text += ("\n" if final_text else "") + "\n".join(text_parts)
 
         if not tool_calls:
+            if requires_evidence and save_evidence_calls == 0 and not reminder_sent:
+                reminder_sent = True
+                messages.append({"role": "assistant", "content": response.content})
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "STOP. You have not called save_evidence yet. Every opportunity, "
+                        "observation, or conclusion you mentioned above is INVISIBLE to the "
+                        "next agent unless saved. Call save_evidence now for each finding. "
+                        "If you genuinely found nothing, call save_evidence once with "
+                        "type='analysis' and title='No opportunities found'."
+                    ),
+                })
+                continue
             break
 
         # Process tool calls before checking stop_reason — ensures all
@@ -72,6 +89,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
             if handler:
                 if tc.name == "save_evidence":
                     result = handler(tc.input, org_id, agent_config["id"], date)
+                    save_evidence_calls += 1
                 else:
                     result = handler(tc.input)
             else:
@@ -87,6 +105,18 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
         messages.append({"role": "user", "content": tool_results})
 
         if response.stop_reason == "end_turn":
+            if requires_evidence and save_evidence_calls == 0 and not reminder_sent:
+                reminder_sent = True
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "You ran searches but have not called save_evidence yet. "
+                        "Call save_evidence now for every opportunity or finding. "
+                        "If truly nothing was found, save one evidence item with "
+                        "type='analysis' and title='No opportunities found'."
+                    ),
+                })
+                continue
             break
 
     # Log usage

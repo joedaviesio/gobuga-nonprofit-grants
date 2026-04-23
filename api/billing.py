@@ -126,7 +126,11 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
     elif event_type == "customer.subscription.updated":
         # Handle plan changes
         subscription_id = data.get("id")
-        price_id = data.get("items", {}).get("data", [{}])[0].get("price", {}).get("id")
+        items = getattr(data, "items", None)
+        items_data = getattr(items, "data", None) if items else None
+        first_item = items_data[0] if items_data else None
+        price = getattr(first_item, "price", None) if first_item else None
+        price_id = getattr(price, "id", None) if price else None
         new_plan = PRICE_TO_PLAN.get(price_id)
         if new_plan:
             from api.auth import _load_orgs, _save_orgs

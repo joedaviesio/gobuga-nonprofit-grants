@@ -19,6 +19,24 @@ if STRIPE_PROFESSIONAL_PRICE_ID:
     PRICE_TO_PLAN[STRIPE_PROFESSIONAL_PRICE_ID] = "professional"
 
 
+def _g(obj, *keys, default=None):
+    """Safe nested lookup for Stripe objects or plain dicts.
+
+    Older Stripe SDKs expose StripeObject via composition (no dict inheritance),
+    so `.get()` routes through `__getattr__` and raises AttributeError. Bracket
+    access works in every version — this helper wraps it with a default.
+    """
+    cur = obj
+    for k in keys:
+        if cur is None:
+            return default
+        try:
+            cur = cur[k]
+        except (KeyError, IndexError, TypeError, AttributeError):
+            return default
+    return cur
+
+
 def _get_stripe():
     """Lazy import stripe to avoid import errors when not installed."""
     try:
@@ -91,6 +109,55 @@ def create_portal_session(org_id: str) -> dict:
     return {"url": session.url}
 
 
+_PAID_STATUSES = {"active", "trialing", "past_due"}
+
+
+def reconcile_from_stripe(org_id: str) -> None:
+    """Sync org.plan + stripe_subscription_id with Stripe's source of truth.
+
+    Self-heals cases where a webhook was dropped (e.g. server down during
+    checkout.session.completed, or subscription.deleted never arrived).
+    Swallows errors so a Stripe outage doesn't break auth.
+    """
+    from api.auth import get_org, update_org
+
+    org = get_org(org_id)
+    if not org:
+        return
+    customer_id = org.get("stripe_customer_id")
+    if not customer_id:
+        return
+
+    try:
+        stripe = _get_stripe()
+        subs = stripe.Subscription.list(customer=customer_id, limit=10)
+    except Exception as e:
+        print(f"[Billing] reconcile_from_stripe({org_id}) failed: {e}")
+        return
+
+    active = [s for s in subs.data if _g(s, "status") in _PAID_STATUSES]
+    updates: dict = {}
+
+    if active:
+        sub = active[0]
+        sub_id = _g(sub, "id")
+        price_id = _g(sub, "items", "data", 0, "price", "id")
+        plan = PRICE_TO_PLAN.get(price_id)
+        if plan and org.get("plan") != plan:
+            updates["plan"] = plan
+        if sub_id and org.get("stripe_subscription_id") != sub_id:
+            updates["stripe_subscription_id"] = sub_id
+    else:
+        if org.get("plan") != "free":
+            updates["plan"] = "free"
+        if org.get("stripe_subscription_id"):
+            updates["stripe_subscription_id"] = None
+
+    if updates:
+        update_org(org_id, updates)
+        print(f"[Billing] Reconciled org {org_id} from Stripe: {updates}")
+
+
 def handle_webhook(payload: bytes, sig_header: str) -> dict:
     """Process a Stripe webhook event. Returns {"received": True}."""
     stripe = _get_stripe()
@@ -104,12 +171,14 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
         raise ValueError(f"Webhook verification failed: {e}")
 
     event_type = event["type"]
+    event_id = _g(event, "id", default="?")
     data = event["data"]["object"]
+    print(f"[Billing] Webhook received: {event_type} ({event_id})")
 
     if event_type == "checkout.session.completed":
-        org_id = data.get("metadata", {}).get("org_id")
-        plan = data.get("metadata", {}).get("plan")
-        subscription_id = data.get("subscription")
+        org_id = _g(data, "metadata", "org_id")
+        plan = _g(data, "metadata", "plan")
+        subscription_id = _g(data, "subscription")
         if org_id and plan:
             # Idempotency: skip if already on this plan with this subscription
             from api.auth import get_org
@@ -124,13 +193,8 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
                 print(f"[Billing] Org {org_id} upgraded to {plan}")
 
     elif event_type == "customer.subscription.updated":
-        # Handle plan changes
-        subscription_id = data.get("id")
-        items = getattr(data, "items", None)
-        items_data = getattr(items, "data", None) if items else None
-        first_item = items_data[0] if items_data else None
-        price = getattr(first_item, "price", None) if first_item else None
-        price_id = getattr(price, "id", None) if price else None
+        subscription_id = _g(data, "id")
+        price_id = _g(data, "items", "data", 0, "price", "id")
         new_plan = PRICE_TO_PLAN.get(price_id)
         if new_plan:
             from api.auth import _load_orgs, _save_orgs
@@ -146,8 +210,7 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
                     break
 
     elif event_type == "customer.subscription.deleted":
-        # Downgrade to free on cancellation
-        subscription_id = data.get("id")
+        subscription_id = _g(data, "id")
         from api.auth import _load_orgs, _save_orgs
         orgs = _load_orgs()
         for oid, org in orgs.items():
@@ -159,9 +222,8 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
                 break
 
     elif event_type == "invoice.payment_failed":
-        # Log failed payment — org keeps access until subscription is cancelled by Stripe
-        customer_id = data.get("customer")
-        attempt = data.get("attempt_count", 0)
+        customer_id = _g(data, "customer")
+        attempt = _g(data, "attempt_count", default=0)
         from api.auth import _load_orgs
         orgs = _load_orgs()
         for oid, org in orgs.items():

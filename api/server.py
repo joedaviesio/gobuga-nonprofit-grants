@@ -141,6 +141,8 @@ def api_verify(request: Request):
     session = verify_session(token)
     if not session:
         raise HTTPException(401, "Invalid or expired session")
+    from api.billing import reconcile_from_stripe
+    reconcile_from_stripe(session["org_id"])
     org = get_org(session["org_id"])
     from api.limits import get_tier_key, get_tier, get_cycle_timer
     tier_key = get_tier_key(session["org_id"])

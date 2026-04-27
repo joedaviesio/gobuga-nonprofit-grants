@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { setupOrg, getToken, verifySession } from "@/lib/api";
-import { GEOGRAPHIES } from "@/lib/geographies";
-import { SECTORS } from "@/lib/sectors";
+import { ENABLED_COUNTRIES, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 
 type Step = "basics" | "sectors";
@@ -72,23 +71,14 @@ export default function SetupPage() {
     });
   }, []);
 
+  const countryConfig = findCountry(country);
+  const availableSectors = countryConfig?.sectors ?? [];
+  const availableRegions = countryConfig?.regions ?? [];
+
   const toggleSector = (s: string) => {
     setSectors((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     );
-  };
-
-  const [expandedCountries, setExpandedCountries] = useState<Set<string>>(
-    () => new Set(["__init__", ...GEOGRAPHIES.filter((g) => g.regions?.length).map((g) => g.name)])
-  );
-
-  const toggleExpand = (country: string) => {
-    setExpandedCountries((prev) => {
-      const next = new Set(prev);
-      if (next.has(country)) next.delete(country);
-      else next.add(country);
-      return next;
-    });
   };
 
   const toggleGeo = (g: string) => {
@@ -220,8 +210,8 @@ export default function SetupPage() {
                 }`}
               >
                 <option value="">Select your country</option>
-                {GEOGRAPHIES.map((geo) => (
-                  <option key={geo.name} value={geo.name}>{geo.name}</option>
+                {ENABLED_COUNTRIES.map((c) => (
+                  <option key={c.slug} value={c.name}>{c.name}</option>
                 ))}
               </select>
               {basicAttempted && missingCountry && (
@@ -297,7 +287,7 @@ export default function SetupPage() {
               <div className={`flex flex-wrap gap-2 rounded-lg p-0.5 transition-colors ${
                 attempted && missingSectors ? "ring-1 ring-red-300 bg-red-50/30 p-2" : ""
               }`}>
-                {SECTORS.map((s) => (
+                {availableSectors.map((s) => (
                   <button
                     key={s}
                     onClick={() => toggleSector(s)}
@@ -320,87 +310,68 @@ export default function SetupPage() {
                   <span className="text-xs text-amber-600">Recommended: pick at least one</span>
                 )}
               </div>
-              <div className="flex flex-col gap-3">
-                {GEOGRAPHIES.map((geo) => {
-                  const hasRegions = geo.regions && geo.regions.length > 0;
-                  const isExpanded = hasRegions && (expandedCountries.has(geo.name) || expandedCountries.has("__init__"));
-                  const isWholeSelected = geographies.includes(geo.name);
-                  const selectedRegionCount = hasRegions
-                    ? geo.regions!.filter((r) => geographies.includes(`${geo.name} > ${r}`)).length
-                    : 0;
-                  const hasAnyRegionSelected = selectedRegionCount > 0;
+              {(() => {
+                const isWholeSelected = geographies.includes(country);
+                const hasRegions = availableRegions.length > 0;
+                const selectedRegionCount = availableRegions.filter(
+                  (r) => geographies.includes(`${country} > ${r}`)
+                ).length;
 
-                  if (!hasRegions) {
-                    return (
+                if (!hasRegions) {
+                  return (
+                    <button
+                      onClick={() => toggleGeo(country)}
+                      className={`px-3 py-1.5 text-xs rounded-full border transition-colors self-start ${
+                        isWholeSelected
+                          ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                          : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
+                      }`}
+                    >
+                      All of {country}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div className="border border-stone-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-stone-800">
+                        {country}
+                        {(isWholeSelected || selectedRegionCount > 0) && (
+                          <span className="text-blue-500 font-normal ml-1.5">
+                            ({isWholeSelected ? "all" : selectedRegionCount})
+                          </span>
+                        )}
+                      </span>
                       <button
-                        key={geo.name}
-                        onClick={() => toggleGeo(geo.name)}
-                        className={`px-3 py-1.5 text-xs rounded-full border transition-colors self-start ${
-                          geographies.includes(geo.name)
-                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
-                            : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
+                        onClick={() => toggleWholeCountry(country, availableRegions)}
+                        className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+                          isWholeSelected
+                            ? "bg-blue-50 border-blue-300 text-blue-600"
+                            : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
                         }`}
                       >
-                        {geo.name}
+                        {isWholeSelected ? "Deselect all" : "Select all"}
                       </button>
-                    );
-                  }
-
-                  return (
-                    <div key={geo.name} className="border border-stone-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {availableRegions.map((region) => (
                         <button
-                          onClick={() => toggleExpand(geo.name)}
-                          className="flex items-center gap-1.5 text-sm font-medium text-stone-800 hover:text-stone-900 transition-colors"
-                        >
-                          <svg
-                            className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
-                          {geo.name}
-                          {(isWholeSelected || hasAnyRegionSelected) && (
-                            <span className="text-blue-500 font-normal">
-                              ({isWholeSelected ? "all" : `${selectedRegionCount}`})
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => toggleWholeCountry(geo.name, geo.regions!)}
-                          className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
-                            isWholeSelected
-                              ? "bg-blue-50 border-blue-300 text-blue-600"
-                              : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
+                          key={region}
+                          onClick={() => toggleRegion(country, region, availableRegions)}
+                          className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                            isRegionSelected(country, region)
+                              ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                              : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                           }`}
                         >
-                          {isWholeSelected ? "Deselect all" : "Select all"}
+                          {region}
                         </button>
-                      </div>
-                      {isExpanded && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {geo.regions!.map((region) => (
-                            <button
-                              key={region}
-                              onClick={() => toggleRegion(geo.name, region, geo.regions!)}
-                              className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                                isRegionSelected(geo.name, region)
-                                  ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
-                                  : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
-                              }`}
-                            >
-                              {region}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {loading && (

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getOrgProfile, createCheckout, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, getTailoredAccess, toggleTailored, type OrgProfile, type TailoredAccess } from "@/lib/api";
-import { GEOGRAPHIES } from "@/lib/geographies";
-import { SECTORS } from "@/lib/sectors";
+import { ENABLED_COUNTRIES, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import AuthGate, { useAuth } from "../auth-gate";
@@ -54,7 +53,6 @@ function SettingsContent() {
   const [editValue, setEditValue] = useState("");
   const [editSectors, setEditSectors] = useState<string[]>([]);
   const [editGeographies, setEditGeographies] = useState<string[]>([]);
-  const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -108,7 +106,6 @@ function SettingsContent() {
   const cancelEdit = () => {
     setEditing(null);
     setEditValue("");
-    setExpandedCountries(new Set());
   };
 
   const saveEdit = async () => {
@@ -190,15 +187,6 @@ function SettingsContent() {
     );
   };
 
-  const toggleExpand = (country: string) => {
-    setExpandedCountries((prev) => {
-      const next = new Set(prev);
-      if (next.has(country)) next.delete(country);
-      else next.add(country);
-      return next;
-    });
-  };
-
   // Handle ?checkout=success/cancel query params
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -276,6 +264,11 @@ function SettingsContent() {
   const currentTier = session?.tier || "scanner";
   const tierInfo = TIER_INFO[currentTier] || TIER_INFO.scanner;
 
+  const orgCountryConfig = findCountry(org?.country);
+  const orgSectorOptions = orgCountryConfig?.sectors ?? [];
+  const orgRegionOptions = orgCountryConfig?.regions ?? [];
+  const orgCountryName = org?.country || "";
+
   return (
     <div className="min-h-screen app-bg">
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -315,13 +308,16 @@ function SettingsContent() {
             <span className="text-stone-700">Country</span>
             {editing === "country" ? (
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
+                <select
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   className="px-2 py-1 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
                   autoFocus
-                />
+                >
+                  {ENABLED_COUNTRIES.map((c) => (
+                    <option key={c.slug} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
                 <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
@@ -372,7 +368,7 @@ function SettingsContent() {
             {editing === "sectors" ? (
               <div>
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {SECTORS.map((s) => (
+                  {orgSectorOptions.map((s) => (
                     <button
                       key={s}
                       onClick={() => toggleEditSector(s)}
@@ -415,58 +411,45 @@ function SettingsContent() {
             {editing === "geographies" ? (
               <div>
                 <div className="flex flex-col gap-2 mb-2">
-                  {GEOGRAPHIES.map((geo) => {
-                    const hasRegions = geo.regions && geo.regions.length > 0;
-                    const isExpanded = expandedCountries.has(geo.name);
-                    const isWholeSelected = editGeographies.includes(geo.name);
-                    const hasAnyRegionSelected = hasRegions && geo.regions!.some(
-                      (r) => editGeographies.includes(`${geo.name} > ${r}`)
+                  {(() => {
+                    const hasRegions = orgRegionOptions.length > 0;
+                    const isWholeSelected = editGeographies.includes(orgCountryName);
+                    const hasAnyRegionSelected = hasRegions && orgRegionOptions.some(
+                      (r) => editGeographies.includes(`${orgCountryName} > ${r}`)
                     );
 
+                    if (!orgCountryName) {
+                      return <span className="text-xs text-stone-600">Set a country first.</span>;
+                    }
+
                     return (
-                      <div key={geo.name}>
+                      <div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() =>
                               hasRegions
-                                ? toggleEditWholeCountry(geo.name, geo.regions!)
-                                : toggleEditGeo(geo.name)
+                                ? toggleEditWholeCountry(orgCountryName, orgRegionOptions)
+                                : toggleEditGeo(orgCountryName)
                             }
                             className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                              isWholeSelected || (!hasRegions && editGeographies.includes(geo.name))
+                              isWholeSelected
                                 ? "bg-blue-50 border-blue-300 text-blue-700"
                                 : hasAnyRegionSelected
                                   ? "bg-blue-50/50 border-blue-200 text-blue-600"
                                   : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
                             }`}
                           >
-                            {geo.name}
+                            All of {orgCountryName}
                           </button>
-                          {hasRegions && (
-                            <button
-                              onClick={() => toggleExpand(geo.name)}
-                              className="p-0.5 text-stone-600 hover:text-stone-600 transition-colors"
-                            >
-                              <svg
-                                className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
-                          )}
                         </div>
-                        {hasRegions && isExpanded && (
+                        {hasRegions && (
                           <div className="flex flex-wrap gap-1 mt-1 ml-4">
-                            {geo.regions!.map((region) => (
+                            {orgRegionOptions.map((region) => (
                               <button
                                 key={region}
-                                onClick={() => toggleEditRegion(geo.name, region, geo.regions!)}
+                                onClick={() => toggleEditRegion(orgCountryName, region, orgRegionOptions)}
                                 className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                                  isEditRegionSelected(geo.name, region)
+                                  isEditRegionSelected(orgCountryName, region)
                                     ? "bg-blue-50 border-blue-300 text-blue-700"
                                     : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
                                 }`}
@@ -478,7 +461,7 @@ function SettingsContent() {
                         )}
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">

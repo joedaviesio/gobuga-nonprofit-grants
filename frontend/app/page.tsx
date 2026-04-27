@@ -17,6 +17,9 @@ import {
 import { useAuth } from "./auth-gate";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
+import OpportunitiesView from "./opportunities-view";
+
+const COUNTRY_SWEEP_ENABLED = process.env.NEXT_PUBLIC_COUNTRY_SWEEP_ENABLED === "true";
 
 function PriorityBadge({ priority }: { priority: string }) {
   const colors =
@@ -298,6 +301,13 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
 }
 
 export default function Dashboard() {
+  if (COUNTRY_SWEEP_ENABLED) {
+    return <OpportunitiesView />;
+  }
+  return <LegacyDashboard />;
+}
+
+function LegacyDashboard() {
   const { session, refreshSession } = useAuth();
   const [report, setReport] = useState<Report | null>(null);
   const [latestDate, setLatestDate] = useState<string | null>(null);

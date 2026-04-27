@@ -9,6 +9,8 @@ Checks all paid orgs, triggers a daily cycle for any that haven't run today.
 Stagger by org. Max 3 concurrent cycles.
 """
 
+import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy
+
 import json
 import os
 import sys

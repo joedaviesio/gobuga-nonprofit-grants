@@ -145,11 +145,16 @@ def reconcile_from_stripe(org_id: str) -> None:
         plan = PRICE_TO_PLAN.get(price_id)
         if plan and org.get("plan") != plan:
             updates["plan"] = plan
+            # Free → paid: default Tailored ON. Plan-to-plan: leave toggle alone.
+            if org.get("plan") == "free":
+                updates["tailored_enabled"] = True
         if sub_id and org.get("stripe_subscription_id") != sub_id:
             updates["stripe_subscription_id"] = sub_id
     else:
         if org.get("plan") != "free":
             updates["plan"] = "free"
+            # Reset toggle so a future re-upgrade defaults to ON again
+            updates["tailored_enabled"] = False
         if org.get("stripe_subscription_id"):
             updates["stripe_subscription_id"] = None
 
@@ -186,10 +191,15 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
             if org and org.get("plan") == plan and org.get("stripe_subscription_id") == subscription_id:
                 print(f"[Billing] Org {org_id} already on {plan} — skipping duplicate webhook")
             else:
-                update_org(org_id, {
+                updates: dict = {
                     "plan": plan,
                     "stripe_subscription_id": subscription_id,
-                })
+                }
+                # Free → paid: default Tailored Opportunities ON for new Officer.
+                # Paid → paid plan change: leave the toggle as the user set it.
+                if org and org.get("plan") == "free":
+                    updates["tailored_enabled"] = True
+                update_org(org_id, updates)
                 print(f"[Billing] Org {org_id} upgraded to {plan}")
 
     elif event_type == "customer.subscription.updated":
@@ -204,7 +214,10 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
                     if org.get("plan") == new_plan:
                         print(f"[Billing] Org {oid} already on {new_plan} — skipping")
                     else:
+                        was_free = org.get("plan") == "free"
                         org["plan"] = new_plan
+                        if was_free:
+                            org["tailored_enabled"] = True
                         _save_orgs(orgs)
                         print(f"[Billing] Org {oid} plan changed to {new_plan}")
                     break
@@ -217,6 +230,8 @@ def handle_webhook(payload: bytes, sig_header: str) -> dict:
             if org.get("stripe_subscription_id") == subscription_id:
                 org["plan"] = "free"
                 org["stripe_subscription_id"] = None
+                # Reset toggle so a re-upgrade gets the default-on experience again
+                org["tailored_enabled"] = False
                 _save_orgs(orgs)
                 print(f"[Billing] Org {oid} downgraded to free (subscription cancelled)")
                 break

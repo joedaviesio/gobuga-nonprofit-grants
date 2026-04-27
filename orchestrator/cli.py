@@ -1,5 +1,7 @@
 """CLI entry point."""
 
+import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy
+
 import sys
 from orchestrator.main import run_cycle
 from orchestrator.signoff import interactive_signoff

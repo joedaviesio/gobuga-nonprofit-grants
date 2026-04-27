@@ -1,21 +1,37 @@
 """Sector and geography code maps for case ID generation."""
 
 SECTOR_CODES = {
+    # --- Tag-aligned labels (current sign-up wizard) ---
+    "arts, culture & heritage": "ART",
+    "business, innovation & enterprise": "BIZ",
+    "capability building": "CAP",
+    "civic & local democracy": "CIV",
+    "climate": "CLM",
+    "community development": "COM",
+    "disability services": "DIS",
+    "education": "EDU",
+    "environment": "ENV",
+    "health & wellbeing": "HLT",
+    "infrastructure": "INF",
+    "māori-led kaupapa": "MRI",
+    "maori-led kaupapa": "MRI",
+    "pasifika": "PAS",
+    "research": "RES",
+    "sport & recreation": "SPT",
+    "women & gender equity": "WMN",
+    "youth & children": "YTH",
+
+    # --- Legacy labels (pre-pivot sign-up — kept for existing orgs/cases) ---
     "access to justice": "LAW",
     "ai for public good": "AI",
     "digital inclusion": "DIG",
-    "education": "EDU",
-    "health & wellbeing": "HLT",
     "health and wellbeing": "HLT",
     "environment & climate": "ENV",
     "environment and climate": "ENV",
-    "community development": "COM",
     "arts & culture": "ART",
     "arts and culture": "ART",
-    "youth & children": "YTH",
     "youth and children": "YTH",
     "human rights": "HRE",
-    "disability services": "DIS",
     "housing & homelessness": "HSG",
     "housing and homelessness": "HSG",
     "food security": "FDS",
@@ -24,23 +40,35 @@ SECTOR_CODES = {
     "technology and innovation": "TEC",
 }
 
-# Keywords that map to each sector code for fuzzy matching
+# Keywords that map to each sector code for fuzzy matching against grant brief text
 _SECTOR_KEYWORDS = {
-    "LAW": ["justice", "legal", "law", "court", "rights defence"],
+    "ART": ["arts", "culture", "creative", "music", "theatre", "heritage", "kapa haka"],
+    "BIZ": ["business", "innovation", "enterprise", "entrepreneur", "startup", "commercial"],
+    "CAP": ["capability", "capacity building", "training", "professional development", "upskill"],
+    "CIV": ["civic", "local democracy", "council", "community board", "local government"],
+    "CLM": ["climate", "carbon", "decarbonisation", "emissions", "low-emissions"],
+    "COM": ["community development", "community", "neighbourhood", "marae", "hapū"],
+    "DIS": ["disability", "disabilities", "accessible", "neurodiverse", "deaf", "blind"],
+    "EDU": ["education", "school", "learning", "literacy", "teaching", "scholarship", "tertiary"],
+    "ENV": ["environment", "sustainability", "conservation", "biodiversity", "ecology"],
+    "HLT": ["health", "wellbeing", "wellness", "medical", "mental health", "hauora"],
+    "INF": ["infrastructure", "facility", "building", "venue", "playground", "marae upgrade"],
+    "MRI": ["māori", "maori", "iwi", "hapū", "rūnanga", "kaupapa māori", "te ao māori"],
+    "PAS": ["pasifika", "pacific", "samoan", "tongan", "fijian", "niuean", "cook islands"],
+    "RES": ["research", "marsden", "rangahau", "academic", "investigator", "grant for study"],
+    "SPT": ["sport", "recreation", "active recreation", "physical activity", "tū manawa"],
+    "WMN": ["women", "wahine", "gender equity", "girls", "feminist"],
+    "YTH": ["youth", "children", "young people", "tamariki", "rangatahi"],
+
+    # Legacy codes
+    "LAW": ["justice", "legal", "law", "court"],
     "AI": ["ai", "artificial intelligence", "machine learning"],
     "DIG": ["digital inclusion", "digital access", "internet access", "connectivity"],
-    "EDU": ["education", "school", "learning", "literacy", "teaching", "scholarship"],
-    "HLT": ["health", "wellbeing", "wellness", "medical", "mental health"],
-    "ENV": ["environment", "climate", "sustainability", "conservation", "biodiversity"],
-    "COM": ["community development", "community", "neighbourhood", "civic"],
-    "ART": ["arts", "culture", "creative", "music", "theatre", "heritage"],
-    "YTH": ["youth", "children", "young people", "tamariki", "rangatahi"],
-    "HRE": ["human rights", "equality", "equity", "discrimination"],
-    "DIS": ["disability", "disabilities", "accessible", "inclusion"],
+    "HRE": ["human rights", "equality", "discrimination"],
     "HSG": ["housing", "homelessness", "shelter", "accommodation"],
     "FDS": ["food security", "food bank", "nutrition", "hunger"],
     "ECN": ["economic empowerment", "employment", "livelihood", "microfinance"],
-    "TEC": ["technology", "innovation", "tech", "digital transformation"],
+    "TEC": ["technology", "tech", "digital transformation"],
 }
 
 GEO_CODES = {

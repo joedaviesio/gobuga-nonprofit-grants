@@ -163,8 +163,13 @@ def _fallback_ddg_search(query: str) -> str:
 
 
 def handle_save_evidence(args: dict, org_id: str, agent_id: str, date: str) -> str:
-    """Save evidence and return confirmation."""
-    record = save_evidence(org_id, agent_id, date, args)
+    """Save evidence and return confirmation. Dispatches to the platform-sweep
+    store if `org_id` carries the sweep prefix."""
+    from orchestrator.sweep_evidence import is_sweep_org_id, save_sweep_evidence
+    if is_sweep_org_id(org_id):
+        record = save_sweep_evidence(org_id, agent_id, date, args)
+    else:
+        record = save_evidence(org_id, agent_id, date, args)
     return json.dumps({"saved": True, "id": record["id"], "hash": record["hash"]})
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrgProfile, getOrgUsage, createCheckout, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, type OrgProfile } from "@/lib/api";
+import { getOrgProfile, createCheckout, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, getTailoredAccess, toggleTailored, type OrgProfile, type TailoredAccess } from "@/lib/api";
 import { GEOGRAPHIES } from "@/lib/geographies";
 import { SECTORS } from "@/lib/sectors";
 import LoadingBar from "@/app/loading-bar";
@@ -12,19 +12,28 @@ const TIER_INFO = {
   scanner: {
     label: "Grant Scanner",
     price: "Free",
-    features: ["1 cycle per week", "5 opportunities per cycle", "1 open case at a time", "5 chat messages/case"],
+    features: [
+      "Search 200+ NZ grants",
+      "1 open case at a time",
+      "5 chat messages per case",
+      "Markdown export",
+    ],
   },
   officer: {
     label: "Grant Officer",
-    price: "$49 NZD/mo (~$29 USD)",
-    features: ["1 cycle per week", "All opportunities", "Unlimited open cases", "Unlimited chat", "DOCX export", "Parse & fill."],
+    price: "$9 NZD/mo",
+    features: [
+      "Weekly Tailored Picks (profile-steered)",
+      "Unlimited open cases & chat",
+      "Parse & Fill bots",
+      "DOCX export",
+    ],
   },
 };
 
 function SettingsContent() {
   const { session, refreshSession } = useAuth();
   const [org, setOrg] = useState<OrgProfile | null>(null);
-  const [usage, setUsage] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
@@ -35,6 +44,10 @@ function SettingsContent() {
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [uploadDocType, setUploadDocType] = useState("general");
   const [errorModal, setErrorModal] = useState<string | null>(null);
+
+  // Tailored Opportunities state
+  const [tailored, setTailored] = useState<TailoredAccess | null>(null);
+  const [savingTailored, setSavingTailored] = useState(false);
 
   // Editing state
   const [editing, setEditing] = useState<string | null>(null); // "name" | "country" | "website" | "sectors" | "geographies"
@@ -47,15 +60,37 @@ function SettingsContent() {
   useEffect(() => {
     Promise.all([
       getOrgProfile().catch(() => null),
-      getOrgUsage().catch(() => null),
       listOrgUploads().catch(() => []),
-    ]).then(([o, u, files]) => {
+      getTailoredAccess().catch(() => null),
+    ]).then(([o, files, t]) => {
       setOrg(o);
-      setUsage(u);
       setUploads(files);
+      setTailored(t);
       setLoading(false);
     });
   }, []);
+
+  const handleToggleTailored = async (enabled: boolean) => {
+    setSavingTailored(true);
+    try {
+      await toggleTailored(enabled);
+      const fresh = await getTailoredAccess();
+      setTailored(fresh);
+    } catch (err) {
+      setErrorModal(err instanceof Error ? err.message : "Failed to update toggle");
+    } finally {
+      setSavingTailored(false);
+    }
+  };
+
+  const formatRemaining = (seconds: number): string => {
+    if (seconds <= 0) return "ready now";
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    if (days > 0) return `${days}d ${hours}h`;
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
 
   const startEdit = (field: string) => {
     if (!org) return;
@@ -614,30 +649,58 @@ function SettingsContent() {
         )}
       </div>
 
-      {/* Usage */}
-      {usage && (
-        <div className="card-gradient border border-stone-200 p-5">
-          <h2 className="text-sm font-bold text-stone-700 mb-3">Today's Usage</h2>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-lg font-bold text-stone-800">{(usage as Record<string, number>).total_calls || 0}</div>
-              <div className="text-xs text-stone-600">API Calls</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-stone-800">
-                {(((usage as Record<string, number>).total_input_tokens || 0) / 1000).toFixed(1)}K
-              </div>
-              <div className="text-xs text-stone-600">Input Tokens</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-stone-800">
-                {(((usage as Record<string, number>).total_output_tokens || 0) / 1000).toFixed(1)}K
-              </div>
-              <div className="text-xs text-stone-600">Output Tokens</div>
-            </div>
+      {/* Tailored Opportunities */}
+      <div className="card-gradient border border-stone-200 p-5">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1">
+            <h2 className="text-sm font-bold text-stone-700">Tailored Opportunities</h2>
+            <p className="text-xs text-stone-700 mt-1">
+              On top of the always-on search box, get a weekly profile-steered grant scan
+              with priority-tagged opportunities matched to your sectors and geographies.
+            </p>
           </div>
+          {currentTier === "officer" ? (
+            <button
+              onClick={() => handleToggleTailored(!tailored?.tailored_enabled)}
+              disabled={savingTailored}
+              className={`shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                tailored?.tailored_enabled ? "bg-blue-600" : "bg-stone-300"
+              }`}
+              aria-label="Toggle Tailored Opportunities"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  tailored?.tailored_enabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          ) : (
+            <span className="shrink-0 text-xs px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
+              Officer-tier
+            </span>
+          )}
         </div>
-      )}
+
+        {currentTier === "officer" ? (
+          <div className="text-xs text-stone-700">
+            {tailored?.tailored_enabled ? (
+              tailored.timer && !tailored.timer.expired ? (
+                <span>
+                  ● Cooldown — next cycle available in <strong>{formatRemaining(tailored.timer.remaining_seconds)}</strong>.
+                </span>
+              ) : (
+                <span>● Ready — head to the &quot;Tailored Picks&quot; tab on the dashboard to run a cycle.</span>
+              )
+            ) : (
+              <span className="text-stone-600">Off — toggle on to start running weekly tailored cycles.</span>
+            )}
+          </div>
+        ) : (
+          <div className="text-xs text-stone-700">
+            Available on <strong>Grant Officer</strong>. Upgrade above to unlock weekly tailored cycles.
+          </div>
+        )}
+      </div>
 
       {/* Privacy & Data Policy */}
       <div className="card-gradient border border-stone-200 p-5">

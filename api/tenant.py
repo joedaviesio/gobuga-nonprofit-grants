@@ -93,3 +93,26 @@ def ensure_org_dirs(org_id: str) -> str:
 def ensure_platform_dirs():
     """Create platform directory structure."""
     os.makedirs(PLATFORM_DIR, exist_ok=True)
+
+
+# --- Country sweep paths (search-box pivot) ---
+
+def platform_sources_dir() -> str:
+    return os.path.join(PLATFORM_DIR, "sources")
+
+
+def platform_sources_path(country: str) -> str:
+    return os.path.join(platform_sources_dir(), f"{country}.json")
+
+
+def platform_cycles_dir(country: str, month: str) -> str:
+    """`platform/cycles/<country>/<YYYY-MM>/` — root for a country sweep."""
+    return os.path.join(PLATFORM_DIR, "cycles", country, month)
+
+
+def platform_run_dir(country: str, month: str, run_ts: str) -> str:
+    return os.path.join(platform_cycles_dir(country, month), f"run-{run_ts}")
+
+
+def platform_latest_path(country: str, month: str) -> str:
+    return os.path.join(platform_cycles_dir(country, month), "latest")

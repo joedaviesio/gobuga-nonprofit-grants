@@ -413,6 +413,105 @@ export const openCaseFromOpportunity = (opportunityId: string, cycleDate: string
     body: JSON.stringify({ opportunity_id: opportunityId, cycle_date: cycleDate }),
   });
 
+// --- Country sweep — search-box pivot ---
+
+export interface OpportunityRow {
+  id: string;
+  country: string;
+  title: string;
+  funder: string;
+  deadline: string | null;
+  amount_min: number | null;
+  amount_max: number | null;
+  currency: string;
+  region: string[];
+  tags: string[];
+  eligibility: string;
+  summary: string;
+  source_url: string;
+  evidence_ids: string[];
+  first_seen: string;
+  last_seen: string;
+  dedupe_key: string;
+  amount_note?: string;
+  notes?: string;
+}
+
+export interface OpportunitiesResponse {
+  opportunities: OpportunityRow[];
+  total: number;
+  cursor: number;
+  limit: number;
+  has_more: boolean;
+}
+
+export interface OpportunitiesQuery {
+  country?: string;
+  month?: string;
+  q?: string;
+  tags?: string[];
+  region?: string;
+  deadline_before?: string;
+  min_amount?: number;
+  max_amount?: number;
+  funder?: string;
+  sort?: "recency" | "deadline" | "amount_desc";
+  cursor?: number;
+  limit?: number;
+}
+
+export const listOpportunities = (query: OpportunitiesQuery = {}) => {
+  const params = new URLSearchParams();
+  if (query.country) params.set("country", query.country);
+  if (query.month) params.set("month", query.month);
+  if (query.q) params.set("q", query.q);
+  if (query.tags?.length) params.set("tags", query.tags.join(","));
+  if (query.region) params.set("region", query.region);
+  if (query.deadline_before) params.set("deadline_before", query.deadline_before);
+  if (query.min_amount != null) params.set("min_amount", String(query.min_amount));
+  if (query.max_amount != null) params.set("max_amount", String(query.max_amount));
+  if (query.funder) params.set("funder", query.funder);
+  if (query.sort) params.set("sort", query.sort);
+  if (query.cursor != null) params.set("cursor", String(query.cursor));
+  if (query.limit != null) params.set("limit", String(query.limit));
+  const qs = params.toString();
+  return request<OpportunitiesResponse>(`/opportunities${qs ? `?${qs}` : ""}`);
+};
+
+export const openCaseFromPool = (opportunityId: string, country?: string, month?: string) =>
+  request<CaseFull>("/opportunities/open-case", {
+    method: "POST",
+    body: JSON.stringify({ opportunity_id: opportunityId, country, month }),
+  });
+
+// --- Tailored Opportunities (paid-tier wrapper around the legacy per-org cycle) ---
+
+export interface TailoredAccess {
+  tailored_enabled: boolean;
+  allowed: boolean;
+  reason: "upgrade" | "disabled" | "cooldown" | null;
+  message: string | null;
+  timer: CycleTimer | null;
+}
+
+export const getTailoredAccess = () =>
+  request<TailoredAccess>("/tailored/access");
+
+export const toggleTailored = (enabled: boolean) =>
+  request<{ tailored_enabled: boolean; tier: string; cycle_timer: CycleTimer | null }>(
+    "/tailored/toggle",
+    {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }
+  );
+
+export const runTailoredCycle = () =>
+  request<{ status: string; date: string; cycle_timer: CycleTimer | null }>(
+    "/tailored/run",
+    { method: "POST" }
+  );
+
 // --- Cycle ---
 
 export const runCycle = (date?: string) =>

@@ -6,13 +6,25 @@ import fcntl
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from api.tenant import org_logs_dir
+from api.tenant import org_logs_dir, platform_run_dir
 
 NZ = ZoneInfo("Pacific/Auckland")
 
 
+def _logs_dir_for(org_id: str) -> str:
+    """Logs go under the per-org tree by default, or under the platform sweep
+    run dir when called with a sweep org_id."""
+    if org_id.startswith("_sweep:"):
+        try:
+            _, country, month, run_ts = org_id.split(":")
+            return os.path.join(platform_run_dir(country, month, run_ts), "logs")
+        except ValueError:
+            pass
+    return org_logs_dir(org_id)
+
+
 def _ensure_dir(org_id: str):
-    os.makedirs(org_logs_dir(org_id), exist_ok=True)
+    os.makedirs(_logs_dir_for(org_id), exist_ok=True)
 
 
 def log_usage(
@@ -53,7 +65,7 @@ def log_usage(
     if extra:
         record.update(extra)
 
-    logs_dir = org_logs_dir(org_id)
+    logs_dir = _logs_dir_for(org_id)
     logfile = os.path.join(logs_dir, f"usage-{now_nz.strftime('%Y-%m-%d')}.jsonl")
     line = json.dumps(record) + "\n"
 
@@ -67,7 +79,7 @@ def read_usage(org_id: str, date_str: str | None = None) -> list[dict]:
     """Read usage records for a given NZ date (defaults to today)."""
     if date_str is None:
         date_str = datetime.now(NZ).strftime("%Y-%m-%d")
-    logs_dir = org_logs_dir(org_id)
+    logs_dir = _logs_dir_for(org_id)
     logfile = os.path.join(logs_dir, f"usage-{date_str}.jsonl")
     if not os.path.exists(logfile):
         return []
@@ -120,7 +132,7 @@ def count_cycles_this_month(org_id: str) -> int:
     """Count how many cycles have been logged this month."""
     now_nz = datetime.now(NZ)
     year_month = now_nz.strftime("%Y-%m")
-    logs_dir = org_logs_dir(org_id)
+    logs_dir = _logs_dir_for(org_id)
     if not os.path.exists(logs_dir):
         return 0
 

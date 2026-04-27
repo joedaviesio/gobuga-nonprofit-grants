@@ -23,7 +23,7 @@ TIERS = {
     },
     "officer": {
         "label": "Grant Officer",
-        "price_monthly": 49,
+        "price_monthly": 9,
         "opportunities_per_cycle": None,  # unlimited
         "max_open_cases": -1,  # unlimited
         "chat_messages_per_case": -1,  # unlimited
@@ -138,6 +138,61 @@ def can_trigger_cycle(org_id: str) -> dict:
         "allowed": False,
         "message": "Cycle already active. Next cycle available when timer expires.",
         "timer": timer,
+    }
+
+
+# --- Tailored Opportunities (paid tier feature) ---
+
+def check_tailored_access(org_id: str) -> dict:
+    """Gate for the Tailored Opportunities button. Composes:
+      1. Tier check — must be Officer
+      2. Toggle check — org.tailored_enabled must be True
+      3. Cooldown check — 7-day timer from last trigger must be expired
+
+    Returns {allowed: bool, reason: str|None, message: str, timer: dict|None}.
+    Reasons (when not allowed): 'upgrade' | 'disabled' | 'cooldown'.
+    """
+    tier_key = get_tier_key(org_id)
+    if tier_key != "officer":
+        return {
+            "allowed": False,
+            "reason": "upgrade",
+            "message": "Tailored Opportunities is an Officer-tier feature.",
+            "timer": None,
+        }
+    org = get_org(org_id) or {}
+    if not org.get("tailored_enabled"):
+        return {
+            "allowed": False,
+            "reason": "disabled",
+            "message": "Tailored Opportunities is off — enable it in settings to start running weekly cycles.",
+            "timer": None,
+        }
+    timer = get_cycle_timer(org_id)
+    if timer and not timer["expired"]:
+        return {
+            "allowed": False,
+            "reason": "cooldown",
+            "message": "Next cycle available when the 7-day timer expires.",
+            "timer": timer,
+        }
+    return {
+        "allowed": True,
+        "reason": None,
+        "message": None,
+        "timer": timer,
+    }
+
+
+def set_tailored_enabled(org_id: str, enabled: bool) -> dict:
+    """Officer-only setter for `org.tailored_enabled`."""
+    tier_key = get_tier_key(org_id)
+    if tier_key != "officer":
+        raise PermissionError("Tailored Opportunities is Officer-tier only.")
+    update_org(org_id, {"tailored_enabled": bool(enabled)})
+    return {
+        "tailored_enabled": bool(enabled),
+        "tier": tier_key,
     }
 
 

@@ -1,8 +1,21 @@
 """Bot configuration — the only file you edit to add/remove agents."""
 
+# --- Per-org cycle (legacy) ---
 MODEL_INSPECTOR = "claude-haiku-4-5-20251001"
 MODEL_ANALYST = "claude-haiku-4-5-20251001"
 MODEL_REPORTER = "claude-haiku-4-5-20251001"
+
+# --- Country sweep (search-box pivot) ---
+# Heavier than the per-org cycle: more iterations, all Haiku for now.
+# (Originally specced Sonnet on Analyst; switched to Haiku to keep first-run
+# spend tight. Revisit if dedupe/normalisation quality is poor.)
+MODEL_WATCHER_COUNTRY = "claude-haiku-4-5-20251001"
+MODEL_ANALYST_COUNTRY = "claude-haiku-4-5-20251001"
+MODEL_REPORTER_COUNTRY = "claude-haiku-4-5-20251001"
+
+WATCHER_ITERATIONS_COUNTRY = 16  # per sector worker; 11 sectors → ~176 total max
+ANALYST_ITERATIONS_COUNTRY = 8
+REPORTER_MAX_TOKENS_COUNTRY = 16384  # the pool can be large
 
 AGENTS = [
     # Phase 1 — Watcher (parallel, cheap)

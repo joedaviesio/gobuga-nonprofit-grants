@@ -1,5 +1,7 @@
 """FastAPI server — multi-tenant case management + chatbot API."""
 
+import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy
+
 import json
 import os
 import traceback
@@ -739,6 +741,162 @@ def api_open_case_from_opportunity(req: CreateCaseFromOpportunity, org_id: str =
     return case
 
 
+# --- Country Sweep — search-box pivot ---
+
+from fastapi import Query
+from api.opportunities import (
+    country_slug,
+    current_month,
+    filter_pool,
+    live_only,
+    load_pool,
+    opportunity_to_grant_brief,
+)
+
+
+@app.get("/api/opportunities")
+def api_list_opportunities(
+    org_id: str = Depends(get_current_org),
+    country: str | None = Query(None),
+    month: str | None = Query(None, description="YYYY-MM; defaults to current month"),
+    q: str = Query(""),
+    tags: str = Query("", description="csv of tag slugs; AND across"),
+    region: str | None = Query(None),
+    deadline_before: str | None = Query(None, description="ISO date"),
+    min_amount: int | None = Query(None, ge=0),
+    max_amount: int | None = Query(None, ge=0),
+    funder: str | None = Query(None),
+    sort: str = Query("recency", pattern="^(recency|deadline|amount_desc)$"),
+    cursor: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
+):
+    """Browse the country-sweep opportunity pool. Defaults to the org's
+    country and the current month. Auto-filters past-deadline rows."""
+    org = get_org(org_id) or {}
+    country = country_slug(country or org.get("country"))
+    month = month or current_month()
+    pool = load_pool(country, month)
+    pool = live_only(pool)
+    tag_list = [t for t in tags.split(",") if t.strip()]
+    return filter_pool(
+        pool,
+        q=q,
+        tags=tag_list,
+        region=region,
+        deadline_before=deadline_before,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        funder=funder,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+    )
+
+
+class OpenCaseFromOpportunityRequest(BaseModel):
+    opportunity_id: str
+    country: str | None = None
+    month: str | None = None
+
+
+@app.post("/api/opportunities/open-case")
+def api_open_case_from_pool(
+    req: OpenCaseFromOpportunityRequest,
+    org_id: str = Depends(get_current_org),
+):
+    """Create a case from a row in the country-sweep pool. Adapts the row to
+    the legacy `grant_brief` shape and hands off to the existing case pipeline."""
+    from api.limits import check_case_limit
+    limit_check = check_case_limit(org_id)
+    if not limit_check["allowed"]:
+        raise HTTPException(403, limit_check["message"])
+
+    org = get_org(org_id) or {}
+    country = country_slug(req.country or org.get("country"))
+    month = req.month or current_month()
+    pool = load_pool(country, month)
+    if not pool:
+        raise HTTPException(404, f"No opportunity pool for {country}/{month}")
+
+    opp = next((o for o in pool if o.get("id") == req.opportunity_id), None)
+    if opp is None:
+        raise HTTPException(404, f"Opportunity {req.opportunity_id} not found in {country}/{month}")
+
+    grant_brief = opportunity_to_grant_brief(opp, country, month)
+    grant_id_raw = (opp.get("title") or "unknown").lower()
+    grant_id = "-".join(grant_id_raw.split()[:5])
+    import re
+    grant_id = re.sub(r"[^a-z0-9-]", "", grant_id) or "opportunity"
+    case = create_case(org_id, grant_id, grant_brief)
+    return case
+
+
+# --- Admin: trigger a country sweep ---
+
+_sweep_state = {
+    "running": False,
+    "country": None,
+    "month": None,
+    "started_at": None,
+    "completed_at": None,
+    "error": None,
+}
+
+
+class TriggerSweepRequest(BaseModel):
+    country: str | None = None
+    month: str | None = None
+
+
+def _require_admin(org_id: str) -> dict:
+    org = get_org(org_id) or {}
+    if not org.get("is_admin"):
+        raise HTTPException(403, "Admin only")
+    return org
+
+
+@app.post("/api/admin/sweep")
+def api_admin_trigger_sweep(req: TriggerSweepRequest, org_id: str = Depends(get_current_org)):
+    """Admin-only: kick off a country sweep in the background. Returns
+    immediately with a job ref; poll `/api/admin/sweep/status` for progress."""
+    org = _require_admin(org_id)
+    if _sweep_state["running"]:
+        raise HTTPException(409, f"A sweep is already running for {_sweep_state['country']}/{_sweep_state['month']}")
+
+    country = country_slug(req.country or org.get("country"))
+    month = req.month or current_month()
+
+    from datetime import datetime as _dt, timezone as _tz
+    import threading
+    from orchestrator.sweep import run_country_sweep
+
+    def _worker():
+        try:
+            run_country_sweep(country, month)
+        except Exception as e:
+            _sweep_state["error"] = str(e)
+        finally:
+            _sweep_state["running"] = False
+            _sweep_state["completed_at"] = _dt.now(_tz.utc).isoformat()
+
+    _sweep_state.update({
+        "running": True,
+        "country": country,
+        "month": month,
+        "started_at": _dt.now(_tz.utc).isoformat(),
+        "completed_at": None,
+        "error": None,
+    })
+    threading.Thread(target=_worker, daemon=True).start()
+    return {"status": "started", "country": country, "month": month}
+
+
+@app.get("/api/admin/sweep/status")
+def api_admin_sweep_status(org_id: str = Depends(get_current_org)):
+    _require_admin(org_id)
+    return dict(_sweep_state)
+
+
 # --- Cycle Runner ---
 
 _cycle_state = {
@@ -795,6 +953,90 @@ def api_run_cycle(req: RunCycleRequest, org_id: str = Depends(get_current_org)):
     thread.start()
 
     return {"status": "started", "date": cycle_date or "today"}
+
+
+# --- Tailored Opportunities (paid tier — wraps the legacy per-org cycle) ---
+
+class ToggleTailoredRequest(BaseModel):
+    enabled: bool
+
+
+@app.patch("/api/tailored/toggle")
+def api_tailored_toggle(req: ToggleTailoredRequest, org_id: str = Depends(get_current_org)):
+    """Officer-only: turn the Tailored Opportunities feature on or off.
+    Off by default. Turning it off does NOT cancel an in-flight cycle."""
+    from api.limits import set_tailored_enabled, get_cycle_timer
+    try:
+        result = set_tailored_enabled(org_id, req.enabled)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    return {**result, "cycle_timer": get_cycle_timer(org_id)}
+
+
+@app.get("/api/tailored/access")
+def api_tailored_access(org_id: str = Depends(get_current_org)):
+    """Returns the current gate state — used by the UI to decide whether
+    to show the toggle, the upgrade CTA, or the run button."""
+    from api.limits import check_tailored_access
+    org = get_org(org_id) or {}
+    access = check_tailored_access(org_id)
+    return {
+        "tailored_enabled": bool(org.get("tailored_enabled", False)),
+        **access,
+    }
+
+
+@app.post("/api/tailored/run")
+def api_tailored_run(org_id: str = Depends(get_current_org)):
+    """Trigger an Officer's weekly per-org cycle. Reuses the legacy
+    `run_cycle` engine (Watcher → Analyst → Reporter) and the existing
+    `_cycle_state` for status polling. Starts the 7-day cooldown timer."""
+    from api.limits import check_tailored_access, trigger_cycle, get_model_overrides
+    from orchestrator.main import run_cycle
+    from datetime import datetime, timezone
+    import threading
+
+    access = check_tailored_access(org_id)
+    if not access["allowed"]:
+        raise HTTPException(403 if access["reason"] != "cooldown" else 409, access["message"])
+
+    if _cycle_state["running"]:
+        raise HTTPException(409, "A cycle is already running")
+
+    # Start the 7-day cooldown immediately on trigger so re-clicks are gated
+    timer = trigger_cycle(org_id)
+
+    cycle_date = datetime.now(timezone.utc).date().isoformat()
+    _cycle_state["running"] = True
+    _cycle_state["org_id"] = org_id
+    _cycle_state["started_at"] = datetime.now(timezone.utc).isoformat()
+    _cycle_state["completed_at"] = None
+    _cycle_state["error"] = None
+    _cycle_state["phase"] = "starting"
+
+    model_overrides = get_model_overrides(org_id)
+
+    def _on_phase(phase: str):
+        _cycle_state["phase"] = phase
+
+    def _run():
+        try:
+            run_cycle(org_id, cycle_date, model_overrides=model_overrides, on_phase=_on_phase)
+            _cycle_state["phase"] = "complete"
+            _cycle_state["completed_at"] = datetime.now(timezone.utc).isoformat()
+        except Exception as e:
+            _cycle_state["error"] = str(e)
+            print(f"Tailored cycle error: {e}")
+        finally:
+            _cycle_state["running"] = False
+
+    threading.Thread(target=_run, daemon=True).start()
+
+    return {
+        "status": "started",
+        "date": cycle_date,
+        "cycle_timer": timer,
+    }
 
 
 @app.get("/api/cycle/status")

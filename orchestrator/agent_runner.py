@@ -2,12 +2,44 @@
 
 import json
 import os
+import time
 import anthropic
 from dotenv import load_dotenv
 from api.usage_log import log_usage
 
 load_dotenv()
 from orchestrator.tools import TOOL_DEFINITIONS, TOOL_HANDLERS
+
+
+def _create_with_retry(client, kwargs, max_retries: int = 4):
+    """Call Anthropic messages.create with exponential backoff on 429s.
+    Honours `retry-after` header when present; otherwise backs off 30, 60, 120, 240s."""
+    backoff_schedule = [30, 60, 120, 240]
+    last_err = None
+    for attempt in range(max_retries):
+        try:
+            return client.messages.create(**kwargs)
+        except anthropic.RateLimitError as e:
+            last_err = e
+            wait = backoff_schedule[min(attempt, len(backoff_schedule) - 1)]
+            try:
+                # Anthropic sometimes includes retry-after seconds
+                ra = e.response.headers.get("retry-after") if getattr(e, "response", None) else None
+                if ra:
+                    wait = max(wait, int(float(ra)))
+            except (AttributeError, ValueError, TypeError):
+                pass
+            print(f"  [429 rate-limit; sleeping {wait}s before retry {attempt + 2}/{max_retries}]", flush=True)
+            time.sleep(wait)
+        except anthropic.APIStatusError as e:
+            if getattr(e, "status_code", None) in (429, 529):
+                last_err = e
+                wait = backoff_schedule[min(attempt, len(backoff_schedule) - 1)]
+                print(f"  [{e.status_code} from API; sleeping {wait}s before retry {attempt + 2}/{max_retries}]", flush=True)
+                time.sleep(wait)
+            else:
+                raise
+    raise last_err if last_err else RuntimeError("retry exhausted with no exception captured")
 
 
 def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) -> dict:
@@ -46,7 +78,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
         if tools:
             kwargs["tools"] = tools
 
-        response = client.messages.create(**kwargs)
+        response = _create_with_retry(client, kwargs)
         total_input += getattr(response.usage, "input_tokens", 0)
         total_output += getattr(response.usage, "output_tokens", 0)
         api_calls += 1

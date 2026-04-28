@@ -455,7 +455,7 @@ export interface OpportunitiesQuery {
   min_amount?: number;
   max_amount?: number;
   funder?: string;
-  sort?: "recency" | "deadline" | "amount_desc";
+  sort?: "recency" | "deadline" | "amount_desc" | "random";
   cursor?: number;
   limit?: number;
 }
@@ -786,3 +786,75 @@ export const deleteDatabankEntry = (caseId: string, key: string) =>
   request<{ deleted: string }>(`/cases/${caseId}/databank/${key}`, {
     method: "DELETE",
   });
+
+// --- Public anon feed ---
+//
+// Hits /api/public/* — no auth header attached, even if a stale token sits in
+// localStorage, so anon traffic stays anon end-to-end.
+
+export interface PublicOpportunity {
+  id: string | null;
+  title: string;
+  funder_redacted: string;
+  country: string | null;
+  region: string[];
+  tags: string[];
+  amount_band: string | null;
+  deadline_bucket: string;
+  summary_preview: string;
+  posted_days_ago: number | null;
+}
+
+export interface PublicOpportunitiesResponse {
+  opportunities: PublicOpportunity[];
+  total: number;
+  cursor: number;
+  limit: number;
+  has_more: boolean;
+}
+
+export interface PublicStats {
+  live_count: number;
+  countries: string[];
+  updated_at: string;
+}
+
+async function publicRequest<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export interface PublicOpportunityFilters {
+  country?: string;
+  q?: string;
+  tags?: string[];
+  region?: string;
+  sort?: "recency" | "deadline" | "amount_desc" | "random";
+  cursor?: number;
+  limit?: number;
+}
+
+export const listPublicOpportunities = (
+  filters: PublicOpportunityFilters = {},
+): Promise<PublicOpportunitiesResponse> => {
+  const params = new URLSearchParams();
+  if (filters.country) params.set("country", filters.country);
+  if (filters.q) params.set("q", filters.q);
+  if (filters.tags && filters.tags.length > 0) params.set("tags", filters.tags.join(","));
+  if (filters.region) params.set("region", filters.region);
+  if (filters.sort) params.set("sort", filters.sort);
+  if (typeof filters.cursor === "number") params.set("cursor", String(filters.cursor));
+  if (typeof filters.limit === "number") params.set("limit", String(filters.limit));
+  const qs = params.toString();
+  return publicRequest<PublicOpportunitiesResponse>(`/public/opportunities${qs ? `?${qs}` : ""}`);
+};
+
+export const getPublicStats = (): Promise<PublicStats> =>
+  publicRequest<PublicStats>("/public/stats");
+

@@ -104,3 +104,40 @@ export function findCountry(name: string | null | undefined): CountryConfig | un
   if (!name) return undefined;
   return COUNTRIES.find((c) => c.name === name);
 }
+
+// Mirrors api.taxonomy.SECTOR_LABEL_TO_TAG — used to translate the
+// org's stored sector labels into the controlled tag slugs that drive
+// the opportunity feed's filter chips.
+export const SECTOR_LABEL_TO_TAG: Record<string, string> = {
+  "Arts, culture & heritage": "arts",
+  "Business, innovation & enterprise": "business",
+  "Capability building": "capability",
+  "Civic & local democracy": "civic",
+  "Climate": "climate",
+  "Community development": "community",
+  "Disability services": "disability",
+  "Education": "education",
+  "Environment": "environment",
+  "Health & wellbeing": "health",
+  "Infrastructure": "infrastructure",
+  "Māori-led kaupapa": "maori",
+  "Pasifika": "pasifika",
+  "Research": "research",
+  "Sport & recreation": "sport",
+  "Women & gender equity": "women",
+  "Youth & children": "youth",
+};
+
+export function orgSectorsToTags(labels: string[] | null | undefined): string[] {
+  if (!labels) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const label of labels) {
+    const slug = SECTOR_LABEL_TO_TAG[label];
+    if (slug && !seen.has(slug)) {
+      seen.add(slug);
+      out.push(slug);
+    }
+  }
+  return out;
+}

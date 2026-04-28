@@ -502,7 +502,7 @@ function UpgradePitch({ onError }: { onError: (msg: string) => void }) {
             <p className="text-sm text-slate-700 mt-1.5">
               The search box is great when you know what you&apos;re looking for. The Tailored
               cycle is for when you don&apos;t. Once a week, a deep, profile-steered scan reads
-              your sectors, geographies, and mission, then hunts the open web for grants
+              your sectors, geographies, and mission, then hunts for grants
               that fit; and only the ones that fit.
             </p>
           </div>

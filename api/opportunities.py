@@ -302,6 +302,19 @@ def _extract_tags(text: str, valid_tags: list[str] | None = None) -> list[str]:
     return validate_tags(raw)
 
 
+def _source_domain(url: str) -> str:
+    """Bare hostname (no scheme, no www., no path) for dedupe keys."""
+    if not url:
+        return ""
+    s = url.strip().lower()
+    s = re.sub(r"^[a-z]+://", "", s)
+    s = s.split("/", 1)[0]
+    s = s.split("?", 1)[0]
+    if s.startswith("www."):
+        s = s[4:]
+    return s
+
+
 def build_opportunities_from_watchers(
     watcher_evidence: list[dict],
     country: str,
@@ -347,13 +360,21 @@ def build_opportunities_from_watchers(
         deadline = _extract_deadline(parsed.get("deadline") or "")
         funder_slug = slugify_funder(funder)
         programme_slug = re.sub(r"[^a-z0-9]+", "-", programme.lower()).strip("-")[:80]
-        dedupe_key = f"{funder_slug}|{programme_slug}|{deadline}".lower()
+        domain = _source_domain(ev.get("source_url") or "")
+        # Prefer (funder, domain, deadline) so title variants of the same programme collapse.
+        # Fall back to programme_slug when source_url is missing, to avoid merging unrelated rows.
+        dedupe_token = domain or programme_slug
+        dedupe_key = f"{funder_slug}|{dedupe_token}|{deadline}".lower()
 
         if dedupe_key in by_dedupe:
             existing = by_dedupe[dedupe_key]
             ev_id = ev.get("id")
             if ev_id and ev_id not in existing["evidence_ids"]:
                 existing["evidence_ids"].append(ev_id)
+            # Prefer the longest title — usually the most descriptive variant.
+            new_title = programme
+            if new_title and len(new_title) > len(existing.get("title", "")):
+                existing["title"] = new_title
             # Prefer fuller summary if existing is shorter
             new_summary = parsed.get("summary") or ""
             if new_summary and len(new_summary) > len(existing.get("summary", "")):
@@ -449,12 +470,16 @@ def build_opportunities_from_analyst(
         deadline = parsed.get("deadline") or "TBC"
         funder_slug = slugify_funder(funder)
         programme_slug = re.sub(r"[^a-z0-9]+", "-", programme.lower()).strip("-")
-        dedupe_key = f"{funder_slug}|{programme_slug}|{deadline}".lower()
+        domain = _source_domain(ev.get("source_url") or "")
+        dedupe_token = domain or programme_slug
+        dedupe_key = f"{funder_slug}|{dedupe_token}|{deadline}".lower()
 
         if dedupe_key in by_dedupe:
             existing = by_dedupe[dedupe_key]
             if ev.get("id") not in existing["evidence_ids"]:
                 existing["evidence_ids"].append(ev.get("id"))
+            if programme and len(programme) > len(existing.get("title", "")):
+                existing["title"] = programme
             continue
 
         seq += 1
@@ -599,6 +624,22 @@ def filter_pool(
         and _matches_amount(row, min_amount, max_amount)
         and _matches_funder(row, funder)
     ]
+    if sort == "random":
+        import random
+        random.shuffle(matched)
+        # Region priority still applies — regional matches first, random within bucket.
+        matched.sort(key=lambda r: _region_priority(r, region))
+        total = len(matched)
+        cursor = max(0, int(cursor or 0))
+        limit = max(1, min(int(limit or 50), 500))
+        page = matched[cursor:cursor + limit]
+        return {
+            "opportunities": page,
+            "total": total,
+            "cursor": cursor,
+            "limit": limit,
+            "has_more": cursor + limit < total,
+        }
     reverse = sort == "recency"
     # When a specific region is picked, regional matches always rank above
     # national-only matches. Within each partition, the primary sort applies.
@@ -674,3 +715,118 @@ def opportunity_to_grant_brief(opportunity: dict, country: str, month: str) -> d
         "region": regions,
     }
     return {k: v for k, v in brief.items() if v not in (None, "", [], {})}
+
+
+# --- Anon redaction (public landing feed) ---
+#
+# Projects a full pool row down to a deliberately narrower shape that hides
+# funder identity, source URL, exact deadline, eligibility text, and evidence
+# pointers. The single source of truth for "what an unauthenticated visitor
+# can see" lives here — the public router calls this and never exposes the
+# original row.
+
+# Bands are upper-inclusive at the named boundary — e.g. an amount of exactly
+# $50k reads as "$10k–$50k", not "$50k–$250k". "Under $10k" is the only band
+# that's strict below; everything else uses <= against the labelled cap.
+_AMOUNT_BANDS: list[tuple[float, str]] = [
+    (50_000, "$10k–$50k"),
+    (250_000, "$50k–$250k"),
+    (1_000_000, "$250k–$1m"),
+    (float("inf"), "$1m+"),
+]
+
+
+def _redact_funder(name: str | None) -> str:
+    """Initial-em-dash redaction: 'Foundation North' -> 'F——n N——h'.
+    Falls back to a generic label when the name is missing or too short to
+    redact meaningfully (a 2-letter funder isn't worth half-revealing)."""
+    if not name:
+        return "Anonymous funder"
+    cleaned = name.strip()
+    if len(cleaned) < 3:
+        return "Anonymous funder"
+    parts: list[str] = []
+    for word in cleaned.split():
+        if len(word) <= 2:
+            parts.append(word)
+        else:
+            parts.append(f"{word[0]}{'—' * 2}{word[-1]}")
+    return " ".join(parts) or "Anonymous funder"
+
+
+def _band_amount(amount_min: int | None, amount_max: int | None) -> str | None:
+    figure = amount_max if amount_max else amount_min
+    if not figure:
+        return None
+    if figure < 10_000:
+        return "Under $10k"
+    for ceiling, label in _AMOUNT_BANDS:
+        if figure <= ceiling:
+            return label
+    return _AMOUNT_BANDS[-1][1]
+
+
+def _bucket_deadline(deadline: str | None, today: date_type | None = None) -> str:
+    """Convert an ISO deadline / 'rolling' / 'TBC' to an anon-safe bucket
+    string. Hides the exact date — the visitor sees urgency, not the
+    precise day."""
+    if not deadline:
+        return "TBC"
+    s = str(deadline).strip().lower()
+    if s == "rolling":
+        return "Rolling"
+    if s in ("tbc", "unknown", ""):
+        return "TBC"
+    try:
+        d = datetime.fromisoformat(str(deadline)).date()
+    except (TypeError, ValueError):
+        return "TBC"
+    today = today or datetime.now(timezone.utc).date()
+    days = (d - today).days
+    if days < 0:
+        return "Closed"
+    if days <= 7:
+        return "Closes this week"
+    if days <= 30:
+        return "Closes this month"
+    return "30+ days"
+
+
+def _days_ago(iso: str | None) -> int | None:
+    if not iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    delta = datetime.now(timezone.utc) - dt
+    return max(0, delta.days)
+
+
+def _truncate_summary(text: str | None, length: int = 140) -> str:
+    if not text:
+        return ""
+    cleaned = text.strip()
+    if len(cleaned) <= length:
+        return cleaned
+    return cleaned[:length].rstrip() + "…"
+
+
+def redact_for_anon(row: dict) -> dict:
+    """Project a full pool row down to the anon-safe shape. The returned
+    dict contains *only* the keys listed below — funder identity, source
+    URL, exact deadline, eligibility text, and evidence IDs are dropped."""
+    return {
+        "id": row.get("id"),
+        "title": row.get("title", ""),
+        "funder_redacted": _redact_funder(row.get("funder")),
+        "country": row.get("country"),
+        "region": row.get("region") or [],
+        "tags": row.get("tags") or [],
+        "amount_band": _band_amount(row.get("amount_min"), row.get("amount_max")),
+        "deadline_bucket": _bucket_deadline(row.get("deadline")),
+        "summary_preview": _truncate_summary(row.get("summary")),
+        "posted_days_ago": _days_ago(row.get("first_seen")),
+    }

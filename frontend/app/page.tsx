@@ -18,6 +18,7 @@ import { useAuth } from "./auth-gate";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import OpportunitiesView from "./opportunities-view";
+import AnonLanding from "./anon-landing";
 
 const COUNTRY_SWEEP_ENABLED = process.env.NEXT_PUBLIC_COUNTRY_SWEEP_ENABLED === "true";
 
@@ -301,6 +302,19 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
 }
 
 export default function Dashboard() {
+  const { session, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen app-bg">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <LoadingBar label="Loading..." />
+        </div>
+      </div>
+    );
+  }
+  if (!session) {
+    return <AnonLanding />;
+  }
   if (COUNTRY_SWEEP_ENABLED) {
     return <OpportunitiesView />;
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  getOrgProfile,
   listCases,
   listOpportunities,
   openCaseFromPool,
@@ -14,6 +15,13 @@ import ErrorModal from "@/app/error-modal";
 import CasesView, { isNewOpenCase } from "@/app/cases-view";
 import TailoredView from "@/app/tailored-view";
 import { getTailoredAccess, type TailoredAccess } from "@/lib/api";
+import { orgSectorsToTags } from "@/lib/countries";
+
+// Persists active sector chips across reloads. Seeded once from the org's
+// saved sectors (mapped label → tag slug); subsequent toggles overwrite.
+// Presence of the key — even with an empty array — counts as "user-chosen",
+// so explicit deselect-all is preserved instead of re-seeded.
+const FILTER_TAGS_STORAGE_KEY = "gobuga_opp_filter_tags";
 
 const ALL_TAGS = [
   "community", "sport", "civic", "arts", "environment", "education",
@@ -28,7 +36,7 @@ const NZ_REGIONS = [
   "southland", "gisborne",
 ] as const;
 
-type SortKey = "recency" | "deadline" | "amount_desc";
+type SortKey = "recency" | "deadline" | "amount_desc" | "random";
 
 function formatAmount(row: OpportunityRow): string | null {
   const lo = row.amount_min;
@@ -91,6 +99,7 @@ export default function OpportunitiesView() {
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [tagsHydrated, setTagsHydrated] = useState(false);
   const [region, setRegion] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("recency");
   const [cursor, setCursor] = useState(0);
@@ -100,6 +109,40 @@ export default function OpportunitiesView() {
     const t = setTimeout(() => setDebouncedQ(q), 250);
     return () => clearTimeout(t);
   }, [q]);
+
+  // Seed activeTags on first mount: localStorage wins; otherwise derive
+  // from the org's saved sectors. Only runs once — after this the user's
+  // toggles are the source of truth.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem(FILTER_TAGS_STORAGE_KEY);
+    if (stored !== null) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setActiveTags(parsed.filter((t): t is string => typeof t === "string"));
+        }
+      } catch {
+        // bad JSON — ignore, fall through to org seed
+      }
+      setTagsHydrated(true);
+      return;
+    }
+    getOrgProfile()
+      .then((org) => {
+        const seeded = orgSectorsToTags(org?.sectors ?? []);
+        if (seeded.length > 0) setActiveTags(seeded);
+      })
+      .catch(() => { /* no profile available — leave empty */ })
+      .finally(() => setTagsHydrated(true));
+  }, []);
+
+  // Persist activeTags whenever they change (after hydration, so we don't
+  // overwrite stored state with the empty initial value).
+  useEffect(() => {
+    if (!tagsHydrated || typeof window === "undefined") return;
+    localStorage.setItem(FILTER_TAGS_STORAGE_KEY, JSON.stringify(activeTags));
+  }, [activeTags, tagsHydrated]);
 
   // Reset cursor when filters change
   useEffect(() => {
@@ -283,6 +326,7 @@ export default function OpportunitiesView() {
               <option value="recency">recency</option>
               <option value="deadline">deadline</option>
               <option value="amount_desc">amount (high→low)</option>
+              <option value="random">random</option>
             </select>
           </label>
           <span className="ml-auto text-xs text-slate-600">

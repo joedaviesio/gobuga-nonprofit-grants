@@ -37,6 +37,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
     const token = getToken();
     if (!token) {
+      // Anon visitors see the landing feed at "/"; everywhere else still
+      // redirects to login. The page component branches on `session === null`.
+      if (pathname === "/") {
+        setLoading(false);
+        return;
+      }
       window.location.href = "/login";
       return;
     }

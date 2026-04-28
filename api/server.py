@@ -751,7 +751,119 @@ from api.opportunities import (
     live_only,
     load_pool,
     opportunity_to_grant_brief,
+    redact_for_anon,
 )
+
+
+# --- Anon public feed (no auth) ---
+#
+# Hand-rolled per-IP rate limiter. Lives in-process; resets on restart.
+# Sufficient for MVP — if we need durable limits we'll move to Redis later.
+
+import time as _time
+from collections import defaultdict, deque
+from threading import Lock as _Lock
+from fastapi import Response
+
+_PUBLIC_RATE_LIMIT_PER_MIN = 60
+_PUBLIC_MAX_PAGE_DEPTH = 200
+_public_rate_state: dict[str, deque] = defaultdict(deque)
+_public_rate_lock = _Lock()
+
+
+def _check_public_rate_limit(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    now = _time.time()
+    cutoff = now - 60.0
+    with _public_rate_lock:
+        bucket = _public_rate_state[ip]
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+        if len(bucket) >= _PUBLIC_RATE_LIMIT_PER_MIN:
+            raise HTTPException(429, "Slow down — please retry in a moment.")
+        bucket.append(now)
+
+
+class PublicOpportunity(BaseModel):
+    id: str | None
+    title: str
+    funder_redacted: str
+    country: str | None
+    region: list[str] = []
+    tags: list[str] = []
+    amount_band: str | None = None
+    deadline_bucket: str
+    summary_preview: str = ""
+    posted_days_ago: int | None = None
+
+
+class PublicOpportunitiesResponse(BaseModel):
+    opportunities: list[PublicOpportunity]
+    total: int
+    cursor: int
+    limit: int
+    has_more: bool
+
+
+class PublicStatsResponse(BaseModel):
+    live_count: int
+    countries: list[str]
+    updated_at: str
+
+
+@app.get("/api/public/opportunities", response_model=PublicOpportunitiesResponse)
+def api_public_opportunities(
+    request: Request,
+    response: Response,
+    country: str | None = Query(None),
+    month: str | None = Query(None, description="YYYY-MM; defaults to current month"),
+    q: str = Query(""),
+    tags: str = Query("", description="csv of tag slugs; AND across"),
+    region: str | None = Query(None),
+    sort: str = Query("recency", pattern="^(recency|deadline|amount_desc|random)$"),
+    cursor: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),
+):
+    """Public, redacted feed. No auth, rate-limited per IP. Hides funder
+    identity, source URL, exact deadline, eligibility, and evidence IDs —
+    see `redact_for_anon`."""
+    _check_public_rate_limit(request)
+    if cursor + limit > _PUBLIC_MAX_PAGE_DEPTH:
+        raise HTTPException(400, "Sign up to browse the full pool.")
+    country = country_slug(country or "nz")
+    month = month or current_month()
+    pool = live_only(load_pool(country, month))
+    tag_list = [t for t in tags.split(",") if t.strip()]
+    page = filter_pool(
+        pool,
+        q=q,
+        tags=tag_list,
+        region=region,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+    )
+    page["opportunities"] = [redact_for_anon(r) for r in page["opportunities"]]
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["X-Robots-Tag"] = "noindex"
+    return page
+
+
+@app.get("/api/public/stats", response_model=PublicStatsResponse)
+def api_public_stats(request: Request, response: Response):
+    """Live-opportunity counter for the anon hero strip. NZ-only for MVP."""
+    _check_public_rate_limit(request)
+    from datetime import datetime as _dt, timezone as _tz
+    country = "nz"
+    month = current_month()
+    pool = live_only(load_pool(country, month))
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["X-Robots-Tag"] = "noindex"
+    return {
+        "live_count": len(pool),
+        "countries": [country],
+        "updated_at": _dt.now(_tz.utc).isoformat(),
+    }
 
 
 @app.get("/api/opportunities")
@@ -766,7 +878,7 @@ def api_list_opportunities(
     min_amount: int | None = Query(None, ge=0),
     max_amount: int | None = Query(None, ge=0),
     funder: str | None = Query(None),
-    sort: str = Query("recency", pattern="^(recency|deadline|amount_desc)$"),
+    sort: str = Query("recency", pattern="^(recency|deadline|amount_desc|random)$"),
     cursor: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=500),
 ):

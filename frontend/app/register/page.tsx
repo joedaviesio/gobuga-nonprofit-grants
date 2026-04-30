@@ -184,10 +184,6 @@ export default function RegisterPage() {
           >
             {loading ? "Creating account..." : "Create account"}
           </button>
-
-          <p className="text-sm text-stone-600 text-center">
-            Free plan includes 2 scans/month and 1 active case.
-          </p>
         </form>
 
         <p className="text-center text-sm text-stone-600 mt-4">

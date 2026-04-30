@@ -7,6 +7,11 @@ _DATA_ROOT = os.environ.get("GOBUGA_DATA_DIR", PROJECT_ROOT)
 ORGS_DIR = os.path.join(_DATA_ROOT, "orgs")
 PLATFORM_DIR = os.path.join(_DATA_ROOT, "platform")
 
+# Static config (country source manifests) ships with the code rather than the
+# volume — it's checked into git, not user-mutable. Always project-relative,
+# even when GOBUGA_DATA_DIR points at a Railway volume.
+PLATFORM_CONFIG_DIR = os.path.join(PROJECT_ROOT, "platform")
+
 
 # --- Org-scoped paths ---
 
@@ -98,7 +103,7 @@ def ensure_platform_dirs():
 # --- Country sweep paths (search-box pivot) ---
 
 def platform_sources_dir() -> str:
-    return os.path.join(PLATFORM_DIR, "sources")
+    return os.path.join(PLATFORM_CONFIG_DIR, "sources")
 
 
 def platform_sources_path(country: str) -> str:

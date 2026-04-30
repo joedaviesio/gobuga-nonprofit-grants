@@ -1,0 +1,740 @@
+{
+  "country": "nz",
+  "country_label": "New Zealand",
+  "currency": "NZD",
+  "regions": [
+    "northland",
+    "auckland",
+    "waikato",
+    "bay-of-plenty",
+    "gisborne",
+    "hawkes-bay",
+    "taranaki",
+    "manawatu-whanganui",
+    "wellington",
+    "tasman",
+    "nelson",
+    "marlborough",
+    "west-coast",
+    "canterbury",
+    "otago",
+    "southland",
+    "national"
+  ],
+  "must_appear_funders": [
+    {
+      "name": "Department of Internal Affairs",
+      "url": "https://www.communitymatters.govt.nz/",
+      "sectors": [
+        "community",
+        "infrastructure",
+        "inclusion"
+      ]
+    },
+    {
+      "name": "Lottery Grants Board",
+      "url": "https://www.communitymatters.govt.nz/lottery-grants/",
+      "sectors": [
+        "community",
+        "infrastructure",
+        "health",
+        "environment"
+      ]
+    },
+    {
+      "name": "Sport NZ",
+      "url": "https://sportnz.org.nz/funding/",
+      "sectors": [
+        "sport",
+        "youth"
+      ]
+    },
+    {
+      "name": "Creative New Zealand",
+      "url": "https://www.creativenz.govt.nz/find-funding",
+      "sectors": [
+        "arts"
+      ]
+    },
+    {
+      "name": "Te Puni Kōkiri",
+      "url": "https://www.tpk.govt.nz/en/whakamahia/funding",
+      "sectors": [
+        "maori_pasifika"
+      ]
+    },
+    {
+      "name": "Ministry for the Environment",
+      "url": "https://environment.govt.nz/funding/",
+      "sectors": [
+        "environment"
+      ]
+    },
+    {
+      "name": "Ministry of Health",
+      "url": "https://www.health.govt.nz/about-us/contracts-procurement-and-funding",
+      "sectors": [
+        "health"
+      ]
+    },
+    {
+      "name": "Ministry of Business Innovation and Employment",
+      "url": "https://www.mbie.govt.nz/about/who-we-are/our-funding/",
+      "sectors": [
+        "business",
+        "education",
+        "infrastructure"
+      ]
+    },
+    {
+      "name": "Ministry for Culture and Heritage",
+      "url": "https://mch.govt.nz/funding-nz-culture",
+      "sectors": [
+        "arts"
+      ]
+    },
+    {
+      "name": "Rātā Foundation",
+      "url": "https://www.ratafoundation.org.nz/grants/",
+      "sectors": [
+        "community",
+        "arts",
+        "environment",
+        "education",
+        "health",
+        "youth",
+        "sport",
+        "maori_pasifika",
+        "inclusion",
+        "infrastructure",
+        "business"
+      ]
+    },
+    {
+      "name": "Foundation North",
+      "url": "https://www.foundationnorth.org.nz/grants/",
+      "sectors": [
+        "community",
+        "arts",
+        "environment",
+        "education",
+        "health",
+        "youth",
+        "sport",
+        "maori_pasifika",
+        "inclusion",
+        "infrastructure",
+        "business"
+      ]
+    },
+    {
+      "name": "Trust Waikato",
+      "url": "https://trustwaikato.co.nz/",
+      "sectors": [
+        "community",
+        "arts",
+        "environment",
+        "education",
+        "health",
+        "youth",
+        "sport",
+        "maori_pasifika",
+        "inclusion",
+        "infrastructure",
+        "business"
+      ]
+    },
+    {
+      "name": "Otago Community Trust",
+      "url": "https://www.oct.org.nz/grants/",
+      "sectors": [
+        "community",
+        "arts",
+        "environment",
+        "education",
+        "health",
+        "youth",
+        "sport",
+        "maori_pasifika",
+        "inclusion",
+        "infrastructure",
+        "business"
+      ]
+    }
+  ],
+  "seed_sources": [
+    {
+      "name": "DIA — Lottery Grants",
+      "url": "https://www.communitymatters.govt.nz/lottery-grants/",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "community",
+        "infrastructure",
+        "health",
+        "environment"
+      ]
+    },
+    {
+      "name": "DIA — COGS (Community Organisation Grants Scheme)",
+      "url": "https://www.communitymatters.govt.nz/community-organisation-grants-scheme-cogs/",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "community",
+        "inclusion"
+      ]
+    },
+    {
+      "name": "MSD — Community Investment",
+      "url": "https://www.msd.govt.nz/what-we-can-do/providers/community-investment/index.html",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "community",
+        "youth",
+        "inclusion",
+        "health"
+      ]
+    },
+    {
+      "name": "MBIE funding",
+      "url": "https://www.mbie.govt.nz/about/who-we-are/our-funding/",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "business",
+        "education",
+        "infrastructure"
+      ]
+    },
+    {
+      "name": "Sport NZ funding",
+      "url": "https://sportnz.org.nz/funding/",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "sport",
+        "youth"
+      ]
+    },
+    {
+      "name": "Creative New Zealand",
+      "url": "https://www.creativenz.govt.nz/find-funding",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "arts"
+      ]
+    },
+    {
+      "name": "Te Puni Kōkiri",
+      "url": "https://www.tpk.govt.nz/en/whakamahia/funding",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "maori_pasifika"
+      ]
+    },
+    {
+      "name": "Ministry for the Environment funding",
+      "url": "https://environment.govt.nz/funding/",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "environment"
+      ]
+    },
+    {
+      "name": "Ministry of Health funding",
+      "url": "https://www.health.govt.nz/about-us/contracts-procurement-and-funding",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "health"
+      ]
+    },
+    {
+      "name": "Ministry for Culture and Heritage",
+      "url": "https://mch.govt.nz/funding-nz-culture",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "arts"
+      ]
+    },
+    {
+      "name": "Health Research Council of NZ",
+      "url": "https://hrc.govt.nz/grants-funding/news-applications",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "health",
+        "education"
+      ]
+    },
+    {
+      "name": "Royal Society Te Apārangi (Marsden)",
+      "url": "https://www.royalsociety.org.nz/what-we-do/funds-and-opportunities/",
+      "category": "government",
+      "scope": "national",
+      "sectors": [
+        "education"
+      ]
+    },
+    {
+      "name": "Rātā Foundation",
+      "url": "https://www.ratafoundation.org.nz/grants/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "canterbury",
+        "marlborough",
+        "tasman",
+        "nelson",
+        "west-coast"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Foundation North",
+      "url": "https://www.foundationnorth.org.nz/grants/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "auckland",
+        "northland"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Trust Waikato",
+      "url": "https://trustwaikato.co.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "waikato"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Otago Community Trust",
+      "url": "https://www.oct.org.nz/grants/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "otago"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "BayTrust",
+      "url": "https://www.baytrust.org.nz/grants/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Eastern & Central Community Trust",
+      "url": "https://ecct.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "hawkes-bay",
+        "manawatu-whanganui"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "WEL Energy Trust",
+      "url": "https://welenergytrust.co.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "waikato"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Toi Foundation",
+      "url": "https://toifoundation.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "taranaki"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Auckland Council community grants",
+      "url": "https://www.aucklandcouncil.govt.nz/grants-community-support-housing/grants/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "auckland"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Wellington City Council grants",
+      "url": "https://wellington.govt.nz/funding-grants-and-awards",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "wellington"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Christchurch City Council funding",
+      "url": "https://ccc.govt.nz/culture-and-community/funding-and-grants/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "canterbury"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Dunedin City Council grants",
+      "url": "https://www.dunedin.govt.nz/services/grants-and-funding",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "otago"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Hamilton City Council grants",
+      "url": "https://hamilton.govt.nz/community-support/grants-and-funding/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "waikato"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Tauranga City Council grants",
+      "url": "https://www.tauranga.govt.nz/community/community-funding-and-support",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "FundView (aggregator)",
+      "url": "https://www.fundview.co.nz/",
+      "category": "aggregator",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "Fuel (aggregator)",
+      "url": "https://fuel.org.nz/",
+      "category": "aggregator",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "GeneROSITY (aggregator)",
+      "url": "https://www.generosity.org.nz/",
+      "category": "aggregator",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "Philanthropy New Zealand directory",
+      "url": "https://philanthropy.org.nz/",
+      "category": "aggregator",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "Pub Charity",
+      "url": "https://pubcharitylimited.org.nz/",
+      "category": "gaming",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "The Lion Foundation",
+      "url": "https://lionfoundation.org.nz/",
+      "category": "gaming",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "NZ Community Trust",
+      "url": "https://nzct.org.nz/",
+      "category": "gaming",
+      "scope": "national",
+      "sectors": []
+    },
+    {
+      "name": "Auckland Council Local Boards funding",
+      "url": "https://www.aucklandcouncil.govt.nz/grants-community-support-housing/grants/local-board-grants-quick-response/Pages/default.aspx",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "auckland"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Tātaki Auckland Unlimited",
+      "url": "https://www.aucklandunlimited.com/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "auckland"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Aktive — Auckland regional sport",
+      "url": "https://aktive.org.nz/funding/",
+      "category": "regional-sport",
+      "scope": "regional",
+      "regions": [
+        "auckland"
+      ],
+      "sectors": [
+        "sport"
+      ]
+    },
+    {
+      "name": "Foundation North quick response",
+      "url": "https://www.foundationnorth.org.nz/grants/quick-response-grants/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "auckland",
+        "northland"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Sport Waikato funding",
+      "url": "https://www.sportwaikato.org.nz/funding",
+      "category": "regional-sport",
+      "scope": "regional",
+      "regions": [
+        "waikato"
+      ],
+      "sectors": [
+        "sport"
+      ]
+    },
+    {
+      "name": "Te Waka — Waikato economic development",
+      "url": "https://tewaka.nz/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "waikato"
+      ],
+      "sectors": [
+        "business"
+      ]
+    },
+    {
+      "name": "Momentum Waikato",
+      "url": "https://momentumwaikato.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "waikato"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Acorn Foundation (Tauranga)",
+      "url": "https://acornfoundation.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Sport Bay of Plenty funding",
+      "url": "https://sportbop.co.nz/funding/",
+      "category": "regional-sport",
+      "scope": "regional",
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "sectors": [
+        "sport"
+      ]
+    },
+    {
+      "name": "TECT (Tauranga Energy Consumer Trust)",
+      "url": "https://tect.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Greater Wellington Regional Council",
+      "url": "https://www.gw.govt.nz/your-region/grants-funding-and-rebates/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "wellington"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Hutt City Council grants",
+      "url": "https://www.huttcity.govt.nz/community-and-support/grants-and-funding",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "wellington"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Porirua City Council grants",
+      "url": "https://poriruacity.govt.nz/your-community/community-funding/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "wellington"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Nikau Foundation",
+      "url": "https://nikaufoundation.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "wellington"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Nuku Ora — Wellington regional sport",
+      "url": "https://www.nukuora.org.nz/funding/",
+      "category": "regional-sport",
+      "scope": "regional",
+      "regions": [
+        "wellington"
+      ],
+      "sectors": [
+        "sport"
+      ]
+    },
+    {
+      "name": "Christchurch City Council Strengthening Communities",
+      "url": "https://ccc.govt.nz/culture-and-community/funding-and-grants/strengthening-communities-grants",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "canterbury"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Environment Canterbury",
+      "url": "https://www.ecan.govt.nz/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "canterbury"
+      ],
+      "sectors": [
+        "environment"
+      ]
+    },
+    {
+      "name": "Christchurch Foundation",
+      "url": "https://www.christchurchfoundation.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "canterbury"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Sport Canterbury funding",
+      "url": "https://www.sportcanterbury.org.nz/about-us/funding/",
+      "category": "regional-sport",
+      "scope": "regional",
+      "regions": [
+        "canterbury"
+      ],
+      "sectors": [
+        "sport"
+      ]
+    },
+    {
+      "name": "Mainland Foundation",
+      "url": "https://mainlandfoundation.co.nz/",
+      "category": "gaming",
+      "scope": "regional",
+      "regions": [
+        "canterbury"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Otago Regional Council",
+      "url": "https://www.orc.govt.nz/",
+      "category": "council",
+      "scope": "regional",
+      "regions": [
+        "otago"
+      ],
+      "sectors": [
+        "environment"
+      ]
+    },
+    {
+      "name": "Sport Otago funding",
+      "url": "https://sportotago.co.nz/funding/",
+      "category": "regional-sport",
+      "scope": "regional",
+      "regions": [
+        "otago"
+      ],
+      "sectors": [
+        "sport"
+      ]
+    },
+    {
+      "name": "Central Lakes Trust",
+      "url": "https://www.centrallakes.org.nz/",
+      "category": "foundation",
+      "scope": "regional",
+      "regions": [
+        "otago"
+      ],
+      "sectors": []
+    },
+    {
+      "name": "Dunedin Casinos Charitable Trust",
+      "url": "https://www.dccct.co.nz/",
+      "category": "gaming",
+      "scope": "regional",
+      "regions": [
+        "otago"
+      ],
+      "sectors": []
+    }
+  ]
+}

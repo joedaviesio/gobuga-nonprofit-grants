@@ -5,7 +5,10 @@ __pycache__/
 
 # Runtime data (per-org, created by the app)
 orgs/
-platform/
+platform/*
+# …except static config (country source manifests) which ships with the code
+!platform/sources/
+!platform/sources/**
 
 # Frontend
 frontend/node_modules/

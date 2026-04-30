@@ -203,6 +203,25 @@ def api_reset_password(req: ResetPasswordRequest):
         raise HTTPException(400, str(e))
 
 
+# --- Admin: trigger a country sweep (Railway cron hits this monthly) ---
+# Distinct from `/api/admin/sweep` below: that one auth's via session and is
+# meant for an in-app admin button; this one auth's via SWEEP_SECRET so a
+# headless cron can call it without a user login.
+
+@app.post("/api/admin/run-sweep", status_code=202)
+def api_run_sweep(
+    request: Request,
+    country: str | None = None,
+    month: str | None = None,
+    force: bool = False,
+):
+    """Dispatch a country sweep on a background thread. Auth via SWEEP_SECRET bearer."""
+    from api.startup_sweep import trigger_sweep, verify_sweep_secret
+    if not verify_sweep_secret(_extract_token(request)):
+        raise HTTPException(401, "Invalid or missing sweep secret")
+    return trigger_sweep(country=country, month=month, force=force)
+
+
 # --- Test helper (requires ALLOW_TEST_ENDPOINTS=1) ---
 
 @app.get("/api/test/latest-reset-token")

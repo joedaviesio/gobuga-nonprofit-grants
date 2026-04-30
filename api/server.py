@@ -63,6 +63,14 @@ app.add_middleware(
 # traffic arrives as HTTP even when the external URL is HTTPS.
 
 
+from api.startup_sweep import maybe_seed_pool
+
+
+@app.on_event("startup")
+def _seed_pool_on_startup() -> None:
+    maybe_seed_pool()
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch unhandled exceptions so CORS headers are still sent."""

@@ -61,8 +61,25 @@ def previous_month(month: str) -> str:
     return f"{y}-{m - 1:02d}"
 
 
+def latest_available_month(
+    country: str,
+    before: str | None = None,
+    max_lookback: int = 6,
+) -> str | None:
+    """Walk back from `before` (default: current month) to find the most recent
+    month that has a populated pool. Returns None if nothing found within
+    `max_lookback` months. Lets the system tolerate skipped sweeps."""
+    month = before or current_month()
+    for _ in range(max_lookback):
+        if os.path.exists(_opportunities_path(country, month)):
+            return month
+        month = previous_month(month)
+    return None
+
+
 def load_current_pool(country: str = "nz") -> list[dict]:
-    return load_pool(country, current_month())
+    month = latest_available_month(country) or current_month()
+    return load_pool(country, month)
 
 
 # --- Cross-month dedupe + live filter ---

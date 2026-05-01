@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from api.opportunities import (
     build_opportunities_from_watchers,
+    latest_available_month,
     live_only,
     load_pool,
     merge_with_previous,
@@ -402,8 +403,10 @@ def run_country_sweep(
     with open(os.path.join(run_dir, "outputs.json"), "w") as f:
         json.dump(all_outputs, f, indent=2, default=str)
 
-    # Cross-month merge to carry id/first_seen forward
-    prev_pool = load_pool(country, previous_month(month))
+    # Cross-month merge to carry id/first_seen forward. Walk back past any
+    # skipped months so continuity survives gaps in the sweep cadence.
+    prev_month = latest_available_month(country, before=previous_month(month))
+    prev_pool = load_pool(country, prev_month) if prev_month else []
     opportunities = merge_with_previous(opportunities_raw, prev_pool) if prev_pool else opportunities_raw
     opportunities = live_only(opportunities)
 

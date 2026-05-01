@@ -16,7 +16,7 @@ import hmac
 import os
 import threading
 
-from api.opportunities import current_month
+from api.opportunities import current_month, latest_available_month
 from api.tenant import platform_latest_path
 
 
@@ -66,12 +66,18 @@ def _dispatch_sweep(country: str, month: str, force: bool = False) -> str:
 
 
 def maybe_seed_pool() -> None:
-    """Startup hook: dispatch sweep for any seed country whose pool is missing."""
+    """Startup hook: dispatch a sweep only if the country has no recent pool
+    at all. Skipping a single month (deliberately or otherwise) is fine — the
+    monthly cron will catch up next cycle, and the API falls back to the most
+    recent available pool in the meantime."""
     if os.environ.get("STARTUP_SWEEP_DISABLED") == "1":
         print("[startup_sweep] Disabled via STARTUP_SWEEP_DISABLED=1")
         return
     month = current_month()
     for country in SEED_COUNTRIES:
+        if latest_available_month(country) is not None:
+            print(f"[startup_sweep] {country}: recent pool exists — skipping seed")
+            continue
         result = _dispatch_sweep(country, month)
         print(f"[startup_sweep] {country} {month}: {result}")
 

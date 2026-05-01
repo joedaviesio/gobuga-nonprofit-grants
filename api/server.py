@@ -775,6 +775,7 @@ from api.opportunities import (
     country_slug,
     current_month,
     filter_pool,
+    latest_available_month,
     live_only,
     load_pool,
     opportunity_to_grant_brief,
@@ -858,7 +859,7 @@ def api_public_opportunities(
     if cursor + limit > _PUBLIC_MAX_PAGE_DEPTH:
         raise HTTPException(400, "Sign up to browse the full pool.")
     country = country_slug(country or "nz")
-    month = month or current_month()
+    month = month or latest_available_month(country) or current_month()
     pool = live_only(load_pool(country, month))
     tag_list = [t for t in tags.split(",") if t.strip()]
     page = filter_pool(
@@ -882,7 +883,7 @@ def api_public_stats(request: Request, response: Response):
     _check_public_rate_limit(request)
     from datetime import datetime as _dt, timezone as _tz
     country = "nz"
-    month = current_month()
+    month = latest_available_month(country) or current_month()
     pool = live_only(load_pool(country, month))
     response.headers["Cache-Control"] = "public, max-age=300"
     response.headers["X-Robots-Tag"] = "noindex"
@@ -913,7 +914,7 @@ def api_list_opportunities(
     country and the current month. Auto-filters past-deadline rows."""
     org = get_org(org_id) or {}
     country = country_slug(country or org.get("country"))
-    month = month or current_month()
+    month = month or latest_available_month(country) or current_month()
     pool = load_pool(country, month)
     pool = live_only(pool)
     tag_list = [t for t in tags.split(",") if t.strip()]
@@ -952,7 +953,7 @@ def api_open_case_from_pool(
 
     org = get_org(org_id) or {}
     country = country_slug(req.country or org.get("country"))
-    month = req.month or current_month()
+    month = req.month or latest_available_month(country) or current_month()
     pool = load_pool(country, month)
     if not pool:
         raise HTTPException(404, f"No opportunity pool for {country}/{month}")

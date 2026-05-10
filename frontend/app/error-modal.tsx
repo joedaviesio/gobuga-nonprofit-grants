@@ -102,18 +102,18 @@ export default function ErrorModal({ message, onClose }: ErrorModalProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
-            <p className="text-sm text-slate-700 pt-1">{upgradeMsg}</p>
+            <p className="text-base text-slate-700 pt-1">{upgradeMsg}</p>
           </div>
           <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+              className="px-4 py-2 text-base text-slate-500 hover:text-slate-700 transition-colors"
             >
               Not now
             </button>
             <button
               onClick={handleUpgrade}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Upgrade
             </button>
@@ -140,12 +140,12 @@ export default function ErrorModal({ message, onClose }: ErrorModalProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-sm text-slate-700 pt-1">{friendly}</p>
+          <p className="text-base text-slate-700 pt-1">{friendly}</p>
         </div>
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="px-4 py-2 text-base bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
             OK
           </button>

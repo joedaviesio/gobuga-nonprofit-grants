@@ -30,7 +30,7 @@ function PriorityBadge({ priority }: { priority: string }) {
       ? "bg-slate-50 text-slate-700 border border-slate-200"
       : "bg-amber-50 text-amber-600 border border-amber-200";
   return (
-    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
+    <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
       {priority}
     </span>
   );
@@ -50,7 +50,7 @@ function StatusBadge({ status }: { status: string }) {
       ? "bg-slate-100 text-slate-700 border border-slate-200"
       : "bg-slate-50 text-slate-600 border border-slate-200";
   return (
-    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
+    <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
       {status}
     </span>
   );
@@ -76,7 +76,7 @@ function ReportView({
       {isHistorical && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
           <div className="w-2 h-2 bg-amber-400 rounded-full" />
-          <span className="text-xs text-amber-700">
+          <span className="text-sm text-amber-700">
             Viewing report from <strong>{report.date}</strong> (not the latest)
           </span>
         </div>
@@ -84,7 +84,7 @@ function ReportView({
 
       {/* Opportunities */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-800 mb-3 font-[family-name:var(--font-dm-sans)]">Opportunities</h2>
+        <h2 className="text-lg font-semibold text-slate-800 mb-3 font-[family-name:var(--font-dm-sans)]">Opportunities</h2>
         {(() => {
           const filtered = report.opportunities.filter((opp) => {
             if (opp.expired) return false;
@@ -110,14 +110,14 @@ function ReportView({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <PriorityBadge priority={opp.priority} />
-                    <span className="text-sm font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
+                    <span className="text-base font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
                       {opp.title}
                     </span>
                   </div>
                   {opp.description && (
-                    <p className="text-xs text-slate-600 mt-1">{opp.description}</p>
+                    <p className="text-sm text-slate-600 mt-1">{opp.description}</p>
                   )}
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-600">
+                  <div className="flex flex-wrap gap-3 mt-2 text-sm text-slate-600">
                     {opp.deadline && <span>Deadline: {opp.deadline}</span>}
                     {opp.amount && <span>Amount: {opp.amount}</span>}
                     {opp.funder && <span>Funder: {opp.funder}</span>}
@@ -125,7 +125,7 @@ function ReportView({
                   {opp.details.length > 0 && (
                     <ul className="mt-2 space-y-0.5">
                       {opp.details.map((d, i) => (
-                        <li key={i} className="text-xs text-slate-700">
+                        <li key={i} className="text-sm text-slate-700">
                           - {d}
                         </li>
                       ))}
@@ -139,7 +139,7 @@ function ReportView({
                           href={link.url}
                           target="_blank"
                           rel="noopener"
-                          className="text-xs text-blue-600 underline hover:text-blue-800"
+                          className="text-sm text-blue-600 underline hover:text-blue-800"
                         >
                           {link.title ? link.title.slice(0, 40) + (link.title.length > 40 ? "..." : "") : new URL(link.url).hostname}
                         </a>
@@ -157,7 +157,7 @@ function ReportView({
                   });
                   if (opp.expired) {
                     return (
-                      <span className="shrink-0 px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg">
+                      <span className="shrink-0 px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg">
                         Expired
                       </span>
                     );
@@ -166,7 +166,7 @@ function ReportView({
                     return (
                       <a
                         href={`/case/${existingCase.case_id}`}
-                        className="shrink-0 px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                        className="shrink-0 px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
                       >
                         View Case
                       </a>
@@ -176,7 +176,7 @@ function ReportView({
                     <button
                       onClick={() => onOpenCase(opp)}
                       disabled={openingCase === opp.id}
-                      className="shrink-0 px-4 py-1.5 text-xs btn-gradient rounded-lg disabled:opacity-50 transition-colors"
+                      className="shrink-0 px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                     >
                       {openingCase === opp.id ? "Creating..." : "Open Case"}
                     </button>
@@ -253,7 +253,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.key
                 ? t.color
                 : "text-slate-600 border-transparent hover:text-slate-600"
@@ -265,7 +265,7 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-slate-600 py-4">
+        <p className="text-base text-slate-600 py-4">
           {cases.length === 0
             ? "No cases yet. Open one from Opportunities."
             : `No ${tab} cases.`}
@@ -280,15 +280,15 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono font-medium text-slate-700">
+                  <span className="text-base font-mono font-medium text-slate-700">
                     {c.case_id}
                   </span>
                   <span className="mx-2 text-slate-300">|</span>
-                  <span className="text-sm text-slate-600">{c.grant_id}</span>
+                  <span className="text-base text-slate-600">{c.grant_id}</span>
                 </div>
                 <StatusBadge status={c.status} />
               </div>
-              <div className="mt-1 flex gap-4 text-xs text-slate-600">
+              <div className="mt-1 flex gap-4 text-sm text-slate-600">
                 <span>{c.sections_count} sections</span>
                 <span>{c.uploads_count} uploads</span>
                 <span>updated {new Date(c.updated).toLocaleDateString()}</span>
@@ -586,7 +586,7 @@ function LegacyDashboard() {
       <div className="flex items-center gap-4 mb-6 border-b border-slate-200 pb-3">
         <button
           onClick={handleViewLatest}
-          className={`text-sm font-medium pb-1 transition-colors ${
+          className={`text-base font-medium pb-1 transition-colors ${
             activeView === "brief"
               ? "text-slate-900 border-b-2 border-slate-900"
               : "text-slate-600 hover:text-slate-600"
@@ -596,7 +596,7 @@ function LegacyDashboard() {
         </button>
         <button
           onClick={() => setActiveView("cases")}
-          className={`text-sm font-medium pb-1 transition-colors ${
+          className={`text-base font-medium pb-1 transition-colors ${
             activeView === "cases"
               ? "text-slate-900 border-b-2 border-slate-900"
               : "text-slate-600 hover:text-slate-600"
@@ -606,7 +606,7 @@ function LegacyDashboard() {
           {(() => {
             const newOpen = cases.filter(isNewOpenCase).length;
             return newOpen > 0 ? (
-              <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-xs font-bold text-white bg-red-500 rounded-full">
                 {newOpen}
               </span>
             ) : null;
@@ -614,7 +614,7 @@ function LegacyDashboard() {
         </button>
         <button
           onClick={() => setActiveView("cycle")}
-          className={`text-sm font-medium pb-1 transition-colors ${
+          className={`text-base font-medium pb-1 transition-colors ${
             activeView === "cycle"
               ? "text-slate-900 border-b-2 border-slate-900"
               : "text-slate-600 hover:text-slate-600"
@@ -623,7 +623,7 @@ function LegacyDashboard() {
           Run Cycle
         </button>
         {report && (
-          <span className="ml-auto text-xs text-slate-600">
+          <span className="ml-auto text-sm text-slate-600">
             {isHistorical ? `Viewing: ${report.date}` : `Last scan: ${report.date}`}
             {" "}&middot; {report.evidence_count} evidence items
           </span>
@@ -638,10 +638,10 @@ function LegacyDashboard() {
               <div className="mx-auto mb-6 w-64 h-32 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
                 <div className="pixel-gradient w-full h-full" />
               </div>
-              <p className="text-sm text-slate-600">No reports yet. Run a cycle first.</p>
+              <p className="text-base text-slate-600">No reports yet. Run a cycle first.</p>
               <button
                 onClick={() => setActiveView("cycle")}
-                className="mt-4 px-5 py-2 text-sm btn-gradient rounded-lg transition-colors"
+                className="mt-4 px-5 py-2 text-base btn-gradient rounded-lg transition-colors"
               >
                 Go to Run Cycle
               </button>
@@ -652,7 +652,7 @@ function LegacyDashboard() {
                 <div className="mb-4 flex justify-end">
                   <button
                     onClick={handleViewLatest}
-                    className="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+                    className="text-sm px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
                   >
                     Back to latest ({latestDate})
                   </button>
@@ -680,8 +680,8 @@ function LegacyDashboard() {
         <div className="max-w-lg mx-auto space-y-6">
           {/* Run controls */}
           <div className="card-gradient border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800 mb-1">Run Grant Scanning Cycle</h2>
-            <p className="text-xs text-slate-700 mb-4">
+            <h2 className="text-lg font-semibold text-slate-800 mb-1">Run Grant Scanning Cycle</h2>
+            <p className="text-sm text-slate-700 mb-4">
               Scans for opportunities, assesses fit, and compiles your daily brief. Takes around 3 minutes.
             </p>
 
@@ -691,23 +691,23 @@ function LegacyDashboard() {
                 {(!session?.cycle_timer || session.cycle_timer.expired) ? (
                   <>
                     <div>
-                      <label className="block text-xs text-slate-700 mb-1">Enter password to start cycle</label>
+                      <label className="block text-sm text-slate-700 mb-1">Enter password to start cycle</label>
                       <input
                         type="password"
                         value={cyclePassword}
                         onChange={(e) => { setCyclePassword(e.target.value); setTriggerError(""); }}
                         onKeyDown={(e) => e.key === "Enter" && cyclePassword && handleTriggerAndRunCycle()}
                         placeholder="Your account password"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400"
+                        className="w-full px-3 py-2 text-base border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400"
                       />
                     </div>
                     {triggerError && (
-                      <p className="text-xs text-red-600">{triggerError}</p>
+                      <p className="text-sm text-red-600">{triggerError}</p>
                     )}
                     <button
                       onClick={handleTriggerAndRunCycle}
                       disabled={!cyclePassword}
-                      className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
+                      className="w-full px-4 py-2.5 text-base btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                     >
                       Run Cycle
                     </button>
@@ -717,10 +717,10 @@ function LegacyDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                        <span className="text-xs font-medium text-blue-700">Next cycle available in</span>
+                        <span className="text-sm font-medium text-blue-700">Next cycle available in</span>
                       </div>
                       {session?.cycle_timer && (
-                        <span className="text-sm font-mono font-medium text-blue-600 tabular-nums">
+                        <span className="text-base font-mono font-medium text-blue-600 tabular-nums">
                           {(() => {
                             const remaining = Math.max(0, Math.floor((new Date(session.cycle_timer.expires_at).getTime() - Date.now()) / 1000));
                             const d = Math.floor(remaining / 86400);
@@ -746,10 +746,10 @@ function LegacyDashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full brand-gradient live-dot" />
-                    <span className="text-sm font-medium text-slate-700">Cycle running</span>
+                    <span className="text-base font-medium text-slate-700">Cycle running</span>
                   </div>
                   {itemsFound > 0 && (
-                    <span key={itemsFound} className="text-xs font-mono font-medium text-slate-500 tabular-nums counter-tick">
+                    <span key={itemsFound} className="text-sm font-mono font-medium text-slate-500 tabular-nums counter-tick">
                       {itemsFound} items scanned
                     </span>
                   )}
@@ -797,7 +797,7 @@ function LegacyDashboard() {
                               className={`flex items-center gap-2.5 px-2 py-1 ${justDone ? "phase-just-done" : ""}`}
                             >
                               {isDone ? (
-                                <span className="text-green-500 text-sm w-4 text-center">&#10003;</span>
+                                <span className="text-green-500 text-base w-4 text-center">&#10003;</span>
                               ) : isActive ? (
                                 <div className="w-4 flex justify-center">
                                   <div className="w-2.5 h-2.5 rounded-full brand-gradient live-dot" />
@@ -807,7 +807,7 @@ function LegacyDashboard() {
                                   <div className="w-2 h-2 bg-slate-200 rounded-full" />
                                 </div>
                               )}
-                              <span className={`text-xs transition-colors duration-300 ${
+                              <span className={`text-sm transition-colors duration-300 ${
                                 isActive ? "text-slate-800 font-semibold" :
                                 isDone ? "text-green-600 font-medium" :
                                 "text-slate-400"
@@ -831,11 +831,11 @@ function LegacyDashboard() {
               <div className="py-4 cycle-complete-enter">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
                   <div className="flex items-center gap-2.5 mb-1">
-                    <span className="text-green-500 text-lg">&#10003;</span>
-                    <span className="text-sm font-semibold text-green-800">Cycle complete</span>
+                    <span className="text-green-500 text-xl">&#10003;</span>
+                    <span className="text-base font-semibold text-green-800">Cycle complete</span>
                   </div>
                   {cycleMessage && (
-                    <p className="text-xs text-green-600 ml-7">{cycleMessage}</p>
+                    <p className="text-sm text-green-600 ml-7">{cycleMessage}</p>
                   )}
                 </div>
                 <button
@@ -843,7 +843,7 @@ function LegacyDashboard() {
                     handleViewLatest();
                     setCycleStatus("idle");
                   }}
-                  className="w-full px-4 py-2.5 text-sm btn-gradient rounded-lg transition-colors"
+                  className="w-full px-4 py-2.5 text-base btn-gradient rounded-lg transition-colors"
                 >
                   View Opportunities
                 </button>
@@ -851,7 +851,7 @@ function LegacyDashboard() {
             ) : null}
 
             {cycleMessage && (
-              <p className={`text-xs mt-3 ${
+              <p className={`text-sm mt-3 ${
                 cycleStatus === "error" ? "text-red-600" :
                 cycleStatus === "complete" ? "text-green-600" :
                 "text-slate-700"
@@ -863,9 +863,9 @@ function LegacyDashboard() {
 
           {/* Cycle History */}
           <div className="card-gradient border border-slate-200 p-5 shadow-sm">
-            <h3 className="text-xs font-semibold text-slate-700 mb-3">Cycle History</h3>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Cycle History</h3>
             {reportDates.length === 0 ? (
-              <p className="text-xs text-slate-600">No cycles have been run yet.</p>
+              <p className="text-sm text-slate-600">No cycles have been run yet.</p>
             ) : (
               <div className="space-y-1">
                 {[...reportDates].sort((a, b) => b.localeCompare(a)).map((date) => (
@@ -880,12 +880,12 @@ function LegacyDashboard() {
                       ) : (
                         <div className="w-2 h-2 bg-slate-300 rounded-full" />
                       )}
-                      <span className="text-sm font-mono text-slate-700">{date}</span>
+                      <span className="text-base font-mono text-slate-700">{date}</span>
                       {date === latestDate && (
-                        <span className="text-xs text-green-600 font-medium">latest</span>
+                        <span className="text-sm text-green-600 font-medium">latest</span>
                       )}
                     </div>
-                    <span className="text-xs text-slate-600 group-hover:text-slate-600 transition-colors">
+                    <span className="text-sm text-slate-600 group-hover:text-slate-600 transition-colors">
                       View report
                     </span>
                   </button>

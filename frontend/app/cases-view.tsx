@@ -17,7 +17,7 @@ export function StatusBadge({ status }: { status: string }) {
       ? "bg-slate-100 text-slate-700 border border-slate-200"
       : "bg-slate-50 text-slate-600 border border-slate-200";
   return (
-    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
+    <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
       {status}
     </span>
   );
@@ -81,7 +81,7 @@ export default function CasesView({ cases }: { cases: CaseSummary[] }) {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.key
                 ? t.color
                 : "text-slate-600 border-transparent hover:text-slate-600"
@@ -93,7 +93,7 @@ export default function CasesView({ cases }: { cases: CaseSummary[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-slate-600 py-4">
+        <p className="text-base text-slate-600 py-4">
           {cases.length === 0
             ? "No cases yet. Open one from Opportunities."
             : `No ${tab} cases.`}
@@ -108,15 +108,15 @@ export default function CasesView({ cases }: { cases: CaseSummary[] }) {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono font-medium text-slate-700">
+                  <span className="text-base font-mono font-medium text-slate-700">
                     {c.case_id}
                   </span>
                   <span className="mx-2 text-slate-300">|</span>
-                  <span className="text-sm text-slate-600">{c.grant_id}</span>
+                  <span className="text-base text-slate-600">{c.grant_id}</span>
                 </div>
                 <StatusBadge status={c.status} />
               </div>
-              <div className="mt-1 flex gap-4 text-xs text-slate-600">
+              <div className="mt-1 flex gap-4 text-sm text-slate-600">
                 <span>{c.sections_count} sections</span>
                 <span>{c.uploads_count} uploads</span>
                 <span>updated {new Date(c.updated).toLocaleDateString()}</span>

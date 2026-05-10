@@ -31,7 +31,7 @@ function CycleCountdown({ expiresAt }: { expiresAt: string }) {
   const isExpired = remaining <= 0;
 
   return (
-    <span className={`text-xs font-mono tabular-nums ${isExpired ? "text-green-600" : "text-slate-500"}`}>
+    <span className={`text-sm font-mono tabular-nums ${isExpired ? "text-green-600" : "text-slate-500"}`}>
       {isExpired ? (
         <span className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
@@ -60,15 +60,15 @@ export function HeaderLogout() {
       {cycleTimer && !cycleTimer.expired ? (
         <CycleCountdown expiresAt={cycleTimer.expires_at} />
       ) : (
-        <span className="text-xs font-mono flex items-center gap-1 text-blue-600">
+        <span className="text-sm font-mono flex items-center gap-1 text-blue-600">
           <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
           Cycle ready
         </span>
       )}
       {session.org_name && (
-        <span className="text-xs text-stone-700 hidden sm:inline font-medium">{session.org_name}</span>
+        <span className="text-sm text-stone-700 hidden sm:inline font-medium">{session.org_name}</span>
       )}
-      <a href="/settings" className="text-xs text-stone-600 hover:text-blue-600 transition-colors font-medium">
+      <a href="/settings" className="text-sm text-stone-600 hover:text-blue-600 transition-colors font-medium">
         Settings
       </a>
       <span className="flex items-center gap-1.5">
@@ -76,11 +76,11 @@ export function HeaderLogout() {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
         </span>
-        <span className="text-xs text-green-600 hidden sm:inline">Online</span>
+        <span className="text-sm text-green-600 hidden sm:inline">Online</span>
       </span>
       <button
         onClick={logout}
-        className="text-xs text-stone-600 hover:text-red-600 transition-colors font-medium"
+        className="text-sm text-stone-600 hover:text-red-600 transition-colors font-medium"
       >
         Sign out
       </button>

@@ -176,36 +176,36 @@ export default function SetupPage() {
         <GradientMesh />
         <div className="max-w-lg mx-auto relative z-10">
           <div className="text-center mb-8">
-            <h1 className="text-xl font-bold text-stone-900">Set up your organisation</h1>
-            <p className="text-sm text-stone-700 mt-1">Step 1 of 2: Tell us about your org</p>
+            <h1 className="text-2xl font-bold text-stone-900">Set up your organisation</h1>
+            <p className="text-base text-stone-700 mt-1">Step 1 of 2: Tell us about your org</p>
           </div>
 
           <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-4 shadow-lg">
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-red-700">{error}</div>
+              <div className="bg-red-50 border border-red-200 rounded px-3 py-2 text-base text-red-700">{error}</div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Organisation name</label>
+              <label className="block text-base font-medium text-stone-700 mb-1">Organisation name</label>
               <input
                 type="text"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:border-blue-400 text-stone-900 ${
+                className={`w-full px-3 py-2 text-base border rounded-md focus:outline-none focus:border-blue-400 text-stone-900 ${
                   basicAttempted && missingName ? "border-red-300 bg-red-50/50" : "border-stone-300"
                 }`}
               />
               {basicAttempted && missingName && (
-                <p className="text-xs text-red-600 mt-1">Enter your organisation name</p>
+                <p className="text-sm text-red-600 mt-1">Enter your organisation name</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Country</label>
+              <label className="block text-base font-medium text-stone-700 mb-1">Country</label>
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:border-blue-400 text-stone-900 ${
+                className={`w-full px-3 py-2 text-base border rounded-md focus:outline-none focus:border-blue-400 text-stone-900 ${
                   basicAttempted && missingCountry ? "border-red-300 bg-red-50/50" : "border-stone-300"
                 }`}
               >
@@ -215,12 +215,12 @@ export default function SetupPage() {
                 ))}
               </select>
               {basicAttempted && missingCountry && (
-                <p className="text-xs text-red-600 mt-1">Select your country</p>
+                <p className="text-sm text-red-600 mt-1">Select your country</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-2">Organisation status</label>
+              <label className="block text-base font-medium text-stone-700 mb-2">Organisation status</label>
               <div className="flex gap-2">
                 {([
                   { value: "nonprofit", label: "Non-profit" },
@@ -231,7 +231,7 @@ export default function SetupPage() {
                     key={opt.value}
                     type="button"
                     onClick={() => setOrgStatus(opt.value)}
-                    className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
+                    className={`flex-1 px-3 py-2 text-base rounded-md border transition-colors ${
                       orgStatus === opt.value
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-white text-stone-800 border-stone-300 hover:border-blue-400"
@@ -242,7 +242,7 @@ export default function SetupPage() {
                 ))}
               </div>
               {orgStatus === "forprofit" && (
-                <p className="mt-2 text-sm text-amber-700">
+                <p className="mt-2 text-base text-amber-700">
                   GoBuga is designed for non-profit organisations. Some grant opportunities may not be applicable to for-profit entities.
                 </p>
               )}
@@ -256,7 +256,7 @@ export default function SetupPage() {
                 }
                 setStep("sectors");
               }}
-              className="w-full px-4 py-2.5 text-sm btn-gradient rounded-md"
+              className="w-full px-4 py-2.5 text-base btn-gradient rounded-md"
             >
               Next: Sectors & Geographies
             </button>
@@ -272,16 +272,16 @@ export default function SetupPage() {
         <GradientMesh />
         <div className="max-w-lg mx-auto relative z-10">
           <div className="text-center mb-8">
-            <h1 className="text-xl font-bold text-stone-900">Sectors & Geographies</h1>
-            <p className="text-sm text-stone-700 mt-1">Step 2 of 2: What grants should we look for?</p>
+            <h1 className="text-2xl font-bold text-stone-900">Sectors & Geographies</h1>
+            <p className="text-base text-stone-700 mt-1">Step 2 of 2: What grants should we look for?</p>
           </div>
 
           <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-6 shadow-lg">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-stone-700">Funding sectors (select all that apply)</label>
+                <label className="block text-base font-medium text-stone-700">Funding sectors (select all that apply)</label>
                 {attempted && missingSectors && (
-                  <span className="text-xs text-red-600 animate-pulse">Select at least one</span>
+                  <span className="text-sm text-red-600 animate-pulse">Select at least one</span>
                 )}
               </div>
               <div className={`flex flex-wrap gap-2 rounded-lg p-0.5 transition-colors ${
@@ -291,7 +291,7 @@ export default function SetupPage() {
                   <button
                     key={s}
                     onClick={() => toggleSector(s)}
-                    className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                       sectors.includes(s)
                         ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
                         : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
@@ -305,9 +305,9 @@ export default function SetupPage() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-stone-700">Target geographies</label>
+                <label className="block text-base font-medium text-stone-700">Target geographies</label>
                 {attempted && missingGeographies && (
-                  <span className="text-xs text-amber-600">Recommended: pick at least one</span>
+                  <span className="text-sm text-amber-600">Recommended: pick at least one</span>
                 )}
               </div>
               {(() => {
@@ -321,7 +321,7 @@ export default function SetupPage() {
                   return (
                     <button
                       onClick={() => toggleGeo(country)}
-                      className={`px-3 py-1.5 text-xs rounded-full border transition-colors self-start ${
+                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors self-start ${
                         isWholeSelected
                           ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
                           : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
@@ -335,7 +335,7 @@ export default function SetupPage() {
                 return (
                   <div className="border border-stone-200 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-stone-800">
+                      <span className="text-base font-medium text-stone-800">
                         {country}
                         {(isWholeSelected || selectedRegionCount > 0) && (
                           <span className="text-blue-500 font-normal ml-1.5">
@@ -345,7 +345,7 @@ export default function SetupPage() {
                       </span>
                       <button
                         onClick={() => toggleWholeCountry(country, availableRegions)}
-                        className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+                        className={`px-2 py-0.5 text-xs rounded border transition-colors ${
                           isWholeSelected
                             ? "bg-blue-50 border-blue-300 text-blue-600"
                             : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
@@ -359,7 +359,7 @@ export default function SetupPage() {
                         <button
                           key={region}
                           onClick={() => toggleRegion(country, region, availableRegions)}
-                          className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                          className={`px-2.5 py-1 text-sm rounded-full border transition-colors ${
                             isRegionSelected(country, region)
                               ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
                               : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
@@ -381,13 +381,13 @@ export default function SetupPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep("basics")}
-                className="px-4 py-2.5 text-sm border border-stone-300 text-stone-800 rounded-md hover:bg-stone-100 transition-colors"
+                className="px-4 py-2.5 text-base border border-stone-300 text-stone-800 rounded-md hover:bg-stone-100 transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={handleContinue}
-                className={`flex-1 px-4 py-2.5 text-sm rounded-md transition-colors ${
+                className={`flex-1 px-4 py-2.5 text-base rounded-md transition-colors ${
                   canContinue
                     ? "btn-gradient"
                     : "bg-stone-300 text-stone-500 cursor-default"
@@ -398,7 +398,7 @@ export default function SetupPage() {
             </div>
 
             {attempted && (missingSectors || missingGeographies) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-xs text-amber-800 space-y-1">
+              <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm text-amber-800 space-y-1">
                 <p className="font-medium">Almost there — just a couple things:</p>
                 <ul className="list-disc list-inside space-y-0.5 text-amber-700">
                   {missingSectors && <li>Pick at least one <strong>funding sector</strong></li>}

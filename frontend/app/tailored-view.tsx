@@ -25,7 +25,7 @@ function PriorityBadge({ priority }: { priority: string }) {
       ? "bg-slate-50 text-slate-700 border border-slate-200"
       : "bg-amber-50 text-amber-600 border border-amber-200";
   return (
-    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
+    <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
       {priority}
     </span>
   );
@@ -261,12 +261,12 @@ export default function TailoredView() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full brand-gradient live-dot" />
-                    <span className="text-sm font-medium text-slate-700">Cycle running</span>
+                    <span className="text-base font-medium text-slate-700">Cycle running</span>
                   </div>
                   {itemsFound > 0 && (
                     <span
                       key={itemsFound}
-                      className="text-xs font-mono font-medium text-slate-500 tabular-nums counter-tick"
+                      className="text-sm font-mono font-medium text-slate-500 tabular-nums counter-tick"
                     >
                       {itemsFound} items scanned
                     </span>
@@ -303,7 +303,7 @@ export default function TailoredView() {
                         className={`flex items-center gap-2.5 px-2 py-1 ${justDone ? "phase-just-done" : ""}`}
                       >
                         {isDone ? (
-                          <span className="text-green-500 text-sm w-4 text-center">✓</span>
+                          <span className="text-green-500 text-base w-4 text-center">✓</span>
                         ) : isActive ? (
                           <div className="w-4 flex justify-center">
                             <div className="w-2.5 h-2.5 rounded-full brand-gradient live-dot" />
@@ -314,7 +314,7 @@ export default function TailoredView() {
                           </div>
                         )}
                         <span
-                          className={`text-xs transition-colors duration-300 ${
+                          className={`text-sm transition-colors duration-300 ${
                             isActive
                               ? "text-slate-800 font-semibold"
                               : isDone
@@ -339,15 +339,15 @@ export default function TailoredView() {
         ) : (
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h2 className="text-sm font-semibold text-slate-800 mb-1 font-[family-name:var(--font-dm-sans)]">
+              <h2 className="text-lg font-semibold text-slate-800 mb-1 font-[family-name:var(--font-dm-sans)]">
                 Weekly tailored cycle
               </h2>
-              <p className="text-xs text-slate-700">
+              <p className="text-sm text-slate-700">
                 Runs the deep, profile-steered grant scan. Watcher → Analyst → Reporter, scored
                 against your sectors and geographies. Takes about 3 minutes.
               </p>
               {report && (
-                <p className="text-xs text-slate-600 mt-1.5">
+                <p className="text-sm text-slate-600 mt-1.5">
                   Last cycle: <strong>{report.date}</strong> · {opportunities.length} opportunit
                   {opportunities.length === 1 ? "y" : "ies"}
                 </p>
@@ -356,8 +356,8 @@ export default function TailoredView() {
             <div className="shrink-0">
               {cooldown ? (
                 <div className="text-right">
-                  <div className="text-xs text-slate-600 mb-1">Next cycle in</div>
-                  <div className="text-sm font-medium text-slate-800">
+                  <div className="text-sm text-slate-600 mb-1">Next cycle in</div>
+                  <div className="text-base font-medium text-slate-800">
                     {formatRemaining(cooldown.remaining_seconds)}
                   </div>
                 </div>
@@ -365,7 +365,7 @@ export default function TailoredView() {
                 <button
                   onClick={handleRun}
                   disabled={!canRun}
-                  className="px-5 py-2.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
+                  className="px-5 py-2.5 text-base btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                 >
                   Run weekly cycle →
                 </button>
@@ -377,11 +377,11 @@ export default function TailoredView() {
 
       {/* Picks list */}
       {!report && !running ? (
-        <div className="text-center py-12 text-sm text-slate-600">
+        <div className="text-center py-12 text-base text-slate-600">
           No tailored picks yet. Run your first weekly cycle above to generate one.
         </div>
       ) : sorted.length === 0 && !running ? (
-        <div className="text-center py-12 text-sm text-slate-600">
+        <div className="text-center py-12 text-base text-slate-600">
           The last cycle didn&apos;t surface any opportunities. Try again next week, or refine your
           org profile in settings.
         </div>
@@ -404,14 +404,14 @@ export default function TailoredView() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <PriorityBadge priority={opp.priority} />
-                      <span className="text-sm font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
+                      <span className="text-base font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
                         {opp.title}
                       </span>
                     </div>
                     {opp.description && (
-                      <p className="text-xs text-slate-600 mt-1">{opp.description}</p>
+                      <p className="text-sm text-slate-600 mt-1">{opp.description}</p>
                     )}
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-600">
+                    <div className="flex flex-wrap gap-3 mt-2 text-sm text-slate-600">
                       {opp.deadline && <span>Deadline: {opp.deadline}</span>}
                       {opp.amount && <span>Amount: {opp.amount}</span>}
                       {opp.funder && <span>Funder: {opp.funder}</span>}
@@ -419,7 +419,7 @@ export default function TailoredView() {
                     {opp.details && opp.details.length > 0 && (
                       <ul className="mt-2 space-y-0.5">
                         {opp.details.map((d, i) => (
-                          <li key={i} className="text-xs text-slate-700">- {d}</li>
+                          <li key={i} className="text-sm text-slate-700">- {d}</li>
                         ))}
                       </ul>
                     )}
@@ -431,7 +431,7 @@ export default function TailoredView() {
                             href={link.url}
                             target="_blank"
                             rel="noopener"
-                            className="text-xs text-blue-600 underline hover:text-blue-800"
+                            className="text-sm text-blue-600 underline hover:text-blue-800"
                           >
                             {link.title ? link.title.slice(0, 40) + (link.title.length > 40 ? "..." : "") : (() => { try { return new URL(link.url).hostname; } catch { return "Source"; } })()}
                           </a>
@@ -441,11 +441,11 @@ export default function TailoredView() {
                   </div>
                   <div className="shrink-0">
                     {opp.expired ? (
-                      <span className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg">Expired</span>
+                      <span className="px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg">Expired</span>
                     ) : existingCase ? (
                       <a
                         href={`/case/${existingCase.case_id}`}
-                        className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                        className="px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
                       >
                         View case
                       </a>
@@ -453,7 +453,7 @@ export default function TailoredView() {
                       <button
                         onClick={() => handleOpen(opp)}
                         disabled={openingCase === opp.id}
-                        className="px-4 py-1.5 text-xs btn-gradient rounded-lg disabled:opacity-50 transition-colors"
+                        className="px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                       >
                         {openingCase === opp.id ? "Creating…" : "Open case"}
                       </button>
@@ -491,15 +491,15 @@ function UpgradePitch({ onError }: { onError: (msg: string) => void }) {
       {/* Hero */}
       <div className="card-gradient border border-slate-200 p-6 shadow-sm mb-4">
         <div className="flex items-start gap-3 mb-3">
-          <div className="shrink-0 w-9 h-9 rounded-lg brand-gradient flex items-center justify-center text-white text-lg">★</div>
+          <div className="shrink-0 w-9 h-9 rounded-lg brand-gradient flex items-center justify-center text-white text-xl">★</div>
           <div className="flex-1">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-1">
               Grant Officer
             </div>
-            <h2 className="text-lg font-semibold text-slate-900 font-[family-name:var(--font-dm-sans)]">
+            <h2 className="text-xl font-semibold text-slate-900 font-[family-name:var(--font-dm-sans)]">
               Tailored picks, every week, on top of search
             </h2>
-            <p className="text-sm text-slate-700 mt-1.5">
+            <p className="text-base text-slate-700 mt-1.5">
               The search box is great when you know what you&apos;re looking for. The Tailored
               cycle is for when you don&apos;t. Once a week, a deep, profile-steered scan reads
               your sectors, geographies, and mission, then hunts for grants
@@ -517,7 +517,7 @@ function UpgradePitch({ onError }: { onError: (msg: string) => void }) {
             { t: "Unlimited chat + DOCX export", d: "No per-case message cap. Export the final brief straight to a Word doc for board review" },
           ].map((f) => (
             <div key={f.t} className="bg-white/60 border border-slate-200 rounded-lg p-3">
-              <div className="text-xs font-semibold text-slate-800 mb-0.5">{f.t}</div>
+              <div className="text-sm font-semibold text-slate-800 mb-0.5">{f.t}</div>
               <div className="text-[11px] text-slate-700">{f.d}</div>
             </div>
           ))}
@@ -526,15 +526,15 @@ function UpgradePitch({ onError }: { onError: (msg: string) => void }) {
         {/* Pricing + CTA */}
         <div className="mt-5 flex items-center justify-between gap-3 pt-4 border-t border-slate-200">
           <div>
-            <div className="text-2xl font-bold text-slate-900 font-[family-name:var(--font-dm-sans)]">
-              $9 <span className="text-sm font-normal text-slate-700">NZD / month</span>
+            <div className="text-3xl font-bold text-slate-900 font-[family-name:var(--font-dm-sans)]">
+              $9 <span className="text-base font-normal text-slate-700">NZD / month</span>
             </div>
             <div className="text-[11px] text-slate-600">Cancel any time · No setup fee</div>
           </div>
           <button
             onClick={handleUpgrade}
             disabled={redirecting}
-            className="px-5 py-2.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors font-medium"
+            className="px-5 py-2.5 text-base btn-gradient rounded-lg disabled:opacity-50 transition-colors font-medium"
           >
             {redirecting ? "Redirecting…" : "Upgrade to Officer →"}
           </button>

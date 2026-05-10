@@ -273,12 +273,12 @@ function SettingsContent() {
     <div className="min-h-screen app-bg">
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
-      <h1 className="text-lg font-bold text-stone-800">Settings</h1>
+      <h1 className="text-2xl font-bold text-stone-800">Settings</h1>
 
       {/* Org Profile */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-sm font-bold text-stone-700 mb-3">Organisation</h2>
-        <div className="space-y-2 text-sm">
+        <h2 className="text-lg font-bold text-stone-700 mb-3">Organisation</h2>
+        <div className="space-y-2 text-base">
           {/* Name */}
           <div className="flex justify-between items-center">
             <span className="text-stone-700">Name</span>
@@ -288,13 +288,13 @@ function SettingsContent() {
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="px-2 py-1 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
+                  className="px-2 py-1 text-base border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
                   autoFocus
                 />
-                <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
               </div>
             ) : (
               <button onClick={() => startEdit("name")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -311,17 +311,17 @@ function SettingsContent() {
                 <select
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="px-2 py-1 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
+                  className="px-2 py-1 text-base border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
                   autoFocus
                 >
                   {ENABLED_COUNTRIES.map((c) => (
                     <option key={c.slug} value={c.name}>{c.name}</option>
                   ))}
                 </select>
-                <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
               </div>
             ) : (
               <button onClick={() => startEdit("country")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -339,14 +339,14 @@ function SettingsContent() {
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="px-2 py-1 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
+                  className="px-2 py-1 text-base border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
                   placeholder="https://..."
                   autoFocus
                 />
-                <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                   {saving ? "..." : "Save"}
                 </button>
-                <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
               </div>
             ) : (
               <button onClick={() => startEdit("website")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -360,7 +360,7 @@ function SettingsContent() {
             <div className="flex items-center justify-between mb-1">
               <span className="text-stone-700">Sectors</span>
               {editing !== "sectors" && (
-                <button onClick={() => startEdit("sectors")} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                <button onClick={() => startEdit("sectors")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                   Edit
                 </button>
               )}
@@ -372,7 +372,7 @@ function SettingsContent() {
                     <button
                       key={s}
                       onClick={() => toggleEditSector(s)}
-                      className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                      className={`px-2.5 py-1 text-sm rounded-full border transition-colors ${
                         editSectors.includes(s)
                           ? "bg-blue-50 border-blue-300 text-blue-700"
                           : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
@@ -383,17 +383,17 @@ function SettingsContent() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                  <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                     {saving ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
+                  <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {org?.sectors && org.sectors.length > 0 ? org.sectors.map((s) => (
-                  <span key={s} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{s}</span>
-                )) : <span className="text-xs text-stone-600">-</span>}
+                  <span key={s} className="text-sm bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{s}</span>
+                )) : <span className="text-sm text-stone-600">-</span>}
               </div>
             )}
           </div>
@@ -403,7 +403,7 @@ function SettingsContent() {
             <div className="flex items-center justify-between mb-1">
               <span className="text-stone-700">Geographies</span>
               {editing !== "geographies" && (
-                <button onClick={() => startEdit("geographies")} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                <button onClick={() => startEdit("geographies")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                   Edit
                 </button>
               )}
@@ -419,7 +419,7 @@ function SettingsContent() {
                     );
 
                     if (!orgCountryName) {
-                      return <span className="text-xs text-stone-600">Set a country first.</span>;
+                      return <span className="text-sm text-stone-600">Set a country first.</span>;
                     }
 
                     return (
@@ -431,7 +431,7 @@ function SettingsContent() {
                                 ? toggleEditWholeCountry(orgCountryName, orgRegionOptions)
                                 : toggleEditGeo(orgCountryName)
                             }
-                            className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                            className={`px-2.5 py-1 text-sm rounded-full border transition-colors ${
                               isWholeSelected
                                 ? "bg-blue-50 border-blue-300 text-blue-700"
                                 : hasAnyRegionSelected
@@ -448,7 +448,7 @@ function SettingsContent() {
                               <button
                                 key={region}
                                 onClick={() => toggleEditRegion(orgCountryName, region, orgRegionOptions)}
-                                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                                className={`px-2 py-0.5 text-sm rounded-full border transition-colors ${
                                   isEditRegionSelected(orgCountryName, region)
                                     ? "bg-blue-50 border-blue-300 text-blue-700"
                                     : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
@@ -464,16 +464,16 @@ function SettingsContent() {
                   })()}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={saveEdit} disabled={saving} className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                  <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
                     {saving ? "Saving..." : "Save"}
                   </button>
-                  <button onClick={cancelEdit} className="text-xs text-stone-600 hover:text-stone-600">Cancel</button>
+                  <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {org?.geographies && org.geographies.length > 0 ? org.geographies.map((g) => (
-                  <span key={g} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
+                  <span key={g} className="text-sm bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
                     {g.includes(" > ") ? (
                       <>
                         {g.split(" > ")[0]}
@@ -482,7 +482,7 @@ function SettingsContent() {
                       </>
                     ) : g}
                   </span>
-                )) : <span className="text-xs text-stone-600">-</span>}
+                )) : <span className="text-sm text-stone-600">-</span>}
               </div>
             )}
           </div>
@@ -491,8 +491,8 @@ function SettingsContent() {
 
       {/* Organisation Data */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-sm font-bold text-stone-700 mb-1">Organisation Data</h2>
-        <p className="text-xs text-stone-600 mb-4">
+        <h2 className="text-lg font-bold text-stone-700 mb-1">Organisation Data</h2>
+        <p className="text-sm text-stone-600 mb-4">
           Upload documents that inform your grant scanning cycles. These are used as context when identifying and assessing opportunities.
         </p>
 
@@ -501,7 +501,7 @@ function SettingsContent() {
           <select
             value={uploadDocType}
             onChange={(e) => setUploadDocType(e.target.value)}
-            className="px-2 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:border-blue-400"
+            className="px-2 py-1.5 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-blue-400"
           >
             <option value="general">General</option>
             <option value="annual-reports">Annual Reports</option>
@@ -510,7 +510,7 @@ function SettingsContent() {
             <option value="previous-applications">Previous Applications</option>
             <option value="financial-statements">Financial Statements</option>
           </select>
-          <label className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
+          <label className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${
             uploading ? "bg-stone-100 text-stone-600" : "bg-blue-600 text-white hover:bg-blue-700"
           }`}>
             {uploading ? "Uploading..." : "Upload file"}
@@ -526,7 +526,7 @@ function SettingsContent() {
 
         {/* File list */}
         {uploads.length === 0 ? (
-          <p className="text-xs text-stone-600">No documents uploaded yet.</p>
+          <p className="text-sm text-stone-600">No documents uploaded yet.</p>
         ) : (
           <div className="space-y-1.5">
             {uploads.map((file) => (
@@ -535,8 +535,8 @@ function SettingsContent() {
                   <svg className="w-3.5 h-3.5 text-stone-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-xs text-stone-600 truncate">{file.filename}</span>
-                  <span className="text-xs text-stone-600 shrink-0">
+                  <span className="text-sm text-stone-600 truncate">{file.filename}</span>
+                  <span className="text-sm text-stone-600 shrink-0">
                     {file.size > 1024 * 1024
                       ? `${(file.size / 1024 / 1024).toFixed(1)} MB`
                       : `${Math.round(file.size / 1024)} KB`}
@@ -545,7 +545,7 @@ function SettingsContent() {
                 <button
                   onClick={() => handleDeleteFile(file.filename)}
                   disabled={deletingFile === file.filename}
-                  className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 shrink-0 ml-2"
+                  className="text-sm text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 shrink-0 ml-2"
                 >
                   {deletingFile === file.filename ? "..." : "Remove"}
                 </button>
@@ -557,10 +557,10 @@ function SettingsContent() {
 
       {/* Tier */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-sm font-bold text-stone-700 mb-3">Service Tier</h2>
+        <h2 className="text-lg font-bold text-stone-700 mb-3">Service Tier</h2>
 
         {checkoutMessage && (
-          <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-xs text-green-700">
+          <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-700">
             {checkoutMessage}
           </div>
         )}
@@ -570,12 +570,12 @@ function SettingsContent() {
             {/* Current plan */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-stone-800">{TIER_INFO.scanner.label}</span>
-                <span className="text-xs bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">Current</span>
+                <span className="text-base font-medium text-stone-800">{TIER_INFO.scanner.label}</span>
+                <span className="text-sm bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">Current</span>
               </div>
               <ul className="space-y-1 mb-4">
                 {TIER_INFO.scanner.features.map((f) => (
-                  <li key={f} className="text-xs text-stone-700 flex items-center gap-1.5">
+                  <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
                     <span className="text-green-500">&#10003;</span> {f}
                   </li>
                 ))}
@@ -585,12 +585,12 @@ function SettingsContent() {
             {/* Upgrade card */}
             <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-800">{TIER_INFO.officer.label}</span>
-                <span className="text-sm font-bold text-blue-700">{TIER_INFO.officer.price}</span>
+                <span className="text-base font-medium text-blue-800">{TIER_INFO.officer.label}</span>
+                <span className="text-base font-bold text-blue-700">{TIER_INFO.officer.price}</span>
               </div>
               <ul className="space-y-1 mb-3">
                 {TIER_INFO.officer.features.map((f) => (
-                  <li key={f} className="text-xs text-blue-700 flex items-center gap-1.5">
+                  <li key={f} className="text-sm text-blue-700 flex items-center gap-1.5">
                     <span className="text-blue-500">&#10003;</span> {f}
                   </li>
                 ))}
@@ -598,7 +598,7 @@ function SettingsContent() {
               <button
                 onClick={handleUpgrade}
                 disabled={checkingOut}
-                className="w-full px-4 py-2.5 text-sm font-medium btn-gradient rounded-md disabled:opacity-50"
+                className="w-full px-4 py-2.5 text-base font-medium btn-gradient rounded-md disabled:opacity-50"
               >
                 {checkingOut ? "Redirecting to checkout..." : "Upgrade to Grant Officer"}
               </button>
@@ -609,13 +609,13 @@ function SettingsContent() {
             {/* Active plan */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-blue-700">{TIER_INFO.officer.label}</span>
-                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Active</span>
+                <span className="text-base font-medium text-blue-700">{TIER_INFO.officer.label}</span>
+                <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Active</span>
               </div>
-              <span className="text-xs text-stone-700">{TIER_INFO.officer.price}</span>
+              <span className="text-sm text-stone-700">{TIER_INFO.officer.price}</span>
               <ul className="space-y-1 mt-2">
                 {TIER_INFO.officer.features.map((f) => (
-                  <li key={f} className="text-xs text-stone-700 flex items-center gap-1.5">
+                  <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
                     <span className="text-green-500">&#10003;</span> {f}
                   </li>
                 ))}
@@ -624,7 +624,7 @@ function SettingsContent() {
 
             <button
               onClick={handleManageBilling}
-              className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
+              className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
             >
               Manage billing
             </button>
@@ -636,8 +636,8 @@ function SettingsContent() {
       <div className="card-gradient border border-stone-200 p-5">
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="flex-1">
-            <h2 className="text-sm font-bold text-stone-700">Tailored Opportunities</h2>
-            <p className="text-xs text-stone-700 mt-1">
+            <h2 className="text-lg font-bold text-stone-700">Tailored Opportunities</h2>
+            <p className="text-sm text-stone-700 mt-1">
               On top of the always-on search box, get a weekly profile-steered grant scan
               with priority-tagged opportunities matched to your sectors and geographies.
             </p>
@@ -658,14 +658,14 @@ function SettingsContent() {
               />
             </button>
           ) : (
-            <span className="shrink-0 text-xs px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
+            <span className="shrink-0 text-sm px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
               Officer-tier
             </span>
           )}
         </div>
 
         {currentTier === "officer" ? (
-          <div className="text-xs text-stone-700">
+          <div className="text-sm text-stone-700">
             {tailored?.tailored_enabled ? (
               tailored.timer && !tailored.timer.expired ? (
                 <span>
@@ -679,7 +679,7 @@ function SettingsContent() {
             )}
           </div>
         ) : (
-          <div className="text-xs text-stone-700">
+          <div className="text-sm text-stone-700">
             Available on <strong>Grant Officer</strong>. Upgrade above to unlock weekly tailored cycles.
           </div>
         )}
@@ -689,12 +689,12 @@ function SettingsContent() {
       <div className="card-gradient border border-stone-200 p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-stone-700">Privacy & Data Policy</h2>
-            <p className="text-xs text-stone-600 mt-0.5">How we collect, use, and protect your data.</p>
+            <h2 className="text-lg font-bold text-stone-700">Privacy & Data Policy</h2>
+            <p className="text-sm text-stone-600 mt-0.5">How we collect, use, and protect your data.</p>
           </div>
           <a
             href="/privacy"
-            className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
+            className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
           >
             View policy
           </a>

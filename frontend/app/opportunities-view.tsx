@@ -50,10 +50,10 @@ function formatAmount(row: OpportunityRow): string | null {
 
 function DeadlineBadge({ deadline }: { deadline: string | null }) {
   if (!deadline || deadline === "TBC") {
-    return <span className="text-xs text-slate-500">deadline TBC</span>;
+    return <span className="text-sm text-slate-500">deadline TBC</span>;
   }
   if (deadline === "rolling") {
-    return <span className="text-xs text-slate-600">rolling</span>;
+    return <span className="text-sm text-slate-600">rolling</span>;
   }
   // Try to render days-until
   const dt = new Date(deadline);
@@ -61,17 +61,17 @@ function DeadlineBadge({ deadline }: { deadline: string | null }) {
     const days = Math.ceil((dt.getTime() - Date.now()) / 86400000);
     const tone = days < 7 ? "text-red-600" : days < 30 ? "text-amber-600" : "text-slate-600";
     return (
-      <span className={`text-xs ${tone}`}>
+      <span className={`text-sm ${tone}`}>
         closes {dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
         {days >= 0 && days <= 60 ? ` · ${days}d` : ""}
       </span>
     );
   }
-  return <span className="text-xs text-slate-600">{deadline}</span>;
+  return <span className="text-sm text-slate-600">{deadline}</span>;
 }
 
 function TagPill({ tag, active, onClick }: { tag: string; active: boolean; onClick?: () => void }) {
-  const base = "text-xs px-2.5 py-0.5 rounded-full font-medium border transition-colors";
+  const base = "text-sm px-2.5 py-0.5 rounded-full font-medium border transition-colors";
   const cls = active
     ? "bg-slate-900 text-white border-slate-900"
     : "bg-white text-slate-700 border-slate-200 hover:border-slate-400";
@@ -219,7 +219,7 @@ export default function OpportunitiesView() {
         <div className="flex items-center gap-4 mb-6 border-b border-slate-200 pb-3">
           <button
             onClick={() => setTab("opportunities")}
-            className={`text-sm font-medium pb-1 transition-colors ${
+            className={`text-base font-medium pb-1 transition-colors ${
               tab === "opportunities"
                 ? "text-slate-900 border-b-2 border-slate-900"
                 : "text-slate-600 hover:text-slate-900"
@@ -230,7 +230,7 @@ export default function OpportunitiesView() {
           {showTailoredTab && (
             <button
               onClick={() => setTab("tailored")}
-              className={`text-sm font-medium pb-1 transition-colors ${
+              className={`text-base font-medium pb-1 transition-colors ${
                 tab === "tailored"
                   ? "text-slate-900 border-b-2 border-slate-900"
                   : "text-slate-600 hover:text-slate-900"
@@ -241,7 +241,7 @@ export default function OpportunitiesView() {
           )}
           <button
             onClick={() => setTab("cases")}
-            className={`text-sm font-medium pb-1 transition-colors ${
+            className={`text-base font-medium pb-1 transition-colors ${
               tab === "cases"
                 ? "text-slate-900 border-b-2 border-slate-900"
                 : "text-slate-600 hover:text-slate-900"
@@ -251,7 +251,7 @@ export default function OpportunitiesView() {
             {(() => {
               const newOpen = cases.filter(isNewOpenCase).length;
               return newOpen > 0 ? (
-                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-xs font-bold text-white bg-red-500 rounded-full">
                   {newOpen}
                 </span>
               ) : null;
@@ -268,7 +268,7 @@ export default function OpportunitiesView() {
 
         {/* Header / search */}
         <div className="mb-6">
-          <h1 className="text-lg font-semibold text-slate-900 mb-3 font-[family-name:var(--font-dm-sans)]">
+          <h1 className="text-2xl font-semibold text-slate-900 mb-3 font-[family-name:var(--font-dm-sans)]">
             Grant opportunities
           </h1>
           <div className="relative">
@@ -277,7 +277,7 @@ export default function OpportunitiesView() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search funders, tags, keywords…"
-              className="w-full pl-10 pr-4 py-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-blue-400 shadow-sm"
+              className="w-full pl-10 pr-4 py-3 text-base border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-blue-400 shadow-sm"
             />
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
@@ -303,12 +303,12 @@ export default function OpportunitiesView() {
 
         {/* Region + sort */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
-          <label className="text-xs text-slate-600">
+          <label className="text-sm text-slate-600">
             Region:{" "}
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              className="text-xs border border-slate-200 rounded px-2 py-1 bg-white"
+              className="text-sm border border-slate-200 rounded px-2 py-1 bg-white"
             >
               <option value="">any</option>
               {NZ_REGIONS.map((r) => (
@@ -316,12 +316,12 @@ export default function OpportunitiesView() {
               ))}
             </select>
           </label>
-          <label className="text-xs text-slate-600">
+          <label className="text-sm text-slate-600">
             Sort:{" "}
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="text-xs border border-slate-200 rounded px-2 py-1 bg-white"
+              className="text-sm border border-slate-200 rounded px-2 py-1 bg-white"
             >
               <option value="recency">recency</option>
               <option value="deadline">deadline</option>
@@ -329,7 +329,7 @@ export default function OpportunitiesView() {
               <option value="random">random</option>
             </select>
           </label>
-          <span className="ml-auto text-xs text-slate-600">
+          <span className="ml-auto text-sm text-slate-600">
             {loading ? "loading…" : `${total} matching opportunit${total === 1 ? "y" : "ies"}`}
           </span>
         </div>
@@ -338,13 +338,13 @@ export default function OpportunitiesView() {
         {loading && pool.length === 0 ? (
           <LoadingBar label="Loading opportunities…" />
         ) : pool.length === 0 ? (
-          <div className="text-center py-16 text-sm text-slate-600">
+          <div className="text-center py-16 text-base text-slate-600">
             No opportunities match those filters yet.
             {(q || activeTags.length || region) && (
               <div className="mt-3">
                 <button
                   onClick={() => { setQ(""); setActiveTags([]); setRegion(""); }}
-                  className="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                  className="text-sm px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
                 >
                   Clear filters
                 </button>
@@ -364,11 +364,11 @@ export default function OpportunitiesView() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-sm font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
+                        <span className="text-base font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
                           {row.title}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-700 mb-2">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700 mb-2">
                         <span className="font-medium">{row.funder}</span>
                         <DeadlineBadge deadline={row.deadline} />
                         {amt && <span>{amt}</span>}
@@ -379,13 +379,13 @@ export default function OpportunitiesView() {
                         )}
                       </div>
                       {row.summary && (
-                        <p className="text-xs text-slate-600 line-clamp-2 mb-2">{row.summary}</p>
+                        <p className="text-sm text-slate-600 line-clamp-2 mb-2">{row.summary}</p>
                       )}
                       <div className="flex flex-wrap gap-1">
                         {row.tags.map((t) => (
                           <span
                             key={t}
-                            className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200"
+                            className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200"
                           >
                             {t}
                           </span>
@@ -396,7 +396,7 @@ export default function OpportunitiesView() {
                           href={row.source_url}
                           target="_blank"
                           rel="noopener"
-                          className="inline-block mt-2 text-xs text-blue-600 underline hover:text-blue-800"
+                          className="inline-block mt-2 text-sm text-blue-600 underline hover:text-blue-800"
                         >
                           {(() => {
                             try { return new URL(row.source_url).hostname; }
@@ -409,7 +409,7 @@ export default function OpportunitiesView() {
                       {existing ? (
                         <a
                           href={`/case/${existing.case_id}`}
-                          className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                          className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
                         >
                           View case
                         </a>
@@ -417,7 +417,7 @@ export default function OpportunitiesView() {
                         <button
                           onClick={() => handleOpen(row)}
                           disabled={opening === row.id}
-                          className="px-4 py-1.5 text-xs btn-gradient rounded-lg disabled:opacity-50 transition-colors"
+                          className="px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                         >
                           {opening === row.id ? "Opening…" : "Open case"}
                         </button>
@@ -432,7 +432,7 @@ export default function OpportunitiesView() {
 
         {/* Pagination */}
         {(cursor > 0 || hasMore) && pool.length > 0 && (
-          <div className="mt-6 flex items-center justify-between text-xs">
+          <div className="mt-6 flex items-center justify-between text-sm">
             <button
               onClick={() => setCursor(Math.max(0, cursor - 50))}
               disabled={cursor === 0}

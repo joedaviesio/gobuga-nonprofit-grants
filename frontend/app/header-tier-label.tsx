@@ -9,7 +9,7 @@ export function HeaderTierLabel() {
   const label = isOfficer ? (session?.tier_label || "Grant Officer") : "Helps with grants";
 
   return (
-    <span className={`text-xs font-medium font-[family-name:var(--font-dm-sans)] ${
+    <span className={`text-sm font-medium font-[family-name:var(--font-dm-sans)] ${
       isOfficer ? "text-blue-600" : "text-stone-600"
     }`}>
       {label}

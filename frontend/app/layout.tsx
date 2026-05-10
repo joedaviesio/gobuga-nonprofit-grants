@@ -42,9 +42,10 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} ${inter.variable} antialiased`}>
         <AuthGate>
-          <header className="border-b border-stone-200 px-6 py-3 flex items-center justify-between">
+          <header className="border-b border-stone-200 px-6 py-4 flex items-center justify-between">
             <a href="/" className="flex items-center gap-2">
-              <span className="text-lg font-bold text-stone-800" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/gobuga-wordmark.svg" alt="gobuga.org" className="h-9 w-auto" />
               <HeaderTierLabel />
             </a>
             <HeaderLogout />

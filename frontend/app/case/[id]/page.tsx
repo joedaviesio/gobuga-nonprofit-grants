@@ -48,7 +48,7 @@ function SimpleMarkdown({ text }: { text: string }) {
     if (isTableRow && !inTable) {
       inTable = true;
       const cells = line.split("|").filter((c) => c.trim()).map((c) => inlineMd(esc(c.trim())));
-      output.push('<table class="text-xs border-collapse w-full my-2"><thead><tr>' +
+      output.push('<table class="text-sm border-collapse w-full my-2"><thead><tr>' +
         cells.map((c) => `<th class="border border-stone-200 px-2 py-1 bg-stone-50 text-left font-medium">${c}</th>`).join("") +
         "</tr></thead><tbody>");
     } else if (inTable && isSeparator) {
@@ -79,7 +79,7 @@ function SimpleMarkdown({ text }: { text: string }) {
   if (inTable) output.push("</tbody></table>");
 
   const html = output.join("<br>");
-  return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
+  return <div className="prose text-base" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
 }
 
 import LoadingBar from "@/app/loading-bar";
@@ -379,8 +379,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-stone-200 flex flex-col bg-white overflow-y-auto md:max-h-none max-h-[40vh]">
         {/* Case header */}
         <div className="p-4 border-b border-stone-200">
-          <div className="text-xs font-mono text-stone-600">{caseData.case_id}</div>
-          <div className="text-sm font-medium text-stone-700 mt-1">{caseData.grant_id}</div>
+          <div className="text-sm font-mono text-stone-600">{caseData.case_id}</div>
+          <div className="text-base font-medium text-stone-700 mt-1">{caseData.grant_id}</div>
           {/* Status stepper */}
           {(() => {
             const statuses = [
@@ -419,7 +419,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             setErrorModal(err instanceof Error ? err.message : "Failed to update case");
                           }
                         }}
-                        className={`flex-1 py-1 text-[10px] font-medium rounded transition-colors ${
+                        className={`flex-1 py-1 text-xs font-medium rounded transition-colors ${
                           isActive
                             ? `${s.color} text-white`
                             : isPast
@@ -447,7 +447,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         setErrorModal(err instanceof Error ? err.message : "Failed to update case");
                       }
                     }}
-                    className={`text-[10px] ${
+                    className={`text-xs ${
                       isClosed
                         ? "text-blue-500 hover:text-blue-700"
                         : "text-stone-600 hover:text-stone-600"
@@ -456,13 +456,13 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                     {isClosed ? "Reopen case" : "Close case"}
                   </button>
                   {typeof brief.deadline === "string" && !isNaN(new Date(brief.deadline as string).getTime()) && (
-                    <span className="text-[10px] text-stone-600">
+                    <span className="text-xs text-stone-600">
                       Due {new Date(brief.deadline as string).toLocaleDateString()}
                     </span>
                   )}
                 </div>
                 {isClosed && (
-                  <div className="text-[10px] px-2 py-1 bg-stone-100 rounded text-stone-700 text-center">
+                  <div className="text-xs px-2 py-1 bg-stone-100 rounded text-stone-700 text-center">
                     Case closed
                   </div>
                 )}
@@ -478,7 +478,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
             <button
               key={tab}
               onClick={() => setSidebarTab(tab)}
-              className={`flex-1 py-2 text-xs font-medium ${
+              className={`flex-1 py-2 text-sm font-medium ${
                 sidebarTab === tab
                   ? "text-blue-600 border-b-2 border-blue-600"
                   : "text-stone-600 hover:text-stone-600"
@@ -494,7 +494,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
         {/* Sidebar content */}
         <div className="flex-1 overflow-y-auto p-4">
           {sidebarTab === "brief" && (
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3 text-sm">
               {Object.entries(brief).map(([k, v]) => {
                 // Skip null/undefined/empty values
                 if (v === null || v === undefined) return null;
@@ -520,12 +520,12 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             ))}
                           </div>
                         ) : (
-                          <pre className="text-xs bg-stone-50 p-2 rounded overflow-x-auto">
+                          <pre className="text-sm bg-stone-50 p-2 rounded overflow-x-auto">
                             {JSON.stringify(v, null, 2)}
                           </pre>
                         )
                       ) : typeof v === "object" ? (
-                        <pre className="text-xs bg-stone-50 p-2 rounded overflow-x-auto">
+                        <pre className="text-sm bg-stone-50 p-2 rounded overflow-x-auto">
                           {JSON.stringify(v, null, 2)}
                         </pre>
                       ) : (
@@ -541,7 +541,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {sidebarTab === "databank" && (
             <div className="space-y-2">
               {databank.length === 0 ? (
-                <p className="text-xs text-stone-600">Data bank is empty. Upload files or answer questions to populate it.</p>
+                <p className="text-sm text-stone-600">Data bank is empty. Upload files or answer questions to populate it.</p>
               ) : (
                 (() => {
                   const byCategory: Record<string, DatabankEntry[]> = {};
@@ -552,12 +552,12 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   });
                   return Object.entries(byCategory).map(([cat, entries]) => (
                     <div key={cat}>
-                      <div className="text-xs font-medium text-stone-700 mb-1 capitalize">{cat.replace(/_/g, " ")}</div>
+                      <div className="text-sm font-medium text-stone-700 mb-1 capitalize">{cat.replace(/_/g, " ")}</div>
                       {entries.map((e) => (
-                        <div key={e.id} className="p-2 mb-1 bg-stone-50 rounded text-xs">
+                        <div key={e.id} className="p-2 mb-1 bg-stone-50 rounded text-sm">
                           <div className="font-medium text-stone-700">{e.key.replace(/_/g, " ")}</div>
                           <div className="text-stone-700 mt-0.5 line-clamp-2">{e.value}</div>
-                          <div className="text-[10px] text-stone-300 mt-0.5">{e.source}</div>
+                          <div className="text-xs text-stone-300 mt-0.5">{e.source}</div>
                         </div>
                       ))}
                     </div>
@@ -567,16 +567,16 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {/* Uploads list */}
               {(caseData.uploads?.length || 0) > 0 && (
                 <div className="pt-2 mt-2 border-t border-stone-100">
-                  <div className="text-xs font-medium text-stone-700 mb-1">Documents ({caseData.uploads.length})</div>
+                  <div className="text-sm font-medium text-stone-700 mb-1">Documents ({caseData.uploads.length})</div>
                   {caseData.uploads.map((u, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs text-stone-600 py-0.5">
+                    <div key={i} className="flex items-center gap-1 text-sm text-stone-600 py-0.5">
                       <span className={`inline-block w-1.5 h-1.5 rounded-full ${
                         u.type === "application_form" ? "bg-blue-400" :
                         u.type === "project_plan" ? "bg-amber-400" :
                         "bg-stone-300"
                       }`} />
                       <span className="truncate">{u.filename}</span>
-                      <span className="text-stone-300 text-[10px] ml-auto">{u.type}</span>
+                      <span className="text-stone-300 text-xs ml-auto">{u.type}</span>
                     </div>
                   ))}
                 </div>
@@ -587,17 +587,17 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {sidebarTab === "draft" && (
             <div className="space-y-2">
               {sectionNames.length === 0 ? (
-                <p className="text-xs text-stone-600">No sections drafted yet. Upload a submission form to get started.</p>
+                <p className="text-sm text-stone-600">No sections drafted yet. Upload a submission form to get started.</p>
               ) : (
                 sectionNames.map((name) => {
                   const sec = sections[name];
                   return (
                     <div key={name} className="p-2 border border-stone-200 rounded-md">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-stone-700">
+                        <span className="text-sm font-medium text-stone-700">
                           {name.replace(/_/g, " ")}
                         </span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        <span className={`text-sm px-1.5 py-0.5 rounded ${
                           sec.status === "complete" ? "bg-green-100 text-green-700" :
                           sec.status === "review" ? "bg-amber-100 text-amber-700" :
                           sec.status === "blocked" ? "bg-red-100 text-red-700" :
@@ -606,7 +606,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           {sec.status}
                         </span>
                       </div>
-                      <div className="text-xs text-stone-600 mt-1">
+                      <div className="text-sm text-stone-600 mt-1">
                         {sec.content ? `${sec.content.split(" ").length} words` : "empty"}
                       </div>
                     </div>
@@ -615,20 +615,20 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               )}
               {sectionNames.length > 0 && (
                 <div className="space-y-2 mt-3">
-                  <div className="text-xs font-medium text-stone-700">Export</div>
+                  <div className="text-sm font-medium text-stone-700">Export</div>
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => handleExport("pdf")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">PDF</button>
-                    <button onClick={() => handleExport("docx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
-                    <button onClick={() => handleExport("xlsx")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">XLSX</button>
-                    <button onClick={() => handleExport("markdown")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">MD</button>
-                    <button onClick={() => handleExport("json")} className="text-xs px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">JSON</button>
+                    <button onClick={() => handleExport("pdf")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">PDF</button>
+                    <button onClick={() => handleExport("docx")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
+                    <button onClick={() => handleExport("xlsx")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">XLSX</button>
+                    <button onClick={() => handleExport("markdown")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">MD</button>
+                    <button onClick={() => handleExport("json")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">JSON</button>
                     {templateUploads.map((u) => {
                       const ext = u.filename.split(".").pop() || "docx";
                       return (
                         <button
                           key={u.filename}
                           onClick={() => handleExport(ext, u.filename)}
-                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          className="text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                           title={`Fill template: ${u.filename}`}
                         >
                           Fill {u.filename.slice(0, 20)}...
@@ -650,15 +650,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {/* Step 1: "What would you like to do next?" */}
           {!flowPath && (
             <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-5">
-              <h3 className="text-sm font-bold text-stone-800 mb-4">What would you like to do next?</h3>
+              <h3 className="text-lg font-bold text-stone-800 mb-4">What would you like to do next?</h3>
               <div className="grid grid-cols-3 gap-3">
                 {/* Upload a file */}
                 <button
                   onClick={() => setFlowPath("upload_file")}
                   className="text-left p-4 rounded-lg border-2 border-amber-200 bg-amber-50 hover:border-amber-400 transition-colors"
                 >
-                  <div className="text-sm font-medium text-stone-800">Upload a file</div>
-                  <div className="text-xs text-stone-700 mt-1">Add documents to the case data bank</div>
+                  <div className="text-base font-medium text-stone-800">Upload a file</div>
+                  <div className="text-sm text-stone-700 mt-1">Add documents to the case data bank</div>
                 </button>
 
                 {/* Upload submission */}
@@ -666,8 +666,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   onClick={() => setFlowPath("upload_submission")}
                   className="text-left p-4 rounded-lg border-2 border-teal-200 bg-teal-50 hover:border-teal-400 transition-colors"
                 >
-                  <div className="text-sm font-medium text-stone-800">Upload submission</div>
-                  <div className="text-xs text-stone-700 mt-1">Upload a grant application doc to parse and fill</div>
+                  <div className="text-base font-medium text-stone-800">Upload submission</div>
+                  <div className="text-sm text-stone-700 mt-1">Upload a grant application doc to parse and fill</div>
                 </button>
 
                 {/* Ask questions */}
@@ -678,8 +678,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   }}
                   className="text-left p-4 rounded-lg border-2 border-purple-200 bg-purple-50 hover:border-purple-400 transition-colors"
                 >
-                  <div className="text-sm font-medium text-stone-800">Ask questions</div>
-                  <div className="text-xs text-stone-700 mt-1">Chatbot guides you to fill data gaps</div>
+                  <div className="text-base font-medium text-stone-800">Ask questions</div>
+                  <div className="text-sm text-stone-700 mt-1">Chatbot guides you to fill data gaps</div>
                 </button>
               </div>
             </div>
@@ -696,7 +696,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   setStatusMessage("");
                   setQaMessages([]);
                 }}
-                className="text-xs text-stone-600 hover:text-stone-600"
+                className="text-sm text-stone-600 hover:text-stone-600"
               >
                 &larr; Back to options
               </button>
@@ -704,8 +704,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {/* Path: Upload a file */}
               {flowPath === "upload_file" && (
                 <div className="bg-white border border-amber-200 rounded-lg shadow-sm p-5">
-                  <h3 className="text-sm font-bold text-stone-800 mb-1">Upload a file</h3>
-                  <p className="text-xs text-stone-700 mb-4">
+                  <h3 className="text-lg font-bold text-stone-800 mb-1">Upload a file</h3>
+                  <p className="text-sm text-stone-700 mb-4">
                     Upload documents one at a time. Each file will be analyzed and key information added to the case data bank.
                   </p>
 
@@ -714,7 +714,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   ) : (
                     <>
                       {statusMessage && (
-                        <div className={`text-xs mb-3 p-2 rounded ${
+                        <div className={`text-sm mb-3 p-2 rounded ${
                           botStatus === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
                         }`}>
                           {statusMessage}
@@ -722,7 +722,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                       )}
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-700 hover:border-amber-400 hover:text-amber-600 transition-colors"
+                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-base text-stone-700 hover:border-amber-400 hover:text-amber-600 transition-colors"
                       >
                         Click to select a file
                       </button>
@@ -734,8 +734,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {/* Path: Upload submission */}
               {flowPath === "upload_submission" && (
                 <div className="bg-white border border-teal-200 rounded-lg shadow-sm p-5">
-                  <h3 className="text-sm font-bold text-stone-800 mb-1">Upload submission form</h3>
-                  <p className="text-xs text-stone-700 mb-4">
+                  <h3 className="text-lg font-bold text-stone-800 mb-1">Upload submission form</h3>
+                  <p className="text-sm text-stone-700 mb-4">
                     Upload the grant application document. It will be parsed into sections and automatically filled from the data bank.
                   </p>
 
@@ -743,7 +743,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                     <LoadingDots label={statusMessage} />
                   ) : botStatus === "done" ? (
                     <div className="space-y-3">
-                      <div className="text-xs p-3 bg-teal-50 text-teal-700 rounded-lg">
+                      <div className="text-sm p-3 bg-teal-50 text-teal-700 rounded-lg">
                         {statusMessage}
                       </div>
                       <div className="flex gap-2">
@@ -755,14 +755,14 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             <>
                               <button
                                 onClick={() => handleExport(exportFmt, templateFillable ? submissionFilename : undefined)}
-                                className="flex-1 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                                className="flex-1 py-2 text-base bg-teal-600 text-white rounded-lg hover:bg-teal-700"
                               >
                                 Download as .{exportFmt}
                               </button>
                               {exportFmt !== "pdf" && (
                                 <button
                                   onClick={() => handleExport("pdf")}
-                                  className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                                  className="px-4 py-2 text-base bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
                                 >
                                   .pdf
                                 </button>
@@ -770,14 +770,14 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                               {exportFmt !== "docx" && (
                                 <button
                                   onClick={() => handleExport("docx")}
-                                  className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                                  className="px-4 py-2 text-base bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
                                 >
                                   .docx
                                 </button>
                               )}
                               <button
                                 onClick={() => handleExport("markdown")}
-                                className="px-4 py-2 text-sm bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+                                className="px-4 py-2 text-base bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
                               >
                                 .md
                               </button>
@@ -790,7 +790,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           setBotStatus("idle");
                           setStatusMessage("");
                         }}
-                        className="text-xs text-stone-600 hover:text-stone-600"
+                        className="text-sm text-stone-600 hover:text-stone-600"
                       >
                         Upload another submission
                       </button>
@@ -798,13 +798,13 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   ) : (
                     <>
                       {statusMessage && (
-                        <div className="text-xs mb-3 p-2 rounded bg-red-50 text-red-600">
+                        <div className="text-sm mb-3 p-2 rounded bg-red-50 text-red-600">
                           {statusMessage}
                         </div>
                       )}
                       <button
                         onClick={() => submissionInputRef.current?.click()}
-                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-sm text-stone-700 hover:border-teal-400 hover:text-teal-600 transition-colors"
+                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-base text-stone-700 hover:border-teal-400 hover:text-teal-600 transition-colors"
                       >
                         Click to select submission form (.pdf, .docx, .doc, .xlsx, .xls)
                       </button>
@@ -817,8 +817,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {flowPath === "ask_questions" && (
                 <div className="bg-white border border-purple-200 rounded-lg shadow-sm flex flex-col font-[family-name:var(--font-dm-sans)]" style={{ minHeight: "400px" }}>
                   <div className="p-4 border-b border-purple-100">
-                    <h3 className="text-sm font-bold text-stone-800">Information gathering</h3>
-                    <p className="text-xs text-stone-700">Answer questions to fill gaps in the data bank</p>
+                    <h3 className="text-lg font-bold text-stone-800">Information gathering</h3>
+                    <p className="text-sm text-stone-700">Answer questions to fill gaps in the data bank</p>
                   </div>
 
                   {/* Q&A messages */}
@@ -840,7 +840,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             : "bg-stone-50 border border-stone-200"
                         }`}>
                           {msg.role === "user" ? (
-                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <p className="text-base whitespace-pre-wrap">{msg.content}</p>
                           ) : (
                             <SimpleMarkdown text={msg.content} />
                           )}
@@ -870,19 +870,19 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           }
                         }}
                         placeholder="Type your answer..."
-                        className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-purple-400"
+                        className="flex-1 px-3 py-2 text-base border border-stone-300 rounded-md focus:outline-none focus:border-purple-400"
                         disabled={botStatus === "working"}
                       />
                       <button
                         onClick={handleQaSend}
                         disabled={botStatus === "working" || !qaInput.trim()}
-                        className="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+                        className="px-4 py-2 text-base bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
                       >
                         Send
                       </button>
                     </div>
                     <div className="mt-1 text-right">
-                      <span className={`text-[10px] ${
+                      <span className={`text-xs ${
                         qaInput.trim().split(/\s+/).filter(Boolean).length >= 140
                           ? "text-red-500"
                           : "text-stone-300"
@@ -901,10 +901,10 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
             <div className="bg-white border border-stone-200 rounded-lg shadow-sm font-[family-name:var(--font-dm-sans)]">
               <div className="p-4 border-b border-stone-100">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-stone-800">Grant Summary</h2>
+                  <h2 className="text-lg font-bold text-stone-800">Grant Summary</h2>
                   <button
                     onClick={handleDownloadSummary}
-                    className="text-xs px-2.5 py-1 bg-stone-100 text-stone-600 rounded hover:bg-stone-200"
+                    className="text-sm px-2.5 py-1 bg-stone-100 text-stone-600 rounded hover:bg-stone-200"
                   >
                     Download .md
                   </button>

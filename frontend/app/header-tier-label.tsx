@@ -6,7 +6,7 @@ export function HeaderTierLabel() {
   const { session } = useAuth();
 
   const isOfficer = session?.tier === "officer";
-  const label = isOfficer ? (session?.tier_label || "Grant Officer") : "Helps with grants";
+  const label = isOfficer ? (session?.tier_label || "Grant Officer") : "Grant Scanner";
 
   return (
     <span className={`text-sm font-medium font-[family-name:var(--font-dm-sans)] ${

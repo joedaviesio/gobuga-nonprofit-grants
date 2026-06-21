@@ -3,7 +3,7 @@ Test script: tier system limits and cycle timer.
 
 Tests:
   1. Scanner tier enforces opportunity limits (2H + 2M + 1L)
-  2. Scanner tier enforces 1 open case limit
+  2. Scanner tier enforces 3 open case limit
   3. Scanner tier enforces 5 chat messages/case
   4. Officer tier has no limits
   5. Cycle timer enforces 7-day cooldown
@@ -161,25 +161,28 @@ def case_2():
 
     set_tier("scanner")
 
-    # Create first case — should succeed
-    r = requests.post(f"{API}/api/cases",
-                      json={"grant_id": "test-grant-1", "grant_brief": {"title": "Test brief 1"}},
-                      headers=json_headers(TOKEN))
-    check("First case created (scanner)", r.status_code == 200,
-          f"Got {r.status_code}: {r.text[:200]}")
+    # Create three cases — all should succeed (scanner limit=3)
+    case_ids = []
+    for i in range(1, 4):
+        r = requests.post(f"{API}/api/cases",
+                          json={"grant_id": f"test-grant-{i}", "grant_brief": {"title": f"Test brief {i}"}},
+                          headers=json_headers(TOKEN))
+        check(f"Case {i} created (scanner)", r.status_code == 200,
+              f"Got {r.status_code}: {r.text[:200]}")
+        if r.status_code == 200:
+            case_ids.append(r.json().get("case_id"))
 
-    case_id = r.json().get("case_id") if r.status_code == 200 else None
-
-    # Create second case — should be blocked
-    r2 = requests.post(f"{API}/api/cases",
-                       json={"grant_id": "test-grant-2", "grant_brief": {"title": "Test brief 2"}},
+    # Create fourth case — should be blocked
+    r4 = requests.post(f"{API}/api/cases",
+                       json={"grant_id": "test-grant-4", "grant_brief": {"title": "Test brief 4"}},
                        headers=json_headers(TOKEN))
-    check("Second case blocked (scanner limit=1)", r2.status_code in (403, 429),
-          f"Got {r2.status_code}: {r2.text[:200]}")
+    check("Fourth case blocked (scanner limit=3)", r4.status_code in (403, 429),
+          f"Got {r4.status_code}: {r4.text[:200]}")
 
-    # Clean up: delete the case
-    if case_id:
-        requests.delete(f"{API}/api/cases/{case_id}", headers=auth_headers(TOKEN))
+    # Clean up: delete the cases
+    for case_id in case_ids:
+        if case_id:
+            requests.delete(f"{API}/api/cases/{case_id}", headers=auth_headers(TOKEN))
 
 
 # ---------------------------------------------------------------------------

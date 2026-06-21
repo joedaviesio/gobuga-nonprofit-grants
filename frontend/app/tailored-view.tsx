@@ -513,7 +513,7 @@ function UpgradePitch({ onError }: { onError: (msg: string) => void }) {
           {[
             { t: "Profile-steered scan", d: "Watcher reads your org, generates targeted queries, and surfaces grants the broad search doesn’t" },
             { t: "Priority-tagged brief", d: "Each opportunity scored High / Medium / Low for fit, eligibility, capacity, and strategic value" },
-            { t: "One open case → unlimited", d: "Officer tier removes the 1-case-at-a-time cap, so you can run multiple applications at once" },
+            { t: "3 open cases → unlimited", d: "Officer tier removes the 3-case cap, so you can run as many applications at once as you like" },
             { t: "Unlimited chat + DOCX export", d: "No per-case message cap. Export the final brief straight to a Word doc for board review" },
           ].map((f) => (
             <div key={f.t} className="bg-white/60 border border-slate-200 rounded-lg p-3">

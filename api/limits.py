@@ -15,7 +15,7 @@ TIERS = {
             "medium": 2,
             "low": 1,
         },
-        "max_open_cases": 1,
+        "max_open_cases": 3,
         "chat_messages_per_case": 5,
         "bots_bcd": False,
         "export_docx": False,

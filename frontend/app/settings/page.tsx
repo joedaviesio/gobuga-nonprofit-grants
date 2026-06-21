@@ -13,7 +13,7 @@ const TIER_INFO = {
     price: "Free",
     features: [
       "Search 200+ NZ grants",
-      "1 open case at a time",
+      "3 open cases at a time",
       "5 chat messages per case",
       "Markdown export",
     ],

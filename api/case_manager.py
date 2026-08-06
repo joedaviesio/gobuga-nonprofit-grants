@@ -27,17 +27,24 @@ def _next_case_id(org_id: str, grant_brief: dict) -> str:
         d for d in os.listdir(cases_dir)
         if os.path.isdir(os.path.join(cases_dir, d)) and d.startswith("CASE-")
     ]
+    year = datetime.now(timezone.utc).year % 100
+    year_str = str(year)
     if not existing:
         seq = 1
     else:
         nums = []
         for d in existing:
+            suffix = d.split("-")[-1]  # e.g. "26003" or "262626003"
+            # Strip the leading 2-digit year prefix(es) to recover the
+            # actual sequence number.  Old IDs snowballed because the
+            # year was prepended each time on top of the previous value.
+            while suffix.startswith(year_str) and len(suffix) > len(year_str):
+                suffix = suffix[len(year_str):]
             try:
-                nums.append(int(d.split("-")[-1]))
+                nums.append(int(suffix))
             except ValueError:
                 pass
         seq = max(nums, default=0) + 1
-    year = datetime.now(timezone.utc).year % 100
     sector = infer_sector_code(grant_brief)
     geo = infer_geo_code(grant_brief)
     return f"CASE-{sector}-{geo}-{year}{seq:03d}"

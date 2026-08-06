@@ -5,8 +5,7 @@ import os
 # Pricing per million tokens (keep updated)
 PRICING = {
     "claude-haiku-4-5-20251001": {"input": 0.80, "output": 4.00},
-    "claude-sonnet-4-20250514": {"input": 3.00, "output": 15.00},
-    "claude-opus-4-20250514": {"input": 15.00, "output": 75.00},
+    "claude-sonnet-5": {"input": 3.00, "output": 15.00},
 }
 
 DEFAULT_MODEL = os.getenv("GOBUGA_BOT_MODEL", "claude-haiku-4-5-20251001")

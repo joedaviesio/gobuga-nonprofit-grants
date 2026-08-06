@@ -20,8 +20,8 @@ from api.file_extraction import extract_text
 
 load_dotenv()
 
-MODEL_CHAT = "claude-sonnet-4-20250514"
-MODEL_HEAVY = "claude-opus-4-20250514"
+MODEL_CHAT = "claude-sonnet-5"
+MODEL_HEAVY = "claude-sonnet-5"
 
 
 # --- Tools the chatbot can call ---

@@ -29,7 +29,7 @@ TIERS = {
         "chat_messages_per_case": -1,  # unlimited
         "bots_bcd": True,
         "export_docx": True,
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-sonnet-5",
     },
 }
 

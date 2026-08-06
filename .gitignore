@@ -34,3 +34,6 @@ plan/
 *.md
 !CLAUDE.md
 !templates/prompts/*.md
+
+# Outreach campaign material (contact lists, plans — not part of the app)
+campaigns/

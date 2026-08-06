@@ -27,7 +27,7 @@ AGENTS = [
         "depends_on": [],
         "model": MODEL_INSPECTOR,
         "tools": ["web_fetch", "web_search", "save_evidence"],
-        "max_iterations": 8,
+        "max_iterations": 16,
     },
     # Phase 2 — Analyst (depends on watcher output)
     {
@@ -38,7 +38,7 @@ AGENTS = [
         "depends_on": ["grant_watcher"],
         "model": MODEL_ANALYST,
         "tools": ["save_evidence"],
-        "max_iterations": 8,
+        "max_iterations": 10,
     },
     # Phase 3 — Reporter (compiles brief)
     {

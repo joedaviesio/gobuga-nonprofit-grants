@@ -66,7 +66,10 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
     reminder_sent = False
     requires_evidence = "save_evidence" in agent_config.get("tools", [])
 
-    while iterations < max_iter:
+    # Allow up to 2 bonus iterations for the evidence reminder so it
+    # doesn't get swallowed when the model burns through max_iter on searches.
+    effective_max = max_iter
+    while iterations < effective_max:
         iterations += 1
 
         kwargs = {
@@ -97,6 +100,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
         if not tool_calls:
             if requires_evidence and save_evidence_calls == 0 and not reminder_sent:
                 reminder_sent = True
+                effective_max = iterations + 2  # grant bonus iterations for evidence saving
                 messages.append({"role": "assistant", "content": response.content})
                 messages.append({
                     "role": "user",
@@ -139,6 +143,7 @@ def run_agent(org_id: str, agent_config: dict, system_prompt: str, date: str) ->
         if response.stop_reason == "end_turn":
             if requires_evidence and save_evidence_calls == 0 and not reminder_sent:
                 reminder_sent = True
+                effective_max = iterations + 2  # grant bonus iterations for evidence saving
                 messages.append({
                     "role": "user",
                     "content": (

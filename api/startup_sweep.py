@@ -16,11 +16,12 @@ import hmac
 import os
 import threading
 
+from api.country_config import get_country
 from api.opportunities import current_month, latest_available_month
 from api.tenant import platform_latest_path
 
 
-SEED_COUNTRIES = ("nz",)
+SEED_COUNTRIES: tuple[str, ...] = (get_country(),)
 SWEEP_SECRET = os.getenv("SWEEP_SECRET", "")
 
 _active_sweeps: set[tuple[str, str]] = set()

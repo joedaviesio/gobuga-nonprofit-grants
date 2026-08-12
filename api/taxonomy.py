@@ -3,9 +3,20 @@
 Tags are emitted by the Reporter on each opportunity row and used by
 the search/filter UI. Sectors slice the watcher into parallel workers
 during a country sweep.
+
+Per-country tag/sector/region data now lives in the country config
+(api/country_config.py). The module-level constants below are kept as
+NZ-specific defaults used by get_country_config() when the JSON manifest
+doesn't include the extended fields. Direct imports of TAGS, SECTOR_SLICES,
+etc. from this module still work for backward compatibility but callers
+that need country-aware values should use get_country_config() instead.
 """
 
+from api.country_config import get_country_config
+
+
 # --- Tag vocabulary (per-opportunity labels) ---
+# NZ defaults — canonical list now in country config JSON.
 
 TAGS: list[str] = [
     "community",
@@ -30,21 +41,25 @@ TAGS: list[str] = [
 _TAGS_SET = set(TAGS)
 
 
-def validate_tags(tags: list[str]) -> list[str]:
-    """Drop unknown tags and dedupe, preserving order."""
-    seen = set()
-    out = []
+def validate_tags(tags: list[str], country: str | None = None) -> list[str]:
+    """Drop unknown tags and dedupe, preserving order.
+    When country is given, validates against that country's tag vocabulary."""
+    if country:
+        valid = set(get_country_config(country).tags)
+    else:
+        valid = _TAGS_SET
+    seen: set[str] = set()
+    out: list[str] = []
     for t in tags or []:
         slug = t.strip().lower()
-        if slug in _TAGS_SET and slug not in seen:
+        if slug in valid and slug not in seen:
             seen.add(slug)
             out.append(slug)
     return out
 
 
 # --- Watcher sector slices (one parallel worker per slice) ---
-# Each entry steers a Watcher run with its own seed-query angle.
-# Tags listed are the controlled tags this slice tends to produce.
+# NZ defaults — canonical list now in country config JSON.
 
 SECTOR_SLICES: list[dict] = [
     {"id": "community", "label": "Community development & civic", "tags": ["community", "civic"]},
@@ -61,18 +76,8 @@ SECTOR_SLICES: list[dict] = [
 ]
 
 
-# --- Urban-centre slices (city-deep workers, all sectors) ---
-# Run in parallel with sector workers. The sector workers find national-scope
-# funders; urban workers find council, local-board, regional-foundation, and
-# city-specific community-trust funds that national prompts tend to miss.
-# `regions` is the set of region slugs whose seeds belong to this centre —
-# used by `seeds_for_urban_centre` to filter the seed manifest.
-
 # --- Sign-up sector labels → tag slugs ---
-# The setup wizard uses friendly labels; this map translates them back to the
-# controlled tag vocabulary so org sector picks can drive search relevance,
-# "match my org" sort, and tier features. Keep in sync with
-# `frontend/lib/sectors.ts:SECTORS`.
+# NZ defaults — canonical map now in country config JSON.
 
 SECTOR_LABEL_TO_TAG: dict[str, str] = {
     "Arts, culture & heritage": "arts",
@@ -95,19 +100,28 @@ SECTOR_LABEL_TO_TAG: dict[str, str] = {
 }
 
 
-def org_sector_labels_to_tags(labels: list[str]) -> list[str]:
+def org_sector_labels_to_tags(labels: list[str], country: str | None = None) -> list[str]:
     """Map a list of sign-up sector labels to controlled tag slugs.
+    Uses the country config's label-to-tag map when country is given.
     Unknown labels are dropped silently — useful when reading legacy org
     records that used the old (pre-pivot) sector list."""
+    label_map = (
+        get_country_config(country).sector_label_to_tag
+        if country
+        else SECTOR_LABEL_TO_TAG
+    )
     out: list[str] = []
     seen: set[str] = set()
     for label in labels or []:
-        tag = SECTOR_LABEL_TO_TAG.get(label.strip())
+        tag = label_map.get(label.strip())
         if tag and tag not in seen:
             seen.add(tag)
             out.append(tag)
     return out
 
+
+# --- Urban-centre slices ---
+# NZ defaults — canonical list now in country config JSON.
 
 URBAN_CENTRE_SLICES: list[dict] = [
     {"id": "auckland", "label": "Auckland", "regions": ["auckland", "northland"]},

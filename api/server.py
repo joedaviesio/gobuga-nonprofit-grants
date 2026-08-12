@@ -41,7 +41,7 @@ from api.usage_log import read_usage, usage_summary
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.10",
+    version="0.2.11",
 )
 
 _app_url = os.environ.get("APP_URL", "http://localhost:3002")
@@ -858,7 +858,7 @@ def api_public_opportunities(
     _check_public_rate_limit(request)
     if cursor + limit > _PUBLIC_MAX_PAGE_DEPTH:
         raise HTTPException(400, "Sign up to browse the full pool.")
-    country = country_slug(country or "nz")
+    country = country_slug(country)
     month = month or latest_available_month(country) or current_month()
     pool = live_only(load_pool(country, month))
     tag_list = [t for t in tags.split(",") if t.strip()]
@@ -879,10 +879,11 @@ def api_public_opportunities(
 
 @app.get("/api/public/stats", response_model=PublicStatsResponse)
 def api_public_stats(request: Request, response: Response):
-    """Live-opportunity counter for the anon hero strip. NZ-only for MVP."""
+    """Live-opportunity counter for the anon hero strip."""
     _check_public_rate_limit(request)
     from datetime import datetime as _dt, timezone as _tz
-    country = "nz"
+    from api.country_config import get_country
+    country = get_country()
     month = latest_available_month(country) or current_month()
     pool = live_only(load_pool(country, month))
     response.headers["Cache-Control"] = "public, max-age=300"
@@ -1439,13 +1440,13 @@ def api_delete_databank_entry(case_id: str, key: str, org_id: str = Depends(get_
 
 @app.get("/api/usage")
 def api_usage_summary(date: str = None, org_id: str = Depends(get_current_org)):
-    """Get usage summary for a given NZ date (defaults to today)."""
+    """Get usage summary for a given local date (defaults to today)."""
     return usage_summary(org_id, date)
 
 
 @app.get("/api/usage/log")
 def api_usage_log(date: str = None, org_id: str = Depends(get_current_org)):
-    """Get raw usage records for a given NZ date."""
+    """Get raw usage records for a given local date."""
     return read_usage(org_id, date)
 
 

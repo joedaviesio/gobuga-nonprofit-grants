@@ -25,18 +25,23 @@ sys.path.insert(0, PROJECT_ROOT)
 from dotenv import load_dotenv
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
+from api.country_config import get_country_config
 from api.tenant import PLATFORM_DIR, org_cycles_dir
 from api.auth import _load_orgs
 from api.limits import get_model_overrides
 
 
 MAX_CONCURRENT = 3
-NZ = ZoneInfo("Pacific/Auckland")
+
+
+def _local_tz() -> ZoneInfo:
+    """Return the deployment's local timezone from country config."""
+    return ZoneInfo(get_country_config().timezone)
 
 
 def _needs_cycle_today(org_id: str) -> bool:
     """Check if this org has already had a cycle today."""
-    today = datetime.now(NZ).strftime("%Y-%m-%d")
+    today = datetime.now(_local_tz()).strftime("%Y-%m-%d")
     cycles_dir = org_cycles_dir(org_id)
     today_dir = os.path.join(cycles_dir, today)
     # If there's already a latest symlink for today, skip
@@ -48,7 +53,7 @@ def _needs_cycle_today(org_id: str) -> bool:
 def _run_org_cycle(org_id: str, org_name: str):
     """Run a cycle for one org."""
     from orchestrator.main import run_cycle
-    today = datetime.now(NZ).strftime("%Y-%m-%d")
+    today = datetime.now(_local_tz()).strftime("%Y-%m-%d")
     model_overrides = get_model_overrides(org_id)
     print(f"  Starting cycle for {org_name} ({org_id})...")
     try:
@@ -61,7 +66,7 @@ def _run_org_cycle(org_id: str, org_name: str):
 def main():
     """Check all paid orgs and run cycles for those that need one."""
     print(f"\n{'='*60}")
-    print(f"  GoBuga Scheduler — {datetime.now(NZ).strftime('%Y-%m-%d %H:%M %Z')}")
+    print(f"  GoBuga Scheduler — {datetime.now(_local_tz()).strftime('%Y-%m-%d %H:%M %Z')}")
     print(f"{'='*60}\n")
 
     orgs = _load_orgs()

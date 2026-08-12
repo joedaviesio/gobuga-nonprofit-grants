@@ -31,7 +31,7 @@ from api.sources import (
     seeds_for_urban_centre,
     validate_coverage,
 )
-from api.taxonomy import SECTOR_SLICES, TAGS, URBAN_CENTRE_SLICES
+from api.country_config import get_country_config
 from api.tenant import (
     ensure_platform_dirs,
     platform_cycles_dir,
@@ -104,7 +104,7 @@ def _build_watcher_prompt(country: str, month: str, sector: dict, manifest: dict
         "MONTH": month,
         "SECTOR_ID": sector["id"],
         "SECTOR_LABEL": sector["label"],
-        "TAGS": ", ".join(TAGS),
+        "TAGS": ", ".join(get_country_config(country).tags),
         "MUST_FETCH_SOURCES": must_fetch,
         "REFERENCE_SOURCES": reference,
     })
@@ -142,7 +142,7 @@ def _build_urban_watcher_prompt(country: str, month: str, centre: dict, manifest
         "CENTRE_ID": centre["id"],
         "CENTRE_LABEL": centre["label"],
         "CENTRE_REGIONS": ", ".join(centre["regions"]),
-        "TAGS": ", ".join(TAGS),
+        "TAGS": ", ".join(get_country_config(country).tags),
         "MUST_FETCH_SOURCES": must_fetch,
         "REFERENCE_SOURCES": reference,
     })
@@ -154,7 +154,7 @@ def _build_analyst_prompt(country: str, month: str, manifest: dict, watcher_evid
         "COUNTRY_UPPER": country.upper(),
         "COUNTRY_LABEL": manifest.get("country_label", country.upper()),
         "MONTH": month,
-        "TAGS": ", ".join(TAGS),
+        "TAGS": ", ".join(get_country_config(country).tags),
     })
     # Inline the watcher evidence so the analyst can see everything in one pass.
     ev_section = "\n\n---\n## Evidence from sector workers\n"
@@ -176,8 +176,8 @@ def _build_reporter_prompt(country: str, month: str, manifest: dict, analyst_evi
         "COUNTRY_UPPER": country.upper(),
         "COUNTRY_LABEL": manifest.get("country_label", country.upper()),
         "MONTH": month,
-        "TAGS": ", ".join(TAGS),
-        "CURRENCY": manifest.get("currency", "NZD"),
+        "TAGS": ", ".join(get_country_config(country).tags),
+        "CURRENCY": manifest.get("currency", get_country_config(country).currency),
         "NOW": datetime.now(timezone.utc).isoformat(),
     })
     ev_section = "\n\n---\n## Analyst items (one row per item)\n"
@@ -246,7 +246,8 @@ def _reporter_config() -> dict:
 def plan_sweep(country: str, month: str) -> dict:
     """Describe the work a sweep would do, without making any API calls."""
     manifest = load_manifest(country)
-    sectors = SECTOR_SLICES
+    config = get_country_config(country)
+    sectors = config.sector_slices
     return {
         "country": country,
         "country_label": manifest.get("country_label", country.upper()),
@@ -263,7 +264,7 @@ def plan_sweep(country: str, month: str) -> dict:
         },
         "seed_source_count": len(manifest.get("seed_sources", [])),
         "must_appear_count": len(manifest.get("must_appear_funders", [])),
-        "tags": TAGS,
+        "tags": config.tags,
         "output_dir": platform_cycles_dir(country, month),
     }
 
@@ -287,20 +288,21 @@ def run_country_sweep(
     Returns a summary dict (paths, counts, coverage). On dry_run, returns
     only the plan and writes nothing.
 
-    `sectors_filter`: list of sector ids to include (default: all of SECTOR_SLICES).
+    `sectors_filter`: list of sector ids to include (default: all from country config).
     `watcher_iterations`: per-worker iteration cap (default: WATCHER_ITERATIONS_COUNTRY).
     Both knobs exist for cheap end-to-end smoke tests before a full sweep.
     """
+    config = get_country_config(country)
     iters = watcher_iterations if watcher_iterations is not None else WATCHER_ITERATIONS_COUNTRY
     sectors = (
-        [s for s in SECTOR_SLICES if s["id"] in set(sectors_filter)]
+        [s for s in config.sector_slices if s["id"] in set(sectors_filter)]
         if sectors_filter
-        else SECTOR_SLICES
+        else config.sector_slices
     ) if not skip_sectors else []
     centres = (
-        [c for c in URBAN_CENTRE_SLICES if c["id"] in set(urban_centres_filter)]
+        [c for c in config.urban_centre_slices if c["id"] in set(urban_centres_filter)]
         if urban_centres_filter
-        else URBAN_CENTRE_SLICES
+        else config.urban_centre_slices
     ) if not skip_urban else []
     if not sectors and not centres:
         raise ValueError("No workers selected (both sector and urban filters/skips empty).")

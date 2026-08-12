@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 import bcrypt
 
+from api.country_config import get_country
 from api.store import load_json, save_json
 from api.tenant import (
     ensure_org_dirs,
@@ -123,7 +124,7 @@ def register(email: str, password: str, org_name: str, website_url: str = "") ->
         "name": org_name.strip(),
         "website_url": website_url.strip() if website_url.strip().startswith(("http://", "https://")) else "https://" + website_url.strip() if website_url.strip() else "",
         "plan": "free",
-        "country": "nz",
+        "country": get_country(),
         "is_admin": False,
         "tailored_enabled": False,
         "setup_complete": False,

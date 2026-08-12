@@ -105,10 +105,16 @@ def bot_a_generate_summary(org_id: str, case_id: str, model: str = None) -> dict
     databank_text = format_databank_for_prompt(org_id, case_id)
     donor_docs = _load_data_files(org_id, "donors")
 
+    from datetime import date
+    today = date.today().strftime("%d %B %Y")
+
     system_prompt = f"""You are a grant strategy advisor for the organisation described below.
 
 Your task: produce a concise, actionable grant summary for the grants officer.
 This summary should help them decide how to approach this application.
+
+Today's date is {today}. All recommended dates and timelines MUST be in the future
+relative to today. Never suggest deadlines that have already passed.
 
 ## Organisation Profile
 {org_text[:3000]}
@@ -380,10 +386,16 @@ def bot_c_fill_sections(org_id: str, case_id: str, model: str = None) -> dict:
         section_lines.append(line)
     sections_text = "\n".join(section_lines)
 
+    from datetime import date
+    today = date.today().strftime("%d %B %Y")
+
     system_prompt = f"""You are a grant application writer for the organisation described below.
 
 Your task: fill in every section of this grant application form using the
 information available in the case data bank and organisation profile.
+
+Today's date is {today}. Any dates or timelines you write must be realistic
+relative to today.
 
 ## Organisation Profile
 {org_text[:3000]}

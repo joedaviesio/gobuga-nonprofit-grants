@@ -37,8 +37,18 @@ def _g(obj, *keys, default=None):
     return cur
 
 
+def stripe_configured() -> bool:
+    """Return True when Stripe env vars are set (i.e. billing is enabled)."""
+    return bool(STRIPE_SECRET_KEY)
+
+
 def _get_stripe():
     """Lazy import stripe to avoid import errors when not installed."""
+    if not stripe_configured():
+        raise RuntimeError(
+            "Stripe is not configured for this deployment. "
+            "Set STRIPE_SECRET_KEY to enable billing."
+        )
     try:
         import stripe
         stripe.api_key = STRIPE_SECRET_KEY

@@ -1,0 +1,290 @@
+{
+  "country": "md",
+  "country_label": "Moldova",
+  "currency": "MDL",
+  "timezone": "Europe/Chisinau",
+  "content_language": "ro",
+  "national_scope_synonyms": [
+    "national", "nationwide", "moldova", "republica moldova",
+    "toată țara", "toata tara", "întreaga țară", "intreaga tara"
+  ],
+  "regions": [
+    "chisinau",
+    "balti",
+    "cahul",
+    "comrat",
+    "ungheni",
+    "orhei",
+    "soroca",
+    "edinet",
+    "causeni",
+    "stefan-voda",
+    "criuleni",
+    "ialoveni",
+    "straseni",
+    "anenii-noi",
+    "cimislia",
+    "hincesti",
+    "leova",
+    "nisporeni",
+    "rezina",
+    "soldanesti",
+    "telenesti",
+    "floresti",
+    "glodeni",
+    "falesti",
+    "drochia",
+    "riscani",
+    "briceni",
+    "ocnita",
+    "donduseni",
+    "singerei",
+    "taraclia",
+    "basarabeasca",
+    "cantemir",
+    "dubasari",
+    "gagauzia",
+    "national"
+  ],
+  "tags": [
+    "community",
+    "civic",
+    "arts",
+    "environment",
+    "education",
+    "health",
+    "youth",
+    "research",
+    "capability",
+    "infrastructure",
+    "business",
+    "women",
+    "disability",
+    "climate"
+  ],
+  "sector_slices": [
+    {"id": "community", "label": "Dezvoltare comunitară", "tags": ["community", "civic"]},
+    {"id": "education", "label": "Educație și cercetare", "tags": ["education", "research"]},
+    {"id": "health", "label": "Sănătate și bunăstare", "tags": ["health"]},
+    {"id": "youth", "label": "Tineret și copii", "tags": ["youth"]},
+    {"id": "environment", "label": "Mediu și climă", "tags": ["environment", "climate"]},
+    {"id": "arts", "label": "Artă, cultură și patrimoniu", "tags": ["arts"]},
+    {"id": "inclusion", "label": "Egalitate de gen și incluziune", "tags": ["women", "disability"]},
+    {"id": "business", "label": "Dezvoltare economică și inovație", "tags": ["business", "capability"]},
+    {"id": "infrastructure", "label": "Infrastructură și capacități", "tags": ["infrastructure"]}
+  ],
+  "urban_centre_slices": [
+    {"id": "chisinau", "label": "Chișinău", "regions": ["chisinau", "ialoveni", "criuleni", "anenii-noi", "straseni"]},
+    {"id": "balti", "label": "Bălți și nord", "regions": ["balti", "edinet", "soroca", "drochia", "riscani", "briceni", "ocnita", "donduseni", "floresti", "glodeni", "falesti", "singerei"]},
+    {"id": "cahul", "label": "Cahul și sud", "regions": ["cahul", "cantemir", "taraclia", "basarabeasca", "leova", "cimislia"]},
+    {"id": "comrat", "label": "Comrat și Găgăuzia", "regions": ["comrat", "gagauzia"]}
+  ],
+  "sector_label_to_tag": {
+    "Dezvoltare comunitară": "community",
+    "Civic și democrație locală": "civic",
+    "Artă, cultură și patrimoniu": "arts",
+    "Mediu": "environment",
+    "Educație": "education",
+    "Sănătate și bunăstare": "health",
+    "Tineret și copii": "youth",
+    "Cercetare": "research",
+    "Dezvoltare de capacități": "capability",
+    "Infrastructură": "infrastructure",
+    "Dezvoltare economică": "business",
+    "Egalitate de gen": "women",
+    "Dizabilități": "disability",
+    "Schimbări climatice": "climate"
+  },
+  "funder_aliases": {},
+  "tiers": {
+    "scanner": {
+      "label": "Grant Scanner",
+      "price_monthly": 0,
+      "opportunities_per_cycle": null,
+      "max_open_cases": -1,
+      "chat_messages_per_case": -1,
+      "bots_bcd": true,
+      "export_docx": true,
+      "model": "claude-haiku-4-5-20251001"
+    },
+    "officer": {
+      "label": "Grant Officer",
+      "price_monthly": 5,
+      "opportunities_per_cycle": null,
+      "max_open_cases": -1,
+      "chat_messages_per_case": -1,
+      "bots_bcd": true,
+      "export_docx": true,
+      "model": "claude-sonnet-5"
+    }
+  },
+  "must_appear_funders": [
+    {
+      "name": "USAID Moldova",
+      "url": "https://www.usaid.gov/moldova",
+      "sectors": ["community", "business", "education", "health"]
+    },
+    {
+      "name": "EU Delegation to Moldova",
+      "url": "https://www.eeas.europa.eu/delegations/moldova_en",
+      "sectors": ["community", "business", "infrastructure", "environment"]
+    },
+    {
+      "name": "UNDP Moldova",
+      "url": "https://www.undp.org/moldova",
+      "sectors": ["community", "environment", "business", "inclusion"]
+    },
+    {
+      "name": "Soros Foundation Moldova",
+      "url": "https://www.soros.md/",
+      "sectors": ["community", "education", "arts", "youth", "inclusion"]
+    },
+    {
+      "name": "GIZ Moldova",
+      "url": "https://www.giz.de/en/worldwide/294.html",
+      "sectors": ["business", "environment", "infrastructure"]
+    },
+    {
+      "name": "Swiss Agency for Development and Cooperation",
+      "url": "https://www.eda.admin.ch/deza/en/home/countries/moldova.html",
+      "sectors": ["health", "business", "infrastructure"]
+    },
+    {
+      "name": "Swedish International Development Cooperation Agency",
+      "url": "https://www.sida.se/en",
+      "sectors": ["inclusion", "environment", "community"]
+    },
+    {
+      "name": "Ministry of Education and Research",
+      "url": "https://mecc.gov.md/",
+      "sectors": ["education"]
+    },
+    {
+      "name": "National Agency for Research and Development",
+      "url": "https://ancd.gov.md/",
+      "sectors": ["education"]
+    },
+    {
+      "name": "Environmental Fund Moldova",
+      "url": "https://www.mediu.gov.md/",
+      "sectors": ["environment"]
+    }
+  ],
+  "seed_sources": [
+    {
+      "name": "USAID Moldova programs",
+      "url": "https://www.usaid.gov/moldova",
+      "category": "international",
+      "scope": "national",
+      "sectors": ["community", "business", "education", "health"]
+    },
+    {
+      "name": "EU funding opportunities Moldova",
+      "url": "https://www.eeas.europa.eu/delegations/moldova_en",
+      "category": "international",
+      "scope": "national",
+      "sectors": ["community", "business", "infrastructure", "environment"]
+    },
+    {
+      "name": "UNDP Moldova grants",
+      "url": "https://www.undp.org/moldova",
+      "category": "international",
+      "scope": "national",
+      "sectors": ["community", "environment", "business", "inclusion"]
+    },
+    {
+      "name": "Soros Foundation Moldova",
+      "url": "https://www.soros.md/",
+      "category": "foundation",
+      "scope": "national",
+      "sectors": ["community", "education", "arts", "youth", "inclusion"]
+    },
+    {
+      "name": "GIZ Moldova projects",
+      "url": "https://www.giz.de/en/worldwide/294.html",
+      "category": "international",
+      "scope": "national",
+      "sectors": ["business", "environment", "infrastructure"]
+    },
+    {
+      "name": "Swiss Development Cooperation Moldova",
+      "url": "https://www.eda.admin.ch/deza/en/home/countries/moldova.html",
+      "category": "international",
+      "scope": "national",
+      "sectors": ["health", "business", "infrastructure"]
+    },
+    {
+      "name": "EEA & Norway Grants Moldova",
+      "url": "https://eeagrants.org/",
+      "category": "international",
+      "scope": "national",
+      "sectors": ["community", "environment", "youth"]
+    },
+    {
+      "name": "East Europe Foundation",
+      "url": "https://eef.md/",
+      "category": "foundation",
+      "scope": "national",
+      "sectors": ["community", "business", "education"]
+    },
+    {
+      "name": "National Ecological Fund",
+      "url": "https://www.mediu.gov.md/",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["environment"]
+    },
+    {
+      "name": "ANCD grants and programs",
+      "url": "https://ancd.gov.md/",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["education"]
+    },
+    {
+      "name": "Ministry of Education and Research",
+      "url": "https://mecc.gov.md/",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["education", "youth"]
+    },
+    {
+      "name": "Moldovan Social Investment Fund",
+      "url": "https://www.fism.gov.md/",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["community", "infrastructure"]
+    },
+    {
+      "name": "National Youth Council Moldova",
+      "url": "https://cntm.md/",
+      "category": "foundation",
+      "scope": "national",
+      "sectors": ["youth"]
+    },
+    {
+      "name": "Primăria Chișinău grants",
+      "url": "https://www.chisinau.md/",
+      "category": "council",
+      "scope": "regional",
+      "regions": ["chisinau"],
+      "sectors": []
+    },
+    {
+      "name": "Primăria Bălți grants",
+      "url": "https://www.balti.md/",
+      "category": "council",
+      "scope": "regional",
+      "regions": ["balti"],
+      "sectors": []
+    },
+    {
+      "name": "Gagauzia Executive Committee",
+      "url": "https://gagauzia.md/",
+      "category": "council",
+      "scope": "regional",
+      "regions": ["comrat", "gagauzia"],
+      "sectors": []
+    }
+  ]
+}

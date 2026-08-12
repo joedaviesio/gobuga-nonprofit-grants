@@ -41,7 +41,7 @@ from api.usage_log import read_usage, usage_summary
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.14",
+    version="0.2.16",
 )
 
 _app_url = os.environ.get("APP_URL", "http://localhost:3002")
@@ -151,10 +151,13 @@ def api_verify(request: Request):
     session = verify_session(token)
     if not session:
         raise HTTPException(401, "Invalid or expired session")
-    from api.billing import reconcile_from_stripe
-    reconcile_from_stripe(session["org_id"])
+    from api.billing import reconcile_from_stripe, stripe_configured
+    if stripe_configured():
+        reconcile_from_stripe(session["org_id"])
     org = get_org(session["org_id"])
+    from api.country_config import get_country_config
     from api.limits import get_tier_key, get_tier, get_cycle_timer
+    config = get_country_config()
     tier_key = get_tier_key(session["org_id"])
     tier = get_tier(session["org_id"])
     cycle_timer = get_cycle_timer(session["org_id"])
@@ -168,6 +171,10 @@ def api_verify(request: Request):
         "tier": tier_key,
         "tier_label": tier["label"],
         "cycle_timer": cycle_timer,
+        "country": config.slug,
+        "country_label": config.country_label,
+        "currency": config.currency,
+        "tiers": config.tiers,
     }
 
 
@@ -895,6 +902,25 @@ def api_public_stats(request: Request, response: Response):
     }
 
 
+@app.get("/api/public/country-config")
+def api_public_country_config(request: Request, response: Response):
+    """Non-sensitive country config for the frontend (tiers, labels, currency)."""
+    _check_public_rate_limit(request)
+    from api.country_config import get_country_config
+    config = get_country_config()
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["X-Robots-Tag"] = "noindex"
+    return {
+        "country": config.slug,
+        "country_label": config.country_label,
+        "currency": config.currency,
+        "tiers": config.tiers,
+        "tags": config.tags,
+        "sector_slices": config.sector_slices,
+        "regions": config.regions,
+    }
+
+
 @app.get("/api/opportunities")
 def api_list_opportunities(
     org_id: str = Depends(get_current_org),
@@ -1459,7 +1485,9 @@ class CheckoutRequest(BaseModel):
 @app.post("/api/billing/checkout")
 def api_billing_checkout(req: CheckoutRequest, org_id: str = Depends(get_current_org)):
     """Create a Stripe Checkout session for plan upgrade."""
-    from api.billing import create_checkout_session
+    from api.billing import create_checkout_session, stripe_configured
+    if not stripe_configured():
+        raise HTTPException(503, "Billing is not enabled for this deployment.")
     try:
         result = create_checkout_session(org_id, req.plan)
         return result
@@ -1472,7 +1500,9 @@ def api_billing_checkout(req: CheckoutRequest, org_id: str = Depends(get_current
 @app.get("/api/billing/portal")
 def api_billing_portal(org_id: str = Depends(get_current_org)):
     """Get Stripe Customer Portal URL."""
-    from api.billing import create_portal_session
+    from api.billing import create_portal_session, stripe_configured
+    if not stripe_configured():
+        raise HTTPException(503, "Billing is not enabled for this deployment.")
     try:
         result = create_portal_session(org_id)
         return result

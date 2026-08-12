@@ -15,7 +15,7 @@ import ErrorModal from "@/app/error-modal";
 import CasesView, { isNewOpenCase } from "@/app/cases-view";
 import TailoredView from "@/app/tailored-view";
 import { getTailoredAccess, type TailoredAccess } from "@/lib/api";
-import { orgSectorsToTags } from "@/lib/countries";
+import { orgSectorsToTags, getDeploymentConfig } from "@/lib/countries";
 
 // Persists active sector chips across reloads. Seeded once from the org's
 // saved sectors (mapped label → tag slug); subsequent toggles overwrite.
@@ -23,25 +23,12 @@ import { orgSectorsToTags } from "@/lib/countries";
 // so explicit deselect-all is preserved instead of re-seeded.
 const FILTER_TAGS_STORAGE_KEY = "gobuga_opp_filter_tags";
 
-const ALL_TAGS = [
-  "community", "sport", "civic", "arts", "environment", "education",
-  "health", "youth", "maori", "pasifika", "research", "capability",
-  "infrastructure", "business", "women", "disability", "climate",
-] as const;
-
-const NZ_REGIONS = [
-  "national", "auckland", "wellington", "canterbury", "otago", "waikato",
-  "bay-of-plenty", "northland", "taranaki", "manawatu-whanganui",
-  "hawkes-bay", "tasman", "nelson", "marlborough", "west-coast",
-  "southland", "gisborne",
-] as const;
-
 type SortKey = "recency" | "deadline" | "amount_desc" | "random";
 
 function formatAmount(row: OpportunityRow): string | null {
   const lo = row.amount_min;
   const hi = row.amount_max;
-  const ccy = row.currency || "NZD";
+  const ccy = row.currency || getDeploymentConfig().currency;
   if (lo && hi && lo !== hi) return `$${lo.toLocaleString()}–$${hi.toLocaleString()} ${ccy}`;
   if (hi) return `up to $${hi.toLocaleString()} ${ccy}`;
   if (lo) return `from $${lo.toLocaleString()} ${ccy}`;
@@ -296,7 +283,7 @@ export default function OpportunitiesView() {
 
         {/* Tag pills */}
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {ALL_TAGS.map((t) => (
+          {getDeploymentConfig().tags.map((t) => (
             <TagPill key={t} tag={t} active={activeTags.includes(t)} onClick={() => toggleTag(t)} />
           ))}
         </div>
@@ -311,7 +298,7 @@ export default function OpportunitiesView() {
               className="text-sm border border-slate-200 rounded px-2 py-1 bg-white"
             >
               <option value="">any</option>
-              {NZ_REGIONS.map((r) => (
+              {getDeploymentConfig().regionSlugs.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>

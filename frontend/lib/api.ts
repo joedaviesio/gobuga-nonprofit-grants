@@ -89,6 +89,17 @@ export interface CycleTimer {
   expired: boolean;
 }
 
+export interface TierDefinition {
+  label: string;
+  price_monthly: number;
+  opportunities_per_cycle: number | null;
+  max_open_cases: number;
+  chat_messages_per_case: number;
+  bots_bcd: boolean;
+  export_docx: boolean;
+  model: string;
+}
+
 export interface VerifyResponse {
   valid: boolean;
   user_id: string;
@@ -99,6 +110,10 @@ export interface VerifyResponse {
   tier: "scanner" | "officer";
   tier_label: string;
   cycle_timer: CycleTimer | null;
+  country: string;
+  country_label: string;
+  currency: string;
+  tiers: Record<string, TierDefinition>;
 }
 
 export const verifySession = async (): Promise<VerifyResponse | null> => {
@@ -857,4 +872,19 @@ export const listPublicOpportunities = (
 
 export const getPublicStats = (): Promise<PublicStats> =>
   publicRequest<PublicStats>("/public/stats");
+
+// --- Public country config (deployment-specific, no auth) ---
+
+export interface PublicCountryConfig {
+  country: string;
+  country_label: string;
+  currency: string;
+  tiers: Record<string, TierDefinition>;
+  tags: string[];
+  sector_slices: { id: string; label: string; tags: string[] }[];
+  regions: string[];
+}
+
+export const getPublicCountryConfig = (): Promise<PublicCountryConfig> =>
+  publicRequest<PublicCountryConfig>("/public/country-config");
 

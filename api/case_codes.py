@@ -74,6 +74,8 @@ _SECTOR_KEYWORDS = {
 GEO_CODES = {
     "new zealand": "NZ",
     "aotearoa": "NZ",
+    "moldova": "MD",
+    "republica moldova": "MD",
     "australia": "AU",
     "united kingdom": "UK",
     "united states": "US",
@@ -94,6 +96,8 @@ _GEO_KEYWORDS = {
             "waikato", "otago", "northland", "bay of plenty", "hawke's bay",
             "taranaki", "manawatu", "nelson", "marlborough", "southland",
             "gisborne", "tasman", "west coast"],
+    "MD": ["moldova", "republica moldova", "chisinau", "chișinău", "balti",
+            "bălți", "cahul", "comrat", "gagauzia", "ungheni", "orhei", "soroca"],
     "AU": ["australia", "australian", "new south wales", "victoria", "queensland",
            "western australia", "south australia", "tasmania", "sydney", "melbourne"],
     "UK": ["united kingdom", "england", "scotland", "wales", "northern ireland",

@@ -106,7 +106,10 @@ def bot_a_generate_summary(org_id: str, case_id: str, model: str = None) -> dict
     donor_docs = _load_data_files(org_id, "donors")
 
     from datetime import date
+    from api.country_config import get_country_config
     today = date.today().strftime("%d %B %Y")
+    config = get_country_config()
+    lang = "Romanian" if config.content_language == "ro" else "English"
 
     system_prompt = f"""You are a grant strategy advisor for the organisation described below.
 
@@ -134,7 +137,7 @@ Write a tailored grant summary with these sections:
 4. **Watch out for** — risks, eligibility concerns, or competition
 5. **Recommended next steps** — 3-4 concrete actions
 
-Be direct, specific to this grant. No generic advice. Write in English."""
+Be direct, specific to this grant. No generic advice. Write in {lang}."""
 
     usage = new_usage()
     client = anthropic.Anthropic()

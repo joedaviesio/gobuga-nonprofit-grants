@@ -2,6 +2,15 @@
   "country": "nz",
   "country_label": "New Zealand",
   "currency": "NZD",
+  "timezone": "Pacific/Auckland",
+  "content_language": "en",
+  "national_scope_synonyms": [
+    "national",
+    "nationwide",
+    "new zealand",
+    "all of nz",
+    "across new zealand"
+  ],
   "regions": [
     "northland",
     "auckland",
@@ -21,6 +30,263 @@
     "southland",
     "national"
   ],
+  "tags": [
+    "community",
+    "sport",
+    "civic",
+    "arts",
+    "environment",
+    "education",
+    "health",
+    "youth",
+    "maori",
+    "pasifika",
+    "research",
+    "capability",
+    "infrastructure",
+    "business",
+    "women",
+    "disability",
+    "climate"
+  ],
+  "sector_slices": [
+    {
+      "id": "community",
+      "label": "Community development & civic",
+      "tags": [
+        "community",
+        "civic"
+      ]
+    },
+    {
+      "id": "sport",
+      "label": "Sport & recreation",
+      "tags": [
+        "sport"
+      ]
+    },
+    {
+      "id": "arts",
+      "label": "Arts, culture & heritage",
+      "tags": [
+        "arts"
+      ]
+    },
+    {
+      "id": "environment",
+      "label": "Environment & climate",
+      "tags": [
+        "environment",
+        "climate"
+      ]
+    },
+    {
+      "id": "education",
+      "label": "Education & research",
+      "tags": [
+        "education",
+        "research"
+      ]
+    },
+    {
+      "id": "health",
+      "label": "Health & wellbeing",
+      "tags": [
+        "health"
+      ]
+    },
+    {
+      "id": "youth",
+      "label": "Youth & children",
+      "tags": [
+        "youth"
+      ]
+    },
+    {
+      "id": "maori_pasifika",
+      "label": "Māori & Pasifika",
+      "tags": [
+        "maori",
+        "pasifika"
+      ]
+    },
+    {
+      "id": "infrastructure",
+      "label": "Capability & infrastructure",
+      "tags": [
+        "capability",
+        "infrastructure"
+      ]
+    },
+    {
+      "id": "business",
+      "label": "Business, innovation & enterprise",
+      "tags": [
+        "business"
+      ]
+    },
+    {
+      "id": "inclusion",
+      "label": "Disability, women & inclusion",
+      "tags": [
+        "disability",
+        "women"
+      ]
+    }
+  ],
+  "urban_centre_slices": [
+    {
+      "id": "auckland",
+      "label": "Auckland",
+      "regions": [
+        "auckland",
+        "northland"
+      ]
+    },
+    {
+      "id": "hamilton",
+      "label": "Hamilton & Waikato",
+      "regions": [
+        "waikato"
+      ]
+    },
+    {
+      "id": "tauranga",
+      "label": "Tauranga & Bay of Plenty",
+      "regions": [
+        "bay-of-plenty"
+      ]
+    },
+    {
+      "id": "wellington",
+      "label": "Wellington",
+      "regions": [
+        "wellington",
+        "manawatu-whanganui"
+      ]
+    },
+    {
+      "id": "christchurch",
+      "label": "Christchurch & Canterbury",
+      "regions": [
+        "canterbury",
+        "marlborough",
+        "tasman",
+        "nelson",
+        "west-coast"
+      ]
+    },
+    {
+      "id": "dunedin",
+      "label": "Dunedin & Otago",
+      "regions": [
+        "otago",
+        "southland"
+      ]
+    }
+  ],
+  "sector_label_to_tag": {
+    "Arts, culture & heritage": "arts",
+    "Business, innovation & enterprise": "business",
+    "Capability building": "capability",
+    "Civic & local democracy": "civic",
+    "Climate": "climate",
+    "Community development": "community",
+    "Disability services": "disability",
+    "Education": "education",
+    "Environment": "environment",
+    "Health & wellbeing": "health",
+    "Infrastructure": "infrastructure",
+    "Māori-led kaupapa": "maori",
+    "Pasifika": "pasifika",
+    "Research": "research",
+    "Sport & recreation": "sport",
+    "Women & gender equity": "women",
+    "Youth & children": "youth"
+  },
+  "funder_aliases": {
+    "Sport NZ": [
+      "sport nz",
+      "sport new zealand",
+      "sport new zealand (managed by sport canterbury)",
+      "sport new zealand (managed by sport otago)",
+      "sport new zealand (managed by sport waikato)",
+      "sport new zealand (managed by sport auckland)",
+      "sport new zealand (managed by sport bay of plenty)",
+      "sport new zealand (managed by sport bop)"
+    ],
+    "Health Research Council of New Zealand": [
+      "health research council",
+      "health research council of new zealand",
+      "hrc",
+      "hrc nz"
+    ],
+    "Department of Internal Affairs": [
+      "department of internal affairs",
+      "dia",
+      "internal affairs"
+    ],
+    "Te Puni Kōkiri": [
+      "te puni kokiri",
+      "te puni kōkiri",
+      "tpk"
+    ],
+    "Toi Foundation": [
+      "toi foundation",
+      "toi foundation (formerly tsb community trust)",
+      "tsb community trust"
+    ],
+    "Royal Society Te Apārangi": [
+      "royal society te aparangi",
+      "royal society te apārangi",
+      "royal society of new zealand"
+    ],
+    "Lottery Grants Board": [
+      "lottery grants board",
+      "lotto grants board",
+      "nz lottery grants board"
+    ],
+    "Foundation North": [
+      "foundation north",
+      "asb community trust"
+    ],
+    "Eastern & Central Community Trust": [
+      "eastern & central community trust",
+      "eastern and central community trust",
+      "ecct"
+    ],
+    "Ministry of Education": [
+      "ministry of education",
+      "education workforce (ministry of education)",
+      "moe"
+    ]
+  },
+  "tiers": {
+    "scanner": {
+      "label": "Grant Scanner",
+      "price_monthly": 0,
+      "opportunities_per_cycle": {
+        "high": 2,
+        "medium": 2,
+        "low": 1
+      },
+      "max_open_cases": 3,
+      "chat_messages_per_case": 5,
+      "bots_bcd": false,
+      "export_docx": false,
+      "model": "claude-haiku-4-5-20251001"
+    },
+    "officer": {
+      "label": "Grant Officer",
+      "price_monthly": 9,
+      "opportunities_per_cycle": null,
+      "max_open_cases": -1,
+      "chat_messages_per_case": -1,
+      "bots_bcd": true,
+      "export_docx": true,
+      "model": "claude-sonnet-5"
+    }
+  },
   "must_appear_funders": [
     {
       "name": "Department of Internal Affairs",

@@ -9,6 +9,7 @@ import os
 import re
 from datetime import date as date_type, datetime, timezone
 
+from api.country_config import get_country, get_country_config
 from api.funders import canonicalise_funder, slugify_funder
 from api.taxonomy import validate_tags
 from api.tenant import platform_cycles_dir, platform_latest_path
@@ -43,13 +44,16 @@ _COUNTRY_ALIASES = {
     "new zealand": "nz",
     "aotearoa": "nz",
     "aotearoa new zealand": "nz",
+    "md": "md",
+    "moldova": "md",
+    "republica moldova": "md",
 }
 
 
-def country_slug(value: str | None, default: str = "nz") -> str:
+def country_slug(value: str | None, default: str | None = None) -> str:
     """Normalise any country form (slug or label) to a country slug."""
     if not value:
-        return default
+        return default or get_country()
     return _COUNTRY_ALIASES.get(value.strip().lower(), value.strip().lower())
 
 
@@ -77,7 +81,8 @@ def latest_available_month(
     return None
 
 
-def load_current_pool(country: str = "nz") -> list[dict]:
+def load_current_pool(country: str | None = None) -> list[dict]:
+    country = country or get_country()
     month = latest_available_month(country) or current_month()
     return load_pool(country, month)
 
@@ -290,19 +295,17 @@ def _extract_deadline(text: str) -> str:
     return "TBC"
 
 
-def _extract_regions(text: str) -> list[str]:
+def _extract_regions(text: str, country: str | None = None) -> list[str]:
     if not text:
         return ["national"]
+    config = get_country_config(country)
     t = text.lower()
-    if "national" in t or "nationwide" in t or "new zealand" in t or "all of nz" in t or "across new zealand" in t:
-        return ["national"]
+    # Check for national-scope synonyms from country config
+    for synonym in config.national_scope_synonyms:
+        if synonym.lower() in t:
+            return ["national"]
     # Pull region slugs from the content
-    region_slugs = [
-        "northland", "auckland", "waikato", "bay-of-plenty", "gisborne",
-        "hawkes-bay", "taranaki", "manawatu-whanganui", "wellington",
-        "tasman", "nelson", "marlborough", "west-coast", "canterbury",
-        "otago", "southland",
-    ]
+    region_slugs = [r for r in config.regions if r != "national"]
     found = []
     for slug in region_slugs:
         # match slug or its space-form
@@ -336,7 +339,7 @@ def build_opportunities_from_watchers(
     watcher_evidence: list[dict],
     country: str,
     month: str,
-    currency: str = "NZD",
+    currency: str | None = None,
     now_iso: str | None = None,
 ) -> list[dict]:
     """Build opportunity rows directly from watcher evidence — no LLM analyst.
@@ -346,6 +349,7 @@ def build_opportunities_from_watchers(
     + programme slug + deadline, with `evidence_ids` accumulating across workers
     that found the same programme.
     """
+    currency = currency or get_country_config(country).currency
     now_iso = now_iso or datetime.now(timezone.utc).isoformat()
     country_upper = country.upper()
     by_dedupe: dict[str, dict] = {}
@@ -399,7 +403,7 @@ def build_opportunities_from_watchers(
             continue
 
         amount_min, amount_max = _extract_amount_range(parsed.get("amount") or "")
-        regions = _extract_regions(parsed.get("region") or "")
+        regions = _extract_regions(parsed.get("region") or "", country=country)
         tags = _extract_tags(parsed.get("tags") or "")
 
         seq += 1
@@ -454,7 +458,7 @@ def build_opportunities_from_analyst(
     analyst_evidence: list[dict],
     country: str,
     month: str,
-    currency: str = "NZD",
+    currency: str | None = None,
     now_iso: str | None = None,
 ) -> list[dict]:
     """Deterministically build opportunity rows from Analyst evidence items.
@@ -463,6 +467,7 @@ def build_opportunities_from_analyst(
     programme, so we just shape them into rows. No truncation risk, no parsing
     fragility, sequenced ids, validated tags.
     """
+    currency = currency or get_country_config(country).currency
     now_iso = now_iso or datetime.now(timezone.utc).isoformat()
     country_upper = country.upper()
     rows: list[dict] = []

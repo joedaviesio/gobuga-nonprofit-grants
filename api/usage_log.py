@@ -1,4 +1,4 @@
-"""Usage logger — records every Claude API call with NZ timestamps (multi-tenant)."""
+"""Usage logger — records every Claude API call with local timestamps (multi-tenant)."""
 
 import json
 import os
@@ -6,9 +6,13 @@ import fcntl
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from api.country_config import get_country_config
 from api.tenant import org_logs_dir, platform_run_dir
 
-NZ = ZoneInfo("Pacific/Auckland")
+
+def _local_tz() -> ZoneInfo:
+    """Return the deployment's local timezone from country config."""
+    return ZoneInfo(get_country_config().timezone)
 
 
 def _logs_dir_for(org_id: str) -> str:
@@ -36,7 +40,7 @@ def log_usage(
     extra: dict | None = None,
 ):
     """
-    Append one usage record to org logs/usage-YYYY-MM-DD.jsonl (NZ date).
+    Append one usage record to org logs/usage-YYYY-MM-DD.jsonl (local date).
 
     org_id:     the organisation
     caller:     e.g. "bot_a", "bot_b", "grant_watcher", "chat"
@@ -47,9 +51,9 @@ def log_usage(
     """
     _ensure_dir(org_id)
 
-    now_nz = datetime.now(NZ)
+    now_local = datetime.now(_local_tz())
     record = {
-        "ts": now_nz.isoformat(),
+        "ts": now_local.isoformat(),
         "org_id": org_id,
         "caller": caller,
         "model": usage.get("model", ""),
@@ -66,7 +70,7 @@ def log_usage(
         record.update(extra)
 
     logs_dir = _logs_dir_for(org_id)
-    logfile = os.path.join(logs_dir, f"usage-{now_nz.strftime('%Y-%m-%d')}.jsonl")
+    logfile = os.path.join(logs_dir, f"usage-{now_local.strftime('%Y-%m-%d')}.jsonl")
     line = json.dumps(record) + "\n"
 
     with open(logfile, "a") as f:
@@ -76,9 +80,9 @@ def log_usage(
 
 
 def read_usage(org_id: str, date_str: str | None = None) -> list[dict]:
-    """Read usage records for a given NZ date (defaults to today)."""
+    """Read usage records for a given local date (defaults to today)."""
     if date_str is None:
-        date_str = datetime.now(NZ).strftime("%Y-%m-%d")
+        date_str = datetime.now(_local_tz()).strftime("%Y-%m-%d")
     logs_dir = _logs_dir_for(org_id)
     logfile = os.path.join(logs_dir, f"usage-{date_str}.jsonl")
     if not os.path.exists(logfile):
@@ -93,10 +97,10 @@ def read_usage(org_id: str, date_str: str | None = None) -> list[dict]:
 
 
 def usage_summary(org_id: str, date_str: str | None = None) -> dict:
-    """Aggregate usage for a given NZ date."""
+    """Aggregate usage for a given local date."""
     records = read_usage(org_id, date_str)
     summary = {
-        "date": date_str or datetime.now(NZ).strftime("%Y-%m-%d"),
+        "date": date_str or datetime.now(_local_tz()).strftime("%Y-%m-%d"),
         "org_id": org_id,
         "total_calls": 0,
         "total_input_tokens": 0,
@@ -130,8 +134,8 @@ def usage_summary(org_id: str, date_str: str | None = None) -> dict:
 
 def count_cycles_this_month(org_id: str) -> int:
     """Count how many cycles have been logged this month."""
-    now_nz = datetime.now(NZ)
-    year_month = now_nz.strftime("%Y-%m")
+    now_local = datetime.now(_local_tz())
+    year_month = now_local.strftime("%Y-%m")
     logs_dir = _logs_dir_for(org_id)
     if not os.path.exists(logs_dir):
         return 0

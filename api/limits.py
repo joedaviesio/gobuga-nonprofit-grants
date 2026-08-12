@@ -1,37 +1,17 @@
-"""Plan enforcement — scanner/officer tier limits and model selection."""
+"""Plan enforcement — scanner/officer tier limits and model selection.
+
+Tier definitions are per-country, loaded from the country config JSON.
+NZ defaults are used when the JSON doesn't include a `tiers` field.
+"""
 
 from api.auth import get_org, update_org
 from api.case_manager import list_cases
+from api.country_config import get_country_config
 
 
-# --- Tier definitions ---
-
-TIERS = {
-    "scanner": {
-        "label": "Grant Scanner",
-        "price_monthly": 0,
-        "opportunities_per_cycle": {
-            "high": 2,
-            "medium": 2,
-            "low": 1,
-        },
-        "max_open_cases": 3,
-        "chat_messages_per_case": 5,
-        "bots_bcd": False,
-        "export_docx": False,
-        "model": "claude-haiku-4-5-20251001",
-    },
-    "officer": {
-        "label": "Grant Officer",
-        "price_monthly": 9,
-        "opportunities_per_cycle": None,  # unlimited
-        "max_open_cases": -1,  # unlimited
-        "chat_messages_per_case": -1,  # unlimited
-        "bots_bcd": True,
-        "export_docx": True,
-        "model": "claude-sonnet-5",
-    },
-}
+def _get_tiers() -> dict:
+    """Load tier definitions from the deployment's country config."""
+    return get_country_config().tiers
 
 # Map old plan keys to new tier keys for backwards compat
 _PLAN_TO_TIER = {
@@ -45,12 +25,14 @@ def get_tier_key(org_id: str) -> str:
     """Get the tier key (scanner/officer) for an org."""
     org = get_org(org_id)
     plan = org.get("plan", "free") if org else "free"
-    return _PLAN_TO_TIER.get(plan, plan if plan in TIERS else "scanner")
+    tiers = _get_tiers()
+    return _PLAN_TO_TIER.get(plan, plan if plan in tiers else "scanner")
 
 
 def get_tier(org_id: str) -> dict:
     """Get the tier config for an org."""
-    return TIERS.get(get_tier_key(org_id), TIERS["scanner"])
+    tiers = _get_tiers()
+    return tiers.get(get_tier_key(org_id), tiers["scanner"])
 
 
 def toggle_tier(org_id: str) -> str:

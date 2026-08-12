@@ -2,32 +2,43 @@
 
 import { useEffect, useState } from "react";
 import { getOrgProfile, createCheckout, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, getTailoredAccess, toggleTailored, type OrgProfile, type TailoredAccess } from "@/lib/api";
-import { ENABLED_COUNTRIES, findCountry } from "@/lib/countries";
+import { getEnabledCountries, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import AuthGate, { useAuth } from "../auth-gate";
 
+import { getDeploymentConfig } from "@/lib/countries";
+
+function getTierInfo(tierKey: string): { label: string; price: string; features: string[] } {
+  const config = getDeploymentConfig();
+  const tierDef = (config.tiers as Record<string, { label?: string; price_monthly?: number; max_open_cases?: number; chat_messages_per_case?: number; bots_bcd?: boolean; export_docx?: boolean }>)?.[tierKey];
+
+  if (!tierDef) {
+    // Fallback for when config hasn't loaded yet
+    return tierKey === "officer"
+      ? { label: "Grant Officer", price: "Paid", features: ["Tailored Picks", "Unlimited cases & chat", "All bots", "DOCX export"] }
+      : { label: "Grant Scanner", price: "Free", features: ["Search grants", "Open cases", "Chat with bots", "Markdown export"] };
+  }
+
+  const price = tierDef.price_monthly === 0 ? "Free" : `$${tierDef.price_monthly} ${config.currency}/mo`;
+  const cases = tierDef.max_open_cases === -1 ? "Unlimited open cases" : `${tierDef.max_open_cases} open cases at a time`;
+  const chat = tierDef.chat_messages_per_case === -1 ? "Unlimited chat" : `${tierDef.chat_messages_per_case} chat messages per case`;
+  const features: string[] = [
+    `Search ${config.countryLabel} grants`,
+    cases,
+    chat,
+  ];
+  if (tierDef.bots_bcd) features.push("Parse & Fill bots");
+  if (tierDef.export_docx) features.push("DOCX export");
+  if (tierKey === "officer") features.unshift("Weekly Tailored Picks (profile-steered)");
+
+  return { label: tierDef.label || tierKey, price, features };
+}
+
+// Legacy compatibility — used in a few places below
 const TIER_INFO = {
-  scanner: {
-    label: "Grant Scanner",
-    price: "Free",
-    features: [
-      "Search 200+ NZ grants",
-      "3 open cases at a time",
-      "5 chat messages per case",
-      "Markdown export",
-    ],
-  },
-  officer: {
-    label: "Grant Officer",
-    price: "$9 NZD/mo",
-    features: [
-      "Weekly Tailored Picks (profile-steered)",
-      "Unlimited open cases & chat",
-      "Parse & Fill bots",
-      "DOCX export",
-    ],
-  },
+  scanner: { label: "Grant Scanner", price: "Free", features: [] as string[] },
+  officer: { label: "Grant Officer", price: "Paid", features: [] as string[] },
 };
 
 function SettingsContent() {
@@ -262,7 +273,7 @@ function SettingsContent() {
   }
 
   const currentTier = session?.tier || "scanner";
-  const tierInfo = TIER_INFO[currentTier] || TIER_INFO.scanner;
+  const tierInfo = getTierInfo(currentTier);
 
   const orgCountryConfig = findCountry(org?.country);
   const orgSectorOptions = orgCountryConfig?.sectors ?? [];
@@ -314,7 +325,7 @@ function SettingsContent() {
                   className="px-2 py-1 text-base border border-stone-300 rounded-md focus:outline-none focus:border-blue-400"
                   autoFocus
                 >
-                  {ENABLED_COUNTRIES.map((c) => (
+                  {getEnabledCountries().map((c) => (
                     <option key={c.slug} value={c.name}>{c.name}</option>
                   ))}
                 </select>
@@ -565,16 +576,19 @@ function SettingsContent() {
           </div>
         )}
 
-        {currentTier === "scanner" ? (
+        {(() => {
+          const scannerInfo = getTierInfo("scanner");
+          const officerInfo = getTierInfo("officer");
+          return currentTier === "scanner" ? (
           <>
             {/* Current plan */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-base font-medium text-stone-800">{TIER_INFO.scanner.label}</span>
+                <span className="text-base font-medium text-stone-800">{scannerInfo.label}</span>
                 <span className="text-sm bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">Current</span>
               </div>
               <ul className="space-y-1 mb-4">
-                {TIER_INFO.scanner.features.map((f) => (
+                {scannerInfo.features.map((f) => (
                   <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
                     <span className="text-green-500">&#10003;</span> {f}
                   </li>
@@ -585,11 +599,11 @@ function SettingsContent() {
             {/* Upgrade card */}
             <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-medium text-blue-800">{TIER_INFO.officer.label}</span>
-                <span className="text-base font-bold text-blue-700">{TIER_INFO.officer.price}</span>
+                <span className="text-base font-medium text-blue-800">{officerInfo.label}</span>
+                <span className="text-base font-bold text-blue-700">{officerInfo.price}</span>
               </div>
               <ul className="space-y-1 mb-3">
-                {TIER_INFO.officer.features.map((f) => (
+                {officerInfo.features.map((f) => (
                   <li key={f} className="text-sm text-blue-700 flex items-center gap-1.5">
                     <span className="text-blue-500">&#10003;</span> {f}
                   </li>
@@ -600,7 +614,7 @@ function SettingsContent() {
                 disabled={checkingOut}
                 className="w-full px-4 py-2.5 text-base font-medium btn-gradient rounded-md disabled:opacity-50"
               >
-                {checkingOut ? "Redirecting to checkout..." : "Upgrade to Grant Officer"}
+                {checkingOut ? "Redirecting to checkout..." : `Upgrade to ${officerInfo.label}`}
               </button>
             </div>
           </>
@@ -609,12 +623,12 @@ function SettingsContent() {
             {/* Active plan */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-base font-medium text-blue-700">{TIER_INFO.officer.label}</span>
+                <span className="text-base font-medium text-blue-700">{officerInfo.label}</span>
                 <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Active</span>
               </div>
-              <span className="text-sm text-stone-700">{TIER_INFO.officer.price}</span>
+              <span className="text-sm text-stone-700">{officerInfo.price}</span>
               <ul className="space-y-1 mt-2">
-                {TIER_INFO.officer.features.map((f) => (
+                {officerInfo.features.map((f) => (
                   <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
                     <span className="text-green-500">&#10003;</span> {f}
                   </li>
@@ -629,7 +643,8 @@ function SettingsContent() {
               Manage billing
             </button>
           </>
-        )}
+        );
+        })()}
       </div>
 
       {/* Tailored Opportunities */}

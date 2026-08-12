@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { setupOrg, getToken, verifySession } from "@/lib/api";
-import { ENABLED_COUNTRIES, findCountry } from "@/lib/countries";
+import { getEnabledCountries, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 
 type Step = "basics" | "sectors";
@@ -210,7 +210,7 @@ export default function SetupPage() {
                 }`}
               >
                 <option value="">Select your country</option>
-                {ENABLED_COUNTRIES.map((c) => (
+                {getEnabledCountries().map((c) => (
                   <option key={c.slug} value={c.name}>{c.name}</option>
                 ))}
               </select>

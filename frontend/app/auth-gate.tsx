@@ -3,6 +3,7 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import { usePathname } from "next/navigation";
 import { verifySession, logout, getToken, clearToken, type VerifyResponse } from "@/lib/api";
+import { loadDeploymentConfig } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 
 const PUBLIC_PATHS = ["/login", "/register", "/setup", "/seed", "/forgot-password", "/reset-password"];
@@ -30,6 +31,11 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(!isPublic);
 
   useEffect(() => {
+    // Load deployment config (country, tiers, tags) on startup.
+    // This is fire-and-forget — the config caches itself and
+    // components access it synchronously via getDeploymentConfig().
+    loadDeploymentConfig();
+
     if (isPublic) {
       setLoading(false);
       return;

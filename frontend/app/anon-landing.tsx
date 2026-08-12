@@ -7,24 +7,16 @@ import {
   type PublicOpportunity,
   type PublicStats,
 } from "@/lib/api";
+import { getDeploymentConfig } from "@/lib/countries";
 
-// Anon-side sector chip set. Labels are user-facing; slugs go to
-// /api/public/opportunities?tags=<slug>. Mirrors api.taxonomy.SECTOR_LABEL_TO_TAG
-// for the labels we want to surface in the chip row — kept short to fit one row.
-const SECTOR_CHIPS: { label: string; slug: string }[] = [
-  { label: "Community", slug: "community" },
-  { label: "Climate", slug: "climate" },
-  { label: "Environment", slug: "environment" },
-  { label: "Education", slug: "education" },
-  { label: "Health", slug: "health" },
-  { label: "Youth", slug: "youth" },
-  { label: "Arts", slug: "arts" },
-  { label: "Sport", slug: "sport" },
-  { label: "Māori", slug: "maori" },
-  { label: "Pasifika", slug: "pasifika" },
-  { label: "Research", slug: "research" },
-  { label: "Disability", slug: "disability" },
-];
+// Anon-side sector chip set. Built from the deployment's tag vocabulary.
+// The label is the tag slug with first letter capitalised.
+function getSectorChips(): { label: string; slug: string }[] {
+  return getDeploymentConfig().tags.map((slug) => ({
+    label: slug.charAt(0).toUpperCase() + slug.slice(1),
+    slug,
+  }));
+}
 
 const PAGE_LIMIT = 20;
 
@@ -147,7 +139,7 @@ function SectorChips({
 }) {
   return (
     <div className="flex flex-wrap gap-2 justify-center">
-      {SECTOR_CHIPS.map((c) => {
+      {getSectorChips().map((c) => {
         const on = active.includes(c.slug);
         return (
           <button

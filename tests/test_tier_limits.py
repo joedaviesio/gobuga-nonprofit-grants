@@ -90,9 +90,9 @@ def set_tier(tier_key):
 # ---------------------------------------------------------------------------
 def case_1():
     log("\n=== Case 1: Scanner tier opportunity limits ===")
-    from api.limits import filter_opportunities_for_tier, TIERS
+    from api.limits import filter_opportunities_for_tier, _get_tiers
 
-    scanner = TIERS["scanner"]
+    scanner = _get_tiers()["scanner"]
     limits = scanner["opportunities_per_cycle"]
     check("Scanner allows 2 high", limits.get("high") == 2)
     check("Scanner allows 2 medium", limits.get("medium") == 2)
@@ -190,9 +190,9 @@ def case_2():
 # ---------------------------------------------------------------------------
 def case_3():
     log("\n=== Case 3: Scanner tier chat message limit ===")
-    from api.limits import TIERS
+    from api.limits import _get_tiers
 
-    scanner = TIERS["scanner"]
+    scanner = _get_tiers()["scanner"]
     check("Scanner chat limit is 5", scanner["chat_messages_per_case"] == 5)
 
     if not TOKEN:
@@ -228,9 +228,9 @@ def case_3():
 # ---------------------------------------------------------------------------
 def case_4():
     log("\n=== Case 4: Officer tier unlimited ===")
-    from api.limits import TIERS, filter_opportunities_for_tier
+    from api.limits import _get_tiers, filter_opportunities_for_tier
 
-    officer = TIERS["officer"]
+    officer = _get_tiers()["officer"]
     check("Officer has no opportunity limits", officer.get("opportunities_per_cycle") is None)
     check("Officer has no case limit", officer.get("max_open_cases") == -1)
     check("Officer has no chat limit", officer.get("chat_messages_per_case") == -1)

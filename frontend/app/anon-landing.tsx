@@ -99,13 +99,14 @@ export default function AnonLanding() {
 }
 
 function Hero({ stats }: { stats: PublicStats | null }) {
+  const config = getDeploymentConfig();
   return (
     <div className="text-center mb-8">
       <h1 className="text-3xl font-bold text-slate-900 font-[family-name:var(--font-dm-sans)]">
-        Live grants for New Zealand
+        Live grants for {config.countryLabel}
       </h1>
       <p className="mt-2 text-base text-slate-700">
-      Never miss a grant your organisation is eligible for. We help NZ nonprofits find and access funding faster.</p>
+      Never miss a grant your organisation is eligible for. We help {config.countryLabel} nonprofits find and access funding faster.</p>
       {stats && (
         <p className="mt-2 text-sm text-slate-600">
           <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />

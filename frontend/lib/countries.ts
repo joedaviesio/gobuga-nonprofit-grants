@@ -84,6 +84,8 @@ const NZ_DEFAULT: DeploymentConfig = {
   country: "nz",
   countryLabel: "New Zealand",
   currency: "NZD",
+  contentLanguage: "en",
+  uiLanguages: ["en"],
   sectorLabels: NZ_SECTOR_LABELS,
   regions: NZ_REGIONS,
   sectorLabelToTag: NZ_SECTOR_LABEL_TO_TAG,
@@ -98,6 +100,8 @@ export interface DeploymentConfig {
   country: string;
   countryLabel: string;
   currency: string;
+  contentLanguage: string;
+  uiLanguages: string[];
   sectorLabels: string[];
   regions: string[];
   sectorLabelToTag: Record<string, string>;
@@ -125,6 +129,8 @@ function _mapPublicConfig(raw: PublicCountryConfig): DeploymentConfig {
     country: raw.country,
     countryLabel: raw.country_label,
     currency: raw.currency,
+    contentLanguage: raw.content_language ?? "en",
+    uiLanguages: raw.ui_languages?.length ? raw.ui_languages : ["en"],
     sectorLabels,
     regions: raw.regions.filter((r) => r !== "national").map(
       (r) => r.charAt(0).toUpperCase() + r.slice(1).replace(/-/g, " ")

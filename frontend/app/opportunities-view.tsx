@@ -16,6 +16,7 @@ import CasesView, { isNewOpenCase } from "@/app/cases-view";
 import TailoredView from "@/app/tailored-view";
 import { getTailoredAccess, type TailoredAccess } from "@/lib/api";
 import { orgSectorsToTags, getDeploymentConfig } from "@/lib/countries";
+import { useI18n } from "@/lib/i18n";
 
 // Persists active sector chips across reloads. Seeded once from the org's
 // saved sectors (mapped label → tag slug); subsequent toggles overwrite.
@@ -36,11 +37,12 @@ function formatAmount(row: OpportunityRow): string | null {
 }
 
 function DeadlineBadge({ deadline }: { deadline: string | null }) {
+  const { t } = useI18n();
   if (!deadline || deadline === "TBC") {
-    return <span className="text-sm text-slate-500">deadline TBC</span>;
+    return <span className="text-sm text-slate-500">{t("opps.deadline_tbc")}</span>;
   }
   if (deadline === "rolling") {
-    return <span className="text-sm text-slate-600">rolling</span>;
+    return <span className="text-sm text-slate-600">{t("opps.rolling")}</span>;
   }
   // Try to render days-until
   const dt = new Date(deadline);
@@ -49,7 +51,7 @@ function DeadlineBadge({ deadline }: { deadline: string | null }) {
     const tone = days < 7 ? "text-red-600" : days < 30 ? "text-amber-600" : "text-slate-600";
     return (
       <span className={`text-sm ${tone}`}>
-        closes {dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+        {t("opps.closes", { date: dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) })}
         {days >= 0 && days <= 60 ? ` · ${days}d` : ""}
       </span>
     );
@@ -70,6 +72,7 @@ function TagPill({ tag, active, onClick }: { tag: string; active: boolean; onCli
 }
 
 export default function OpportunitiesView() {
+  const { t } = useI18n();
   const [pool, setPool] = useState<OpportunityRow[]>([]);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -159,7 +162,7 @@ export default function OpportunitiesView() {
         setHasMore(res.has_more);
       })
       .catch((err: unknown) => {
-        setErrorModal(err instanceof Error ? err.message : "Failed to load opportunities.");
+        setErrorModal(err instanceof Error ? err.message : t("opps.load_failed"));
       })
       .finally(() => setLoading(false));
   }, [queryKey, query]);
@@ -184,7 +187,7 @@ export default function OpportunitiesView() {
       const newCase = await openCaseFromPool(row.id);
       window.location.href = `/case/${newCase.case_id}`;
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Failed to open case.");
+      setErrorModal(err instanceof Error ? err.message : t("opps.open_failed"));
       setOpening(null);
     }
   };
@@ -212,7 +215,7 @@ export default function OpportunitiesView() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Opportunities
+            {t("opps.tab_opportunities")}
           </button>
           {showTailoredTab && (
             <button
@@ -223,7 +226,7 @@ export default function OpportunitiesView() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Tailored Picks
+              {t("opps.tab_tailored")}
             </button>
           )}
           <button
@@ -234,7 +237,7 @@ export default function OpportunitiesView() {
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Cases ({cases.length})
+            {t("opps.tab_cases")} ({cases.length})
             {(() => {
               const newOpen = cases.filter(isNewOpenCase).length;
               return newOpen > 0 ? (
@@ -256,14 +259,14 @@ export default function OpportunitiesView() {
         {/* Header / search */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-slate-900 mb-3 font-[family-name:var(--font-dm-sans)]">
-            Grant opportunities
+            {t("opps.title")}
           </h1>
           <div className="relative">
             <input
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search funders, tags, keywords…"
+              placeholder={t("opps.search_placeholder")}
               className="w-full pl-10 pr-4 py-3 text-base border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-blue-400 shadow-sm"
             />
             <svg
@@ -291,49 +294,49 @@ export default function OpportunitiesView() {
         {/* Region + sort */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <label className="text-sm text-slate-600">
-            Region:{" "}
+            {t("opps.region")}:{" "}
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
               className="text-sm border border-slate-200 rounded px-2 py-1 bg-white"
             >
-              <option value="">any</option>
+              <option value="">{t("opps.any")}</option>
               {getDeploymentConfig().regionSlugs.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
           </label>
           <label className="text-sm text-slate-600">
-            Sort:{" "}
+            {t("opps.sort")}:{" "}
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="text-sm border border-slate-200 rounded px-2 py-1 bg-white"
             >
-              <option value="recency">recency</option>
-              <option value="deadline">deadline</option>
-              <option value="amount_desc">amount (high→low)</option>
-              <option value="random">random</option>
+              <option value="recency">{t("opps.sort_recency")}</option>
+              <option value="deadline">{t("opps.sort_deadline")}</option>
+              <option value="amount_desc">{t("opps.sort_amount")}</option>
+              <option value="random">{t("opps.sort_random")}</option>
             </select>
           </label>
           <span className="ml-auto text-sm text-slate-600">
-            {loading ? "loading…" : `${total} matching opportunit${total === 1 ? "y" : "ies"}`}
+            {loading ? t("opps.loading") : t("opps.n_matching", { n: total })}
           </span>
         </div>
 
         {/* List */}
         {loading && pool.length === 0 ? (
-          <LoadingBar label="Loading opportunities…" />
+          <LoadingBar label={t("opps.loading_opportunities")} />
         ) : pool.length === 0 ? (
           <div className="text-center py-16 text-base text-slate-600">
-            No opportunities match those filters yet.
+            {t("opps.no_matches")}
             {(q || activeTags.length || region) && (
               <div className="mt-3">
                 <button
                   onClick={() => { setQ(""); setActiveTags([]); setRegion(""); }}
                   className="text-sm px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
                 >
-                  Clear filters
+                  {t("opps.clear_filters")}
                 </button>
               </div>
             )}
@@ -361,7 +364,7 @@ export default function OpportunitiesView() {
                         {amt && <span>{amt}</span>}
                         {row.region.length > 0 && (
                           <span className="text-slate-600">
-                            {row.region.includes("national") ? "national" : row.region.join(", ")}
+                            {row.region.includes("national") ? t("opps.national") : row.region.join(", ")}
                           </span>
                         )}
                       </div>
@@ -387,7 +390,7 @@ export default function OpportunitiesView() {
                         >
                           {(() => {
                             try { return new URL(row.source_url).hostname; }
-                            catch { return "Source"; }
+                            catch { return t("opps.source"); }
                           })()}
                         </a>
                       )}
@@ -398,7 +401,7 @@ export default function OpportunitiesView() {
                           href={`/case/${existing.case_id}`}
                           className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
                         >
-                          View case
+                          {t("opps.view_case")}
                         </a>
                       ) : (
                         <button
@@ -406,7 +409,7 @@ export default function OpportunitiesView() {
                           disabled={opening === row.id}
                           className="px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                         >
-                          {opening === row.id ? "Opening…" : "Open case"}
+                          {opening === row.id ? t("opps.opening") : t("opps.open_case")}
                         </button>
                       )}
                     </div>
@@ -425,17 +428,17 @@ export default function OpportunitiesView() {
               disabled={cursor === 0}
               className="px-3 py-1.5 border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50"
             >
-              ← Previous
+              ← {t("common.previous")}
             </button>
             <span className="text-slate-600">
-              Showing {cursor + 1}–{cursor + pool.length} of {total}
+              {t("opps.showing_range", { from: cursor + 1, to: cursor + pool.length, total })}
             </span>
             <button
               onClick={() => setCursor(cursor + 50)}
               disabled={!hasMore}
               className="px-3 py-1.5 border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50"
             >
-              Next →
+              {t("common.next")} →
             </button>
           </div>
         )}

@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef } from "react";
 import { uploadOrgDocument, listOrgUploads, completeSeedingStep, getToken, verifySession } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 
-const DOC_TYPES = [
-  { key: "general", label: "General" },
-  { key: "annual-reports", label: "Annual Reports" },
-  { key: "mission-statements", label: "Mission Statements" },
-  { key: "organisational-reviews", label: "Organisational Reviews" },
-  { key: "previous-applications", label: "Previous Applications" },
-  { key: "financial-statements", label: "Financial Statements" },
-] as const;
+const DOC_TYPES: { key: string; labelKey: MessageKey }[] = [
+  { key: "general", labelKey: "seed.doc_general" },
+  { key: "annual-reports", labelKey: "seed.doc_annual_reports" },
+  { key: "mission-statements", labelKey: "seed.doc_mission_statements" },
+  { key: "organisational-reviews", labelKey: "seed.doc_org_reviews" },
+  { key: "previous-applications", labelKey: "seed.doc_previous_applications" },
+  { key: "financial-statements", labelKey: "seed.doc_financial_statements" },
+];
 
 export default function SeedPage() {
+  const { t } = useI18n();
   const [uploads, setUploads] = useState<Record<string, { filename: string; size: number } | null>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -56,7 +58,7 @@ export default function SeedPage() {
       const result = await uploadOrgDocument(file, docType);
       setUploads((prev) => ({ ...prev, [docType]: { filename: result.filename, size: result.size } }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : t("errors.upload"));
     } finally {
       setUploading(null);
     }
@@ -67,7 +69,7 @@ export default function SeedPage() {
       await completeSeedingStep();
       window.location.href = "/";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to continue");
+      setError(err instanceof Error ? err.message : t("errors.generic"));
     }
   };
 
@@ -80,10 +82,9 @@ export default function SeedPage() {
 
       <div className="max-w-lg mx-auto relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-stone-900">Seed your organisation data</h1>
+          <h1 className="text-2xl font-bold text-stone-900">{t("seed.title")}</h1>
           <p className="text-base text-stone-700 mt-1">
-            Upload key documents to help us understand your organisation better.
-            This is optional — you can skip and add them later.
+            {t("seed.subtitle")}
           </p>
         </div>
 
@@ -102,7 +103,7 @@ export default function SeedPage() {
                 className="card-gradient border border-stone-200/60 backdrop-blur-sm p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-stone-800">{dt.label}</p>
+                  <p className="text-base font-medium text-stone-800">{t(dt.labelKey)}</p>
                   {uploaded && (
                     <p className="text-sm text-stone-600 truncate mt-0.5">
                       {uploaded.filename} ({Math.round(uploaded.size / 1024)}KB)
@@ -135,7 +136,7 @@ export default function SeedPage() {
                         : "bg-white border-stone-300 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                     }`}
                   >
-                    {uploaded ? "Replace" : "Upload"}
+                    {uploaded ? t("seed.replace") : t("seed.upload")}
                   </button>
                 )}
               </div>
@@ -148,13 +149,13 @@ export default function SeedPage() {
             onClick={handleContinue}
             className="px-4 py-2.5 text-base border border-stone-300 text-stone-700 rounded-md hover:bg-stone-100 transition-colors"
           >
-            Skip for now
+            {t("seed.skip_for_now")}
           </button>
           <button
             onClick={handleContinue}
             className="flex-1 px-4 py-2.5 text-base btn-gradient rounded-md"
           >
-            Continue to Dashboard{uploadCount > 0 ? ` (${uploadCount} uploaded)` : ""}
+            {t("seed.continue_dashboard")}{uploadCount > 0 ? ` (${t("seed.n_uploaded", { n: uploadCount })})` : ""}
           </button>
         </div>
       </div>

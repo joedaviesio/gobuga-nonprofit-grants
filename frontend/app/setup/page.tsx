@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { setupOrg, getToken, verifySession } from "@/lib/api";
 import { getEnabledCountries, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
+import { useI18n } from "@/lib/i18n";
 
 type Step = "basics" | "sectors";
 
@@ -40,6 +41,7 @@ function GradientMesh() {
 }
 
 export default function SetupPage() {
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>("basics");
   const [attempted, setAttempted] = useState(false);
   const [basicAttempted, setBasicAttempted] = useState(false);
@@ -160,7 +162,7 @@ export default function SetupPage() {
       });
       window.location.href = "/seed";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Setup failed");
+      setError(err instanceof Error ? err.message : t("setup.setup_failed"));
     } finally {
       setLoading(false);
     }
@@ -176,8 +178,8 @@ export default function SetupPage() {
         <GradientMesh />
         <div className="max-w-lg mx-auto relative z-10">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-stone-900">Set up your organisation</h1>
-            <p className="text-base text-stone-700 mt-1">Step 1 of 2: Tell us about your org</p>
+            <h1 className="text-2xl font-bold text-stone-900">{t("setup.title")}</h1>
+            <p className="text-base text-stone-700 mt-1">{t("setup.step1_subtitle")}</p>
           </div>
 
           <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-4 shadow-lg">
@@ -186,7 +188,7 @@ export default function SetupPage() {
             )}
 
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-1">Organisation name</label>
+              <label className="block text-base font-medium text-stone-700 mb-1">{t("auth.org_name")}</label>
               <input
                 type="text"
                 value={orgName}
@@ -196,12 +198,12 @@ export default function SetupPage() {
                 }`}
               />
               {basicAttempted && missingName && (
-                <p className="text-sm text-red-600 mt-1">Enter your organisation name</p>
+                <p className="text-sm text-red-600 mt-1">{t("setup.enter_org_name")}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-1">Country</label>
+              <label className="block text-base font-medium text-stone-700 mb-1">{t("setup.country")}</label>
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
@@ -209,23 +211,23 @@ export default function SetupPage() {
                   basicAttempted && missingCountry ? "border-red-300 bg-red-50/50" : "border-stone-300"
                 }`}
               >
-                <option value="">Select your country</option>
+                <option value="">{t("setup.select_country")}</option>
                 {getEnabledCountries().map((c) => (
                   <option key={c.slug} value={c.name}>{c.name}</option>
                 ))}
               </select>
               {basicAttempted && missingCountry && (
-                <p className="text-sm text-red-600 mt-1">Select your country</p>
+                <p className="text-sm text-red-600 mt-1">{t("setup.select_country")}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-2">Organisation status</label>
+              <label className="block text-base font-medium text-stone-700 mb-2">{t("setup.org_status")}</label>
               <div className="flex gap-2">
                 {([
-                  { value: "nonprofit", label: "Non-profit" },
-                  { value: "pending", label: "Pending" },
-                  { value: "forprofit", label: "For-profit" },
+                  { value: "nonprofit", label: t("setup.status_nonprofit") },
+                  { value: "pending", label: t("setup.status_pending") },
+                  { value: "forprofit", label: t("setup.status_forprofit") },
                 ] as const).map((opt) => (
                   <button
                     key={opt.value}
@@ -243,7 +245,7 @@ export default function SetupPage() {
               </div>
               {orgStatus === "forprofit" && (
                 <p className="mt-2 text-base text-amber-700">
-                  GoBuga is designed for non-profit organisations. Some grant opportunities may not be applicable to for-profit entities.
+                  {t("setup.forprofit_warning")}
                 </p>
               )}
             </div>
@@ -258,7 +260,7 @@ export default function SetupPage() {
               }}
               className="w-full px-4 py-2.5 text-base btn-gradient rounded-md"
             >
-              Next: Sectors & Geographies
+              {t("setup.next_sectors")}
             </button>
           </div>
         </div>
@@ -272,16 +274,16 @@ export default function SetupPage() {
         <GradientMesh />
         <div className="max-w-lg mx-auto relative z-10">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-stone-900">Sectors & Geographies</h1>
-            <p className="text-base text-stone-700 mt-1">Step 2 of 2: What grants should we look for?</p>
+            <h1 className="text-2xl font-bold text-stone-900">{t("setup.sectors_title")}</h1>
+            <p className="text-base text-stone-700 mt-1">{t("setup.step2_subtitle")}</p>
           </div>
 
           <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 space-y-6 shadow-lg">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-base font-medium text-stone-700">Funding sectors (select all that apply)</label>
+                <label className="block text-base font-medium text-stone-700">{t("setup.funding_sectors")}</label>
                 {attempted && missingSectors && (
-                  <span className="text-sm text-red-600 animate-pulse">Select at least one</span>
+                  <span className="text-sm text-red-600 animate-pulse">{t("setup.select_at_least_one")}</span>
                 )}
               </div>
               <div className={`flex flex-wrap gap-2 rounded-lg p-0.5 transition-colors ${
@@ -305,9 +307,9 @@ export default function SetupPage() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-base font-medium text-stone-700">Target geographies</label>
+                <label className="block text-base font-medium text-stone-700">{t("setup.target_geographies")}</label>
                 {attempted && missingGeographies && (
-                  <span className="text-sm text-amber-600">Recommended: pick at least one</span>
+                  <span className="text-sm text-amber-600">{t("setup.recommended_one")}</span>
                 )}
               </div>
               {(() => {
@@ -327,7 +329,7 @@ export default function SetupPage() {
                           : "bg-white border-stone-200 text-stone-700 hover:border-blue-300 hover:bg-blue-50/30"
                       }`}
                     >
-                      All of {country}
+                      {t("setup.all_of", { country })}
                     </button>
                   );
                 }
@@ -339,7 +341,7 @@ export default function SetupPage() {
                         {country}
                         {(isWholeSelected || selectedRegionCount > 0) && (
                           <span className="text-blue-500 font-normal ml-1.5">
-                            ({isWholeSelected ? "all" : selectedRegionCount})
+                            ({isWholeSelected ? t("setup.all") : selectedRegionCount})
                           </span>
                         )}
                       </span>
@@ -351,7 +353,7 @@ export default function SetupPage() {
                             : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
                         }`}
                       >
-                        {isWholeSelected ? "Deselect all" : "Select all"}
+                        {isWholeSelected ? t("setup.deselect_all") : t("setup.select_all")}
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -375,7 +377,7 @@ export default function SetupPage() {
             </div>
 
             {loading && (
-              <LoadingBar label="Setting up your organisation..." />
+              <LoadingBar label={t("setup.setting_up")} />
             )}
 
             <div className="flex gap-3">
@@ -383,7 +385,7 @@ export default function SetupPage() {
                 onClick={() => setStep("basics")}
                 className="px-4 py-2.5 text-base border border-stone-300 text-stone-800 rounded-md hover:bg-stone-100 transition-colors"
               >
-                Back
+                {t("common.back")}
               </button>
               <button
                 onClick={handleContinue}
@@ -393,16 +395,16 @@ export default function SetupPage() {
                     : "bg-stone-300 text-stone-500 cursor-default"
                 }`}
               >
-                {loading ? "Setting up..." : "Continue"}
+                {loading ? t("setup.setting_up_short") : t("common.continue")}
               </button>
             </div>
 
             {attempted && (missingSectors || missingGeographies) && (
               <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm text-amber-800 space-y-1">
-                <p className="font-medium">Almost there — just a couple things:</p>
+                <p className="font-medium">{t("setup.almost_there")}</p>
                 <ul className="list-disc list-inside space-y-0.5 text-amber-700">
-                  {missingSectors && <li>Pick at least one <strong>funding sector</strong></li>}
-                  {missingGeographies && <li>Pick at least one <strong>target geography</strong> (recommended)</li>}
+                  {missingSectors && <li>{t("setup.pick_sector")}</li>}
+                  {missingGeographies && <li>{t("setup.pick_geography")}</li>}
                 </ul>
               </div>
             )}

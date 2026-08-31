@@ -914,6 +914,8 @@ def api_public_country_config(request: Request, response: Response):
         "country": config.slug,
         "country_label": config.country_label,
         "currency": config.currency,
+        "content_language": config.content_language,
+        "ui_languages": config.ui_languages,
         "tiers": config.tiers,
         "tags": config.tags,
         "sector_slices": config.sector_slices,

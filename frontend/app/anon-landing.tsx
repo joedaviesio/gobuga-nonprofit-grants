@@ -8,6 +8,7 @@ import {
   type PublicStats,
 } from "@/lib/api";
 import { getDeploymentConfig } from "@/lib/countries";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 
 // Anon-side sector chip set. Built from the deployment's tag vocabulary.
 // The label is the tag slug with first letter capitalised.
@@ -21,6 +22,7 @@ function getSectorChips(): { label: string; slug: string }[] {
 const PAGE_LIMIT = 20;
 
 export default function AnonLanding() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [opps, setOpps] = useState<PublicOpportunity[]>([]);
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -74,7 +76,7 @@ export default function AnonLanding() {
             </div>
           ) : opps.length === 0 ? (
             <p className="text-base text-slate-600 py-8 text-center">
-              No live opportunities match those filters right now.
+              {t("landing.no_matches")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -99,18 +101,19 @@ export default function AnonLanding() {
 }
 
 function Hero({ stats }: { stats: PublicStats | null }) {
+  const { t } = useI18n();
   const config = getDeploymentConfig();
   return (
     <div className="text-center mb-8">
       <h1 className="text-3xl font-bold text-slate-900 font-[family-name:var(--font-dm-sans)]">
-        Live grants for {config.countryLabel}
+        {t("landing.hero_title", { country: config.countryLabel })}
       </h1>
       <p className="mt-2 text-base text-slate-700">
-      Never miss a grant your organisation is eligible for. We help {config.countryLabel} nonprofits find and access funding faster.</p>
+      {t("landing.hero_subtitle", { country: config.countryLabel })}</p>
       {stats && (
         <p className="mt-2 text-sm text-slate-600">
           <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse" />
-          <strong className="font-medium tabular-nums">{stats.live_count}</strong> live opportunities indexed
+          <strong className="font-medium tabular-nums">{stats.live_count}</strong> {t("landing.live_indexed")}
         </p>
       )}
       <div className="mt-5 flex items-center justify-center gap-3">
@@ -118,13 +121,13 @@ function Hero({ stats }: { stats: PublicStats | null }) {
           href="/register"
           className="px-5 py-2 text-base font-medium btn-gradient rounded-lg"
         >
-          Sign up free
+          {t("landing.sign_up_free")}
         </a>
         <a
           href="/login"
           className="px-5 py-2 text-base font-medium text-slate-800 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
         >
-          Sign in
+          {t("auth.sign_in")}
         </a>
       </div>
     </div>
@@ -161,6 +164,7 @@ function SectorChips({
 }
 
 function AnonOpportunityCard({ opp }: { opp: PublicOpportunity }) {
+  const { t } = useI18n();
   return (
     <div className="card-gradient border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
@@ -176,7 +180,7 @@ function AnonOpportunityCard({ opp }: { opp: PublicOpportunity }) {
           )}
           {opp.amount_band && (
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-slate-600">
-              <span><span className="text-slate-500">Amount:</span> {opp.amount_band}</span>
+              <span><span className="text-slate-500">{t("common.amount")}:</span> {opp.amount_band}</span>
             </div>
           )}
           {opp.tags && opp.tags.length > 0 && (
@@ -193,14 +197,22 @@ function AnonOpportunityCard({ opp }: { opp: PublicOpportunity }) {
           href={opp.id ? `/register?from=${encodeURIComponent(opp.id)}` : "/register"}
           className="shrink-0 px-3 py-1.5 text-sm btn-gradient rounded-lg whitespace-nowrap"
         >
-          Sign up to open case
+          {t("landing.sign_up_open_case")}
         </a>
       </div>
     </div>
   );
 }
 
+// Backend buckets are English strings; map the known ones to translatable keys.
+const BUCKET_KEYS: Record<string, MessageKey> = {
+  "Closes this week": "landing.closes_this_week",
+  "Closes this month": "landing.closes_this_month",
+  "Rolling": "landing.rolling",
+};
+
 function DeadlineBadge({ bucket }: { bucket: string }) {
+  const { t } = useI18n();
   const tone =
     bucket === "Closes this week"
       ? "bg-red-50 text-red-600 border-red-200"
@@ -209,62 +221,66 @@ function DeadlineBadge({ bucket }: { bucket: string }) {
       : bucket === "Rolling"
       ? "bg-green-50 text-green-700 border-green-200"
       : "bg-slate-50 text-slate-600 border-slate-200";
+  const key = BUCKET_KEYS[bucket];
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full border ${tone}`}>
-      {bucket}
+      {key ? t(key) : bucket}
     </span>
   );
 }
 
 function InlineCTA() {
+  const { t } = useI18n();
   return (
     <div className="my-2 px-4 py-3 rounded-xl bg-blue-50/50 border border-blue-100 text-center">
       <p className="text-sm text-blue-800">
-        Funder names and exact deadlines are unlocked on a free account.{" "}
-        <a href="/register" className="font-semibold underline hover:no-underline">Sign up</a>
+        {t("landing.inline_cta")}{" "}
+        <a href="/register" className="font-semibold underline hover:no-underline">{t("landing.sign_up")}</a>
       </p>
     </div>
   );
 }
 
 function FooterCTA() {
+  const { t } = useI18n();
   return (
     <div className="mt-10 px-6 py-8 rounded-2xl card-gradient border border-slate-200 text-center">
       <h2 className="text-xl font-semibold text-slate-900 font-[family-name:var(--font-dm-sans)]">
-        See the full list, with funders and deadlines
+        {t("landing.footer_cta_title")}
       </h2>
       <p className="mt-1 text-base text-slate-700">
-        Free Grant Scanner account
+        {t("landing.footer_cta_subtitle")}
       </p>
       <a
         href="/register"
         className="inline-block mt-4 px-6 py-2.5 text-base font-medium btn-gradient rounded-lg"
       >
-        Create your free account
+        {t("auth.create_free_account")}
       </a>
     </div>
   );
 }
 
 function FilterNudge({ onDismiss }: { onDismiss: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] bg-white border border-slate-200 rounded-xl shadow-lg p-4 flex items-start gap-3">
       <div className="flex-1">
-        <p className="text-base font-medium text-slate-900">Save these filters?</p>
+        <p className="text-base font-medium text-slate-900">{t("landing.nudge_title")}</p>
         <p className="text-sm text-slate-700 mt-0.5">
-          Sign up free to keep your sector picks — and unlock the full opportunity feed.
+          {t("landing.nudge_body")}
         </p>
         <a
           href="/register"
           className="inline-block mt-2 px-3 py-1.5 text-sm font-medium btn-gradient rounded-lg"
         >
-          Sign up free
+          {t("landing.sign_up_free")}
         </a>
       </div>
       <button
         onClick={onDismiss}
         className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-        aria-label="Dismiss"
+        aria-label={t("common.dismiss")}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

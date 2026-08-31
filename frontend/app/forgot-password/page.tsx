@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { requestPasswordReset } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
+import { useI18n } from "@/lib/i18n";
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -18,7 +20,7 @@ export default function ForgotPasswordPage() {
       await requestPasswordReset(email);
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t("errors.generic"));
     } finally {
       setLoading(false);
     }
@@ -32,17 +34,17 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-stone-900 [text-shadow:_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white,_1px_1px_0_white]" style={{ fontFamily: 'var(--font-geist-sans)' }}>gobuga</h1>
-          <p className="text-base text-stone-700 mt-2 font-[family-name:var(--font-dm-sans)]">Reset your password</p>
+          <p className="text-base text-stone-700 mt-2 font-[family-name:var(--font-dm-sans)]">{t("auth.reset_title")}</p>
         </div>
 
         {sent ? (
           <div className="card-gradient border border-stone-200/60 backdrop-blur-sm p-6 shadow-lg">
             <p className="text-base text-stone-800 mb-4">
-              If an account exists for <strong>{email}</strong>, we've sent a password reset link. Check your inbox.
+              {t("auth.reset_sent_before")} <strong>{email}</strong>{t("auth.reset_sent_after")}
             </p>
             <p className="text-base text-stone-600">
-              The link expires in 15 minutes. Didn't receive it? Check your spam folder or{" "}
-              <button onClick={() => setSent(false)} className="text-blue-600 hover:underline font-medium">try again</button>.
+              {t("auth.reset_expiry")}{" "}
+              <button onClick={() => setSent(false)} className="text-blue-600 hover:underline font-medium">{t("auth.try_again")}</button>.
             </p>
           </div>
         ) : (
@@ -54,11 +56,11 @@ export default function ForgotPasswordPage() {
             )}
 
             <p className="text-base text-stone-600">
-              Enter the email address you used to register and we'll send you a link to reset your password.
+              {t("auth.reset_instructions")}
             </p>
 
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-1">Email</label>
+              <label className="block text-base font-medium text-stone-700 mb-1">{t("auth.email")}</label>
               <input
                 type="email"
                 value={email}
@@ -70,19 +72,19 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            {loading && <LoadingBar label="Sending reset link..." />}
+            {loading && <LoadingBar label={t("auth.sending_reset")} />}
             <button
               type="submit"
               disabled={loading}
               className="w-full px-4 py-2.5 text-base btn-gradient rounded-md disabled:opacity-50"
             >
-              {loading ? "Sending..." : "Send reset link"}
+              {loading ? t("auth.sending") : t("auth.send_reset_link")}
             </button>
           </form>
         )}
 
         <p className="text-center text-base text-stone-600 mt-4">
-          <a href="/login" className="text-blue-600 hover:underline font-medium">Back to sign in</a>
+          <a href="/login" className="text-blue-600 hover:underline font-medium">{t("auth.back_to_sign_in")}</a>
         </p>
       </div>
     </div>

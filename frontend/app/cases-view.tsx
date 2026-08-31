@@ -2,8 +2,20 @@
 
 import { useState } from "react";
 import type { CaseSummary } from "@/lib/api";
+import { useI18n, type MessageKey } from "@/lib/i18n";
+
+// Backend statuses are English slugs; map them to translatable labels.
+const STATUS_KEYS: Record<string, MessageKey> = {
+  open: "cases.status_open",
+  submitted: "cases.status_submitted",
+  accepted: "cases.status_accepted",
+  approved: "cases.status_accepted",
+  rejected: "cases.status_rejected",
+  closed: "cases.status_closed",
+};
 
 export function StatusBadge({ status }: { status: string }) {
+  const { t } = useI18n();
   const colors =
     status === "open"
       ? "bg-blue-50 text-blue-600 border border-blue-200"
@@ -18,17 +30,17 @@ export function StatusBadge({ status }: { status: string }) {
       : "bg-slate-50 text-slate-600 border border-slate-200";
   return (
     <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
-      {status}
+      {STATUS_KEYS[status] ? t(STATUS_KEYS[status]) : status}
     </span>
   );
 }
 
 export const CASE_TABS = [
-  { key: "open", label: "Open", color: "text-blue-600 border-blue-600" },
-  { key: "submitted", label: "Submitted", color: "text-amber-600 border-amber-600" },
-  { key: "accepted", label: "Accepted", color: "text-green-600 border-green-600" },
-  { key: "rejected", label: "Rejected", color: "text-red-600 border-red-600" },
-  { key: "closed", label: "Closed", color: "text-slate-700 border-slate-500" },
+  { key: "open", labelKey: "cases.status_open", color: "text-blue-600 border-blue-600" },
+  { key: "submitted", labelKey: "cases.status_submitted", color: "text-amber-600 border-amber-600" },
+  { key: "accepted", labelKey: "cases.status_accepted", color: "text-green-600 border-green-600" },
+  { key: "rejected", labelKey: "cases.status_rejected", color: "text-red-600 border-red-600" },
+  { key: "closed", labelKey: "cases.status_closed", color: "text-slate-700 border-slate-500" },
 ] as const;
 
 type CaseTab = (typeof CASE_TABS)[number]["key"];
@@ -55,6 +67,7 @@ export function isNewOpenCase(c: CaseSummary): boolean {
 }
 
 export default function CasesView({ cases }: { cases: CaseSummary[] }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<CaseTab>("open");
 
   const filtered = cases.filter((c) => {
@@ -77,17 +90,17 @@ export default function CasesView({ cases }: { cases: CaseSummary[] }) {
   return (
     <div>
       <div className="flex gap-1 mb-4 border-b border-slate-200">
-        {CASE_TABS.map((t) => (
+        {CASE_TABS.map((tabDef) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabDef.key}
+            onClick={() => setTab(tabDef.key)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? t.color
+              tab === tabDef.key
+                ? tabDef.color
                 : "text-slate-600 border-transparent hover:text-slate-600"
             }`}
           >
-            {t.label} ({counts[t.key]})
+            {t(tabDef.labelKey)} ({counts[tabDef.key]})
           </button>
         ))}
       </div>
@@ -95,8 +108,8 @@ export default function CasesView({ cases }: { cases: CaseSummary[] }) {
       {filtered.length === 0 ? (
         <p className="text-base text-slate-600 py-4">
           {cases.length === 0
-            ? "No cases yet. Open one from Opportunities."
-            : `No ${tab} cases.`}
+            ? t("cases.none_yet")
+            : t("cases.none_in_tab", { tab: t(STATUS_KEYS[tab]) })}
         </p>
       ) : (
         <div className="space-y-2">
@@ -117,9 +130,9 @@ export default function CasesView({ cases }: { cases: CaseSummary[] }) {
                 <StatusBadge status={c.status} />
               </div>
               <div className="mt-1 flex gap-4 text-sm text-slate-600">
-                <span>{c.sections_count} sections</span>
-                <span>{c.uploads_count} uploads</span>
-                <span>updated {new Date(c.updated).toLocaleDateString()}</span>
+                <span>{t("cases.n_sections", { n: c.sections_count })}</span>
+                <span>{t("cases.n_uploads", { n: c.uploads_count })}</span>
+                <span>{t("cases.updated", { date: new Date(c.updated).toLocaleDateString() })}</span>
               </div>
             </a>
           ))}

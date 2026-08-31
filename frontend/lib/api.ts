@@ -879,6 +879,8 @@ export interface PublicCountryConfig {
   country: string;
   country_label: string;
   currency: string;
+  content_language: string;
+  ui_languages: string[];
   tiers: Record<string, TierDefinition>;
   tags: string[];
   sector_slices: { id: string; label: string; tags: string[] }[];

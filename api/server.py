@@ -41,7 +41,7 @@ from api.usage_log import read_usage, usage_summary
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.18",
+    version="0.2.21",
 )
 
 _app_url = os.environ.get("APP_URL", "http://localhost:3002")

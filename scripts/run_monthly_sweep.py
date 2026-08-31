@@ -14,11 +14,14 @@ import os
 import sys
 from datetime import datetime, timezone
 
+from api.country_config import get_country
 from api.tenant import platform_latest_path
 from orchestrator.sweep import run_country_sweep
 
 
-COUNTRIES = ("nz",)
+# Each deployment sweeps its own country (GOBUGA_COUNTRY env var), matching
+# the behaviour of the /api/admin/run-sweep endpoint.
+COUNTRIES = (get_country(),)
 
 
 def main() -> int:

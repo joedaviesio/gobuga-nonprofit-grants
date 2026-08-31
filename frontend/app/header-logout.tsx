@@ -2,9 +2,10 @@
 
 import { useAuth } from "./auth-gate";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 function formatCountdown(totalSeconds: number): string {
-  if (totalSeconds <= 0) return "Ready";
+  if (totalSeconds <= 0) return "";
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const mins = Math.floor((totalSeconds % 3600) / 60);
@@ -15,6 +16,7 @@ function formatCountdown(totalSeconds: number): string {
 }
 
 function CycleCountdown({ expiresAt }: { expiresAt: string }) {
+  const { t } = useI18n();
   const [remaining, setRemaining] = useState(() => {
     const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000);
     return Math.max(0, diff);
@@ -35,7 +37,7 @@ function CycleCountdown({ expiresAt }: { expiresAt: string }) {
       {isExpired ? (
         <span className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-          Ready
+          {t("header.ready")}
         </span>
       ) : (
         <span className="flex items-center gap-1">
@@ -49,6 +51,7 @@ function CycleCountdown({ expiresAt }: { expiresAt: string }) {
 
 export function HeaderLogout() {
   const { logout, session } = useAuth();
+  const { t } = useI18n();
 
   if (!session) return null;
 
@@ -62,27 +65,27 @@ export function HeaderLogout() {
       ) : (
         <span className="text-sm font-mono flex items-center gap-1 text-blue-600">
           <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-          Cycle ready
+          {t("header.cycle_ready")}
         </span>
       )}
       {session.org_name && (
         <span className="text-sm text-stone-700 hidden sm:inline font-medium">{session.org_name}</span>
       )}
       <a href="/settings" className="text-sm text-stone-600 hover:text-blue-600 transition-colors font-medium">
-        Settings
+        {t("header.settings")}
       </a>
       <span className="flex items-center gap-1.5">
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
         </span>
-        <span className="text-sm text-green-600 hidden sm:inline">Online</span>
+        <span className="text-sm text-green-600 hidden sm:inline">{t("header.online")}</span>
       </span>
       <button
         onClick={logout}
         className="text-sm text-stone-600 hover:text-red-600 transition-colors font-medium"
       >
-        Sign out
+        {t("header.sign_out")}
       </button>
     </div>
   );

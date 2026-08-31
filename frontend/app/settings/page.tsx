@@ -8,40 +8,38 @@ import ErrorModal from "@/app/error-modal";
 import AuthGate, { useAuth } from "../auth-gate";
 
 import { getDeploymentConfig } from "@/lib/countries";
+import { useI18n } from "@/lib/i18n";
 
-function getTierInfo(tierKey: string): { label: string; price: string; features: string[] } {
+type Translate = ReturnType<typeof useI18n>["t"];
+
+function getTierInfo(tierKey: string, t: Translate): { label: string; price: string; features: string[] } {
   const config = getDeploymentConfig();
   const tierDef = (config.tiers as Record<string, { label?: string; price_monthly?: number; max_open_cases?: number; chat_messages_per_case?: number; bots_bcd?: boolean; export_docx?: boolean }>)?.[tierKey];
 
   if (!tierDef) {
     // Fallback for when config hasn't loaded yet
     return tierKey === "officer"
-      ? { label: "Grant Officer", price: "Paid", features: ["Tailored Picks", "Unlimited cases & chat", "All bots", "DOCX export"] }
-      : { label: "Grant Scanner", price: "Free", features: ["Search grants", "Open cases", "Chat with bots", "Markdown export"] };
+      ? { label: t("tiers.officer"), price: t("tiers.paid"), features: [t("tiers.fallback_officer_1"), t("tiers.fallback_officer_2"), t("tiers.fallback_officer_3"), t("tiers.fallback_officer_4")] }
+      : { label: t("tiers.scanner"), price: t("tiers.free"), features: [t("tiers.fallback_scanner_1"), t("tiers.fallback_scanner_2"), t("tiers.fallback_scanner_3"), t("tiers.fallback_scanner_4")] };
   }
 
-  const price = tierDef.price_monthly === 0 ? "Free" : `$${tierDef.price_monthly} ${config.currency}/mo`;
-  const cases = tierDef.max_open_cases === -1 ? "Unlimited open cases" : `${tierDef.max_open_cases} open cases at a time`;
-  const chat = tierDef.chat_messages_per_case === -1 ? "Unlimited chat" : `${tierDef.chat_messages_per_case} chat messages per case`;
+  const price = tierDef.price_monthly === 0 ? t("tiers.free") : `$${tierDef.price_monthly} ${config.currency}/${t("tiers.mo")}`;
+  const cases = tierDef.max_open_cases === -1 ? t("tiers.unlimited_cases") : t("tiers.n_open_cases", { n: tierDef.max_open_cases ?? 0 });
+  const chat = tierDef.chat_messages_per_case === -1 ? t("tiers.unlimited_chat") : t("tiers.n_chat_messages", { n: tierDef.chat_messages_per_case ?? 0 });
   const features: string[] = [
-    `Search ${config.countryLabel} grants`,
+    t("tiers.search_grants", { country: config.countryLabel }),
     cases,
     chat,
   ];
-  if (tierDef.bots_bcd) features.push("Parse & Fill bots");
-  if (tierDef.export_docx) features.push("DOCX export");
-  if (tierKey === "officer") features.unshift("Weekly Tailored Picks (profile-steered)");
+  if (tierDef.bots_bcd) features.push(t("tiers.parse_fill_bots"));
+  if (tierDef.export_docx) features.push(t("tiers.docx_export"));
+  if (tierKey === "officer") features.unshift(t("tiers.weekly_tailored"));
 
   return { label: tierDef.label || tierKey, price, features };
 }
 
-// Legacy compatibility — used in a few places below
-const TIER_INFO = {
-  scanner: { label: "Grant Scanner", price: "Free", features: [] as string[] },
-  officer: { label: "Grant Officer", price: "Paid", features: [] as string[] },
-};
-
 function SettingsContent() {
+  const { t } = useI18n();
   const { session, refreshSession } = useAuth();
   const [org, setOrg] = useState<OrgProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,14 +84,14 @@ function SettingsContent() {
       const fresh = await getTailoredAccess();
       setTailored(fresh);
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Failed to update toggle");
+      setErrorModal(err instanceof Error ? err.message : t("errors.save"));
     } finally {
       setSavingTailored(false);
     }
   };
 
   const formatRemaining = (seconds: number): string => {
-    if (seconds <= 0) return "ready now";
+    if (seconds <= 0) return t("tailored.ready_now");
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     if (days > 0) return `${days}d ${hours}h`;
@@ -141,7 +139,7 @@ function SettingsContent() {
       if (fresh) setOrg(fresh);
       cancelEdit();
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Failed to save");
+      setErrorModal(err instanceof Error ? err.message : t("errors.save"));
     } finally {
       setSaving(false);
     }
@@ -204,7 +202,7 @@ function SettingsContent() {
     const params = new URLSearchParams(window.location.search);
     const checkout = params.get("checkout");
     if (checkout === "success") {
-      setCheckoutMessage("Upgrade successful! Welcome to Grant Officer.");
+      setCheckoutMessage(t("settings.upgrade_success"));
       refreshSession();
       // Clean up URL
       window.history.replaceState({}, "", "/settings");
@@ -220,7 +218,7 @@ function SettingsContent() {
       const { url } = await createCheckout("starter");
       window.location.href = url;
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Failed to start checkout");
+      setErrorModal(err instanceof Error ? err.message : t("settings.checkout_failed"));
       setCheckingOut(false);
     }
   };
@@ -230,7 +228,7 @@ function SettingsContent() {
       const { url } = await getBillingPortal();
       window.location.href = url;
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Failed to open billing portal");
+      setErrorModal(err instanceof Error ? err.message : t("settings.billing_failed"));
     }
   };
 
@@ -243,7 +241,7 @@ function SettingsContent() {
       const fresh = await listOrgUploads().catch(() => []);
       setUploads(fresh);
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Upload failed");
+      setErrorModal(err instanceof Error ? err.message : t("errors.upload"));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -256,7 +254,7 @@ function SettingsContent() {
       await deleteOrgUpload(filename);
       setUploads((prev) => prev.filter((f) => f.filename !== filename));
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Delete failed");
+      setErrorModal(err instanceof Error ? err.message : t("errors.delete"));
     } finally {
       setDeletingFile(null);
     }
@@ -266,14 +264,13 @@ function SettingsContent() {
     return (
       <div className="min-h-screen app-bg">
         <div className="max-w-3xl mx-auto px-6 py-8">
-          <LoadingBar label="Loading settings..." />
+          <LoadingBar label={t("settings.loading")} />
         </div>
       </div>
     );
   }
 
   const currentTier = session?.tier || "scanner";
-  const tierInfo = getTierInfo(currentTier);
 
   const orgCountryConfig = findCountry(org?.country);
   const orgSectorOptions = orgCountryConfig?.sectors ?? [];
@@ -284,15 +281,15 @@ function SettingsContent() {
     <div className="min-h-screen app-bg">
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
       <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
-      <h1 className="text-2xl font-bold text-stone-800">Settings</h1>
+      <h1 className="text-2xl font-bold text-stone-800">{t("header.settings")}</h1>
 
       {/* Org Profile */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-lg font-bold text-stone-700 mb-3">Organisation</h2>
+        <h2 className="text-lg font-bold text-stone-700 mb-3">{t("settings.organisation")}</h2>
         <div className="space-y-2 text-base">
           {/* Name */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-700">Name</span>
+            <span className="text-stone-700">{t("settings.name")}</span>
             {editing === "name" ? (
               <div className="flex items-center gap-2">
                 <input
@@ -303,9 +300,9 @@ function SettingsContent() {
                   autoFocus
                 />
                 <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
-                  {saving ? "..." : "Save"}
+                  {saving ? "..." : t("common.save")}
                 </button>
-                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">{t("common.cancel")}</button>
               </div>
             ) : (
               <button onClick={() => startEdit("name")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -316,7 +313,7 @@ function SettingsContent() {
 
           {/* Country */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-700">Country</span>
+            <span className="text-stone-700">{t("setup.country")}</span>
             {editing === "country" ? (
               <div className="flex items-center gap-2">
                 <select
@@ -330,9 +327,9 @@ function SettingsContent() {
                   ))}
                 </select>
                 <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
-                  {saving ? "..." : "Save"}
+                  {saving ? "..." : t("common.save")}
                 </button>
-                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">{t("common.cancel")}</button>
               </div>
             ) : (
               <button onClick={() => startEdit("country")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -343,7 +340,7 @@ function SettingsContent() {
 
           {/* Website */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-700">Website</span>
+            <span className="text-stone-700">{t("settings.website")}</span>
             {editing === "website" ? (
               <div className="flex items-center gap-2">
                 <input
@@ -355,9 +352,9 @@ function SettingsContent() {
                   autoFocus
                 />
                 <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
-                  {saving ? "..." : "Save"}
+                  {saving ? "..." : t("common.save")}
                 </button>
-                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
+                <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">{t("common.cancel")}</button>
               </div>
             ) : (
               <button onClick={() => startEdit("website")} className="text-stone-800 hover:text-blue-600 transition-colors">
@@ -369,10 +366,10 @@ function SettingsContent() {
           {/* Sectors */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-stone-700">Sectors</span>
+              <span className="text-stone-700">{t("settings.sectors")}</span>
               {editing !== "sectors" && (
                 <button onClick={() => startEdit("sectors")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Edit
+                  {t("common.edit")}
                 </button>
               )}
             </div>
@@ -395,9 +392,9 @@ function SettingsContent() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
-                    {saving ? "Saving..." : "Save"}
+                    {saving ? t("common.saving") : t("common.save")}
                   </button>
-                  <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
+                  <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">{t("common.cancel")}</button>
                 </div>
               </div>
             ) : (
@@ -412,10 +409,10 @@ function SettingsContent() {
           {/* Geographies */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-stone-700">Geographies</span>
+              <span className="text-stone-700">{t("settings.geographies")}</span>
               {editing !== "geographies" && (
                 <button onClick={() => startEdit("geographies")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Edit
+                  {t("common.edit")}
                 </button>
               )}
             </div>
@@ -430,7 +427,7 @@ function SettingsContent() {
                     );
 
                     if (!orgCountryName) {
-                      return <span className="text-sm text-stone-600">Set a country first.</span>;
+                      return <span className="text-sm text-stone-600">{t("settings.set_country_first")}</span>;
                     }
 
                     return (
@@ -450,7 +447,7 @@ function SettingsContent() {
                                   : "bg-white border-stone-200 text-stone-600 hover:border-stone-300"
                             }`}
                           >
-                            All of {orgCountryName}
+                            {t("setup.all_of", { country: orgCountryName })}
                           </button>
                         </div>
                         {hasRegions && (
@@ -476,9 +473,9 @@ function SettingsContent() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveEdit} disabled={saving} className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
-                    {saving ? "Saving..." : "Save"}
+                    {saving ? t("common.saving") : t("common.save")}
                   </button>
-                  <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">Cancel</button>
+                  <button onClick={cancelEdit} className="text-sm text-stone-600 hover:text-stone-600">{t("common.cancel")}</button>
                 </div>
               </div>
             ) : (
@@ -502,9 +499,9 @@ function SettingsContent() {
 
       {/* Organisation Data */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-lg font-bold text-stone-700 mb-1">Organisation Data</h2>
+        <h2 className="text-lg font-bold text-stone-700 mb-1">{t("settings.org_data")}</h2>
         <p className="text-sm text-stone-600 mb-4">
-          Upload documents that inform your grant scanning cycles. These are used as context when identifying and assessing opportunities.
+          {t("settings.org_data_desc")}
         </p>
 
         {/* Upload */}
@@ -514,17 +511,17 @@ function SettingsContent() {
             onChange={(e) => setUploadDocType(e.target.value)}
             className="px-2 py-1.5 text-sm border border-stone-200 rounded-md focus:outline-none focus:border-blue-400"
           >
-            <option value="general">General</option>
-            <option value="annual-reports">Annual Reports</option>
-            <option value="mission-statements">Mission Statements</option>
-            <option value="organisational-reviews">Organisational Reviews</option>
-            <option value="previous-applications">Previous Applications</option>
-            <option value="financial-statements">Financial Statements</option>
+            <option value="general">{t("seed.doc_general")}</option>
+            <option value="annual-reports">{t("seed.doc_annual_reports")}</option>
+            <option value="mission-statements">{t("seed.doc_mission_statements")}</option>
+            <option value="organisational-reviews">{t("seed.doc_org_reviews")}</option>
+            <option value="previous-applications">{t("seed.doc_previous_applications")}</option>
+            <option value="financial-statements">{t("seed.doc_financial_statements")}</option>
           </select>
           <label className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-colors ${
             uploading ? "bg-stone-100 text-stone-600" : "bg-blue-600 text-white hover:bg-blue-700"
           }`}>
-            {uploading ? "Uploading..." : "Upload file"}
+            {uploading ? t("settings.uploading") : t("settings.upload_file")}
             <input
               type="file"
               className="hidden"
@@ -537,7 +534,7 @@ function SettingsContent() {
 
         {/* File list */}
         {uploads.length === 0 ? (
-          <p className="text-sm text-stone-600">No documents uploaded yet.</p>
+          <p className="text-sm text-stone-600">{t("settings.no_documents")}</p>
         ) : (
           <div className="space-y-1.5">
             {uploads.map((file) => (
@@ -558,7 +555,7 @@ function SettingsContent() {
                   disabled={deletingFile === file.filename}
                   className="text-sm text-red-400 hover:text-red-600 transition-colors disabled:opacity-50 shrink-0 ml-2"
                 >
-                  {deletingFile === file.filename ? "..." : "Remove"}
+                  {deletingFile === file.filename ? "..." : t("settings.remove")}
                 </button>
               </div>
             ))}
@@ -568,7 +565,7 @@ function SettingsContent() {
 
       {/* Tier */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-lg font-bold text-stone-700 mb-3">Service Tier</h2>
+        <h2 className="text-lg font-bold text-stone-700 mb-3">{t("settings.service_tier")}</h2>
 
         {checkoutMessage && (
           <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-700">
@@ -577,15 +574,15 @@ function SettingsContent() {
         )}
 
         {(() => {
-          const scannerInfo = getTierInfo("scanner");
-          const officerInfo = getTierInfo("officer");
+          const scannerInfo = getTierInfo("scanner", t);
+          const officerInfo = getTierInfo("officer", t);
           return currentTier === "scanner" ? (
           <>
             {/* Current plan */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-base font-medium text-stone-800">{scannerInfo.label}</span>
-                <span className="text-sm bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">Current</span>
+                <span className="text-sm bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">{t("settings.current")}</span>
               </div>
               <ul className="space-y-1 mb-4">
                 {scannerInfo.features.map((f) => (
@@ -614,7 +611,7 @@ function SettingsContent() {
                 disabled={checkingOut}
                 className="w-full px-4 py-2.5 text-base font-medium btn-gradient rounded-md disabled:opacity-50"
               >
-                {checkingOut ? "Redirecting to checkout..." : `Upgrade to ${officerInfo.label}`}
+                {checkingOut ? t("settings.redirecting_checkout") : t("settings.upgrade_to", { tier: officerInfo.label })}
               </button>
             </div>
           </>
@@ -624,7 +621,7 @@ function SettingsContent() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-base font-medium text-blue-700">{officerInfo.label}</span>
-                <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Active</span>
+                <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{t("settings.active")}</span>
               </div>
               <span className="text-sm text-stone-700">{officerInfo.price}</span>
               <ul className="space-y-1 mt-2">
@@ -640,7 +637,7 @@ function SettingsContent() {
               onClick={handleManageBilling}
               className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
             >
-              Manage billing
+              {t("settings.manage_billing")}
             </button>
           </>
         );
@@ -651,10 +648,9 @@ function SettingsContent() {
       <div className="card-gradient border border-stone-200 p-5">
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-stone-700">Tailored Opportunities</h2>
+            <h2 className="text-lg font-bold text-stone-700">{t("settings.tailored_title")}</h2>
             <p className="text-sm text-stone-700 mt-1">
-              On top of the always-on search box, get a weekly profile-steered grant scan
-              with priority-tagged opportunities matched to your sectors and geographies.
+              {t("settings.tailored_desc")}
             </p>
           </div>
           {currentTier === "officer" ? (
@@ -664,7 +660,7 @@ function SettingsContent() {
               className={`shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
                 tailored?.tailored_enabled ? "bg-blue-600" : "bg-stone-300"
               }`}
-              aria-label="Toggle Tailored Opportunities"
+              aria-label={t("settings.tailored_title")}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -674,7 +670,7 @@ function SettingsContent() {
             </button>
           ) : (
             <span className="shrink-0 text-sm px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
-              Officer-tier
+              {t("settings.officer_tier_badge")}
             </span>
           )}
         </div>
@@ -684,18 +680,18 @@ function SettingsContent() {
             {tailored?.tailored_enabled ? (
               tailored.timer && !tailored.timer.expired ? (
                 <span>
-                  ● Cooldown — next cycle available in <strong>{formatRemaining(tailored.timer.remaining_seconds)}</strong>.
+                  ● {t("settings.tailored_cooldown")} <strong>{formatRemaining(tailored.timer.remaining_seconds)}</strong>.
                 </span>
               ) : (
-                <span>● Ready — head to the &quot;Tailored Picks&quot; tab on the dashboard to run a cycle.</span>
+                <span>● {t("settings.tailored_ready")}</span>
               )
             ) : (
-              <span className="text-stone-600">Off — toggle on to start running weekly tailored cycles.</span>
+              <span className="text-stone-600">{t("settings.tailored_off")}</span>
             )}
           </div>
         ) : (
           <div className="text-sm text-stone-700">
-            Available on <strong>Grant Officer</strong>. Upgrade above to unlock weekly tailored cycles.
+            {t("settings.tailored_upsell_before")} <strong>{t("tiers.officer")}</strong>. {t("settings.tailored_upsell_after")}
           </div>
         )}
       </div>
@@ -704,14 +700,14 @@ function SettingsContent() {
       <div className="card-gradient border border-stone-200 p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-stone-700">Privacy & Data Policy</h2>
-            <p className="text-sm text-stone-600 mt-0.5">How we collect, use, and protect your data.</p>
+            <h2 className="text-lg font-bold text-stone-700">{t("privacy.title")}</h2>
+            <p className="text-sm text-stone-600 mt-0.5">{t("settings.privacy_desc")}</p>
           </div>
           <a
             href="/privacy"
             className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
           >
-            View policy
+            {t("settings.view_policy")}
           </a>
         </div>
       </div>

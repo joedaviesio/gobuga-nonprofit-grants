@@ -4,6 +4,7 @@
   "currency": "MDL",
   "timezone": "Europe/Chisinau",
   "content_language": "ro",
+  "ui_languages": ["ro", "ru", "en"],
   "national_scope_synonyms": [
     "national", "nationwide", "moldova", "republica moldova",
     "toată țara", "toata tara", "întreaga țară", "intreaga tara"

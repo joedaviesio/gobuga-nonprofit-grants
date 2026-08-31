@@ -2,20 +2,22 @@
 
 import { useEffect } from "react";
 import { createCheckout } from "@/lib/api";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 
 interface ErrorModalProps {
   message: string | null;
   onClose: () => void;
 }
 
-const FRIENDLY_MESSAGES: Record<string, string> = {
-  "Case limit reached": "You've reached your case limit. Upgrade to Officer for unlimited cases.",
-  "Failed to create case": "We couldn't open that case. Please try again.",
-  "Failed to load report": "We couldn't load that report. Please try again.",
-  "Failed to save": "Your changes couldn't be saved. Please try again.",
-  "Upload failed": "That file couldn't be uploaded. Please try again.",
-  "Delete failed": "That file couldn't be deleted. Please try again.",
-  "Export failed": "The export didn't work. Please try again.",
+// Raw backend messages (always English) mapped to translatable friendly keys.
+const FRIENDLY_MESSAGES: Record<string, MessageKey> = {
+  "Case limit reached": "errors.case_limit",
+  "Failed to create case": "errors.create_case",
+  "Failed to load report": "errors.load_report",
+  "Failed to save": "errors.save",
+  "Upload failed": "errors.upload",
+  "Delete failed": "errors.delete",
+  "Export failed": "errors.export",
 };
 
 // Patterns that indicate a tier/upgrade gate (403 from limits.py)
@@ -40,7 +42,7 @@ function extractUpgradeMessage(raw: string): string {
   return cleaned;
 }
 
-function simplify(raw: string): string {
+function simplify(raw: string, t: (key: MessageKey) => string): string {
   // Strip HTTP status codes and JSON wrappers
   const cleaned = raw
     .replace(/^\d{3}:\s*/, "")
@@ -48,21 +50,22 @@ function simplify(raw: string): string {
     .replace(/^Failed to \w+ \w+:\s*/, "");
 
   // Match against known messages
-  for (const [key, friendly] of Object.entries(FRIENDLY_MESSAGES)) {
+  for (const [key, friendlyKey] of Object.entries(FRIENDLY_MESSAGES)) {
     if (cleaned.toLowerCase().includes(key.toLowerCase())) {
-      return friendly;
+      return t(friendlyKey);
     }
   }
 
   // If it still looks like a raw API error, give a generic message
   if (cleaned.includes("{") || cleaned.includes("403") || cleaned.includes("500")) {
-    return "Something went wrong. Please try again.";
+    return t("errors.generic");
   }
 
   return cleaned;
 }
 
 export default function ErrorModal({ message, onClose }: ErrorModalProps) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!message) return;
     const handleEsc = (e: KeyboardEvent) => {
@@ -109,13 +112,13 @@ export default function ErrorModal({ message, onClose }: ErrorModalProps) {
               onClick={onClose}
               className="px-4 py-2 text-base text-slate-500 hover:text-slate-700 transition-colors"
             >
-              Not now
+              {t("errors.not_now")}
             </button>
             <button
               onClick={handleUpgrade}
               className="px-4 py-2 text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Upgrade
+              {t("errors.upgrade")}
             </button>
           </div>
         </div>
@@ -123,7 +126,7 @@ export default function ErrorModal({ message, onClose }: ErrorModalProps) {
     );
   }
 
-  const friendly = simplify(message);
+  const friendly = simplify(message, t);
 
   return (
     <div
@@ -147,7 +150,7 @@ export default function ErrorModal({ message, onClose }: ErrorModalProps) {
             onClick={onClose}
             className="px-4 py-2 text-base bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
-            OK
+            {t("common.ok")}
           </button>
         </div>
       </div>

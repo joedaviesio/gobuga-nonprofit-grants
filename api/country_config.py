@@ -32,6 +32,7 @@ def get_country() -> str:
 
 _DEFAULT_TIMEZONE = "Pacific/Auckland"
 _DEFAULT_CONTENT_LANGUAGE = "en"
+_DEFAULT_UI_LANGUAGES: list[str] = ["en"]
 
 _DEFAULT_NATIONAL_SCOPE_SYNONYMS: list[str] = [
     "national", "nationwide", "new zealand", "all of nz", "across new zealand",
@@ -163,6 +164,7 @@ class CountryConfig:
     currency: str
     timezone: str
     content_language: str
+    ui_languages: list[str]  # first entry is the default UI language
     regions: list[str]
     national_scope_synonyms: list[str]
     tags: list[str]
@@ -191,6 +193,7 @@ def get_country_config(country: str | None = None) -> CountryConfig:
         currency=raw.get("currency", "NZD"),
         timezone=raw.get("timezone", _DEFAULT_TIMEZONE),
         content_language=raw.get("content_language", _DEFAULT_CONTENT_LANGUAGE),
+        ui_languages=raw.get("ui_languages", _DEFAULT_UI_LANGUAGES),
         regions=raw.get("regions", []),
         national_scope_synonyms=raw.get(
             "national_scope_synonyms", _DEFAULT_NATIONAL_SCOPE_SYNONYMS

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 function EyeIcon({ open }: { open: boolean }) {
   if (open) {
@@ -32,11 +33,12 @@ export default function PasswordInput({
   value,
   onChange,
   onBlur,
-  placeholder = "Password",
+  placeholder,
   className = "",
   autoFocus,
   required,
 }: PasswordInputProps) {
+  const { t } = useI18n();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -46,7 +48,7 @@ export default function PasswordInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("auth.password")}
         className={`w-full pr-10 ${className}`}
         autoFocus={autoFocus}
         required={required}
@@ -56,7 +58,7 @@ export default function PasswordInput({
         onClick={() => setVisible(!visible)}
         className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:text-stone-700 transition-colors"
         tabIndex={-1}
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? t("auth.hide_password") : t("auth.show_password")}
       >
         <EyeIcon open={visible} />
       </button>

@@ -18,6 +18,7 @@ import {
 } from "@/lib/api";
 import DOMPurify from "dompurify";
 import ErrorModal from "@/app/error-modal";
+import { useI18n } from "@/lib/i18n";
 
 const API_BASE = "/api";
 
@@ -94,6 +95,7 @@ function LoadingDots({ label }: { label: string }) {
 
 
 export default function CaseDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useI18n();
   const { id } = use(params);
   const [caseData, setCaseData] = useState<CaseFull | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -184,7 +186,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
         downloadBlob(new Blob([JSON.stringify(result.content, null, 2)], { type: "application/json" }), `${id}-draft.json`);
       }
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Export failed");
+      setErrorModal(err instanceof Error ? err.message : t("errors.export"));
     }
   };
 
@@ -203,7 +205,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
     if (fileInputRef.current) fileInputRef.current.value = "";
 
     setBotStatus("working");
-    setStatusMessage(`Adding ${file.name} to data bank...`);
+    setStatusMessage(t("case.adding_to_databank", { name: file.name }));
 
     try {
       const uploadResult = await uploadFile(id, file, "reference");
@@ -212,16 +214,16 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       trackUsage(ingestResult.usage);
       await refreshCase();
       setBotStatus("done");
-      setStatusMessage(`Added ${sanitizedName} to data bank.`);
+      setStatusMessage(t("case.added_to_databank", { name: sanitizedName }));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
       if (msg.includes("403")) {
         setErrorModal(msg);
         setBotStatus("idle");
         setStatusMessage("");
       } else {
         setBotStatus("error");
-        setStatusMessage(`Error: ${msg}`);
+        setStatusMessage(`${t("case.error")}: ${msg}`);
       }
     }
   };
@@ -233,30 +235,30 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
     if (submissionInputRef.current) submissionInputRef.current.value = "";
 
     setBotStatus("working");
-    setStatusMessage("Uploading submission form...");
+    setStatusMessage(t("case.uploading_submission"));
 
     try {
       const uploadResult = await uploadFile(id, file, "application_form");
       const sanitizedName = uploadResult.filename || file.name;
       setSubmissionFilename(sanitizedName);
-      setStatusMessage("Parsing form sections...");
+      setStatusMessage(t("case.parsing_sections"));
       const result = await botParseAndFill(id, sanitizedName);
       trackUsage(result.usage);
       await refreshCase();
       setBotStatus("done");
       setStatusMessage(
-        `Parsed ${result.parsed} sections, filled ${result.filled}.` +
-        (result.needs_review > 0 ? ` ${result.needs_review} need review.` : " Ready to export!")
+        t("case.parsed_filled", { parsed: result.parsed, filled: result.filled }) +
+        (result.needs_review > 0 ? ` ${t("case.need_review", { n: result.needs_review })}` : ` ${t("case.ready_to_export")}`)
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
       if (msg.includes("403")) {
         setErrorModal(msg);
         setBotStatus("idle");
         setStatusMessage("");
       } else {
         setBotStatus("error");
-        setStatusMessage(`Error: ${msg}`);
+        setStatusMessage(`${t("case.error")}: ${msg}`);
       }
     }
   };
@@ -264,7 +266,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   // --- Path 3: Ask questions → Bot D ---
   const handleStartQuestions = async () => {
     setBotStatus("working");
-    setStatusMessage("Analyzing what information we need...");
+    setStatusMessage(t("case.analyzing_needs"));
 
     try {
       const result = await botQuestions(id);
@@ -274,14 +276,14 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setBotStatus("idle");
       setStatusMessage("");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
       if (msg.includes("403")) {
         setErrorModal(msg);
         setBotStatus("idle");
         setStatusMessage("");
       } else {
         setBotStatus("error");
-        setStatusMessage(`Error: ${msg}`);
+        setStatusMessage(`${t("case.error")}: ${msg}`);
       }
     }
   };
@@ -293,7 +295,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
     setQaMessages((prev) => [...prev, { role: "user", content: msg }]);
     isNearBottomRef.current = true;
     setBotStatus("working");
-    setStatusMessage("Thinking...");
+    setStatusMessage(t("case.thinking"));
 
     // Add an empty assistant message that we'll stream into
     setQaMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -322,7 +324,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setBotStatus("idle");
       setStatusMessage("");
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      const errMsg = err instanceof Error ? err.message : t("dashboard.unknown_error");
       if (errMsg.includes("403")) {
         // Remove the empty assistant message we added for streaming
         setQaMessages((prev) => {
@@ -338,9 +340,9 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           const updated = [...prev];
           const last = updated[updated.length - 1];
           if (last && last.role === "assistant" && !last.content) {
-            updated[updated.length - 1] = { ...last, content: `Error: ${errMsg}` };
+            updated[updated.length - 1] = { ...last, content: `${t("case.error")}: ${errMsg}` };
           } else {
-            updated.push({ role: "assistant", content: `Error: ${errMsg}` });
+            updated.push({ role: "assistant", content: `${t("case.error")}: ${errMsg}` });
           }
           return updated;
         });
@@ -355,7 +357,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
   if (!caseData) {
     return (
       <div className="p-8 max-w-xs">
-        <LoadingBar label="Loading case..." />
+        <LoadingBar label={t("case.loading")} />
       </div>
     );
   }
@@ -384,10 +386,10 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {/* Status stepper */}
           {(() => {
             const statuses = [
-              { value: "open", label: "Open", color: "bg-blue-500" },
-              { value: "submitted", label: "Submitted", color: "bg-amber-500" },
-              { value: "accepted", label: "Accepted", color: "bg-green-500" },
-              { value: "rejected", label: "Rejected", color: "bg-red-500" },
+              { value: "open", label: t("cases.status_open"), color: "bg-blue-500" },
+              { value: "submitted", label: t("cases.status_submitted"), color: "bg-amber-500" },
+              { value: "accepted", label: t("cases.status_accepted"), color: "bg-green-500" },
+              { value: "rejected", label: t("cases.status_rejected"), color: "bg-red-500" },
             ];
             const currentIdx = statuses.findIndex((s) => s.value === caseData.status);
             const isClosed = caseData.status === "closed";
@@ -416,7 +418,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             const updated = await updateCase(id, { status: s.value });
                             setCaseData(updated);
                           } catch (err) {
-                            setErrorModal(err instanceof Error ? err.message : "Failed to update case");
+                            setErrorModal(err instanceof Error ? err.message : t("errors.save"));
                           }
                         }}
                         className={`flex-1 py-1 text-xs font-medium rounded transition-colors ${
@@ -428,7 +430,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             ? "bg-stone-100 text-stone-700 hover:bg-stone-200 cursor-pointer"
                             : "bg-stone-50 text-stone-300 cursor-default"
                         }`}
-                        title={isClickable ? `Set to ${s.label}` : ""}
+                        title={isClickable ? t("case.set_to", { status: s.label }) : ""}
                       >
                         {s.label}
                       </button>
@@ -444,7 +446,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         const updated = await updateCase(id, { status: newStatus });
                         setCaseData(updated);
                       } catch (err) {
-                        setErrorModal(err instanceof Error ? err.message : "Failed to update case");
+                        setErrorModal(err instanceof Error ? err.message : t("errors.save"));
                       }
                     }}
                     className={`text-xs ${
@@ -453,17 +455,17 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         : "text-stone-600 hover:text-stone-600"
                     }`}
                   >
-                    {isClosed ? "Reopen case" : "Close case"}
+                    {isClosed ? t("case.reopen") : t("case.close")}
                   </button>
                   {typeof brief.deadline === "string" && !isNaN(new Date(brief.deadline as string).getTime()) && (
                     <span className="text-xs text-stone-600">
-                      Due {new Date(brief.deadline as string).toLocaleDateString()}
+                      {t("case.due", { date: new Date(brief.deadline as string).toLocaleDateString() })}
                     </span>
                   )}
                 </div>
                 {isClosed && (
                   <div className="text-xs px-2 py-1 bg-stone-100 rounded text-stone-700 text-center">
-                    Case closed
+                    {t("case.closed")}
                   </div>
                 )}
               </div>
@@ -484,9 +486,9 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   : "text-stone-600 hover:text-stone-600"
               }`}
             >
-              {tab === "brief" ? "Brief" :
-               tab === "databank" ? `Data Bank (${databank.length})` :
-               `Draft (${sectionNames.length})`}
+              {tab === "brief" ? t("case.tab_brief") :
+               tab === "databank" ? `${t("case.tab_databank")} (${databank.length})` :
+               `${t("case.tab_draft")} (${sectionNames.length})`}
             </button>
           ))}
         </div>
@@ -541,7 +543,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {sidebarTab === "databank" && (
             <div className="space-y-2">
               {databank.length === 0 ? (
-                <p className="text-sm text-stone-600">Data bank is empty. Upload files or answer questions to populate it.</p>
+                <p className="text-sm text-stone-600">{t("case.databank_empty")}</p>
               ) : (
                 (() => {
                   const byCategory: Record<string, DatabankEntry[]> = {};
@@ -567,7 +569,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {/* Uploads list */}
               {(caseData.uploads?.length || 0) > 0 && (
                 <div className="pt-2 mt-2 border-t border-stone-100">
-                  <div className="text-sm font-medium text-stone-700 mb-1">Documents ({caseData.uploads.length})</div>
+                  <div className="text-sm font-medium text-stone-700 mb-1">{t("case.documents")} ({caseData.uploads.length})</div>
                   {caseData.uploads.map((u, i) => (
                     <div key={i} className="flex items-center gap-1 text-sm text-stone-600 py-0.5">
                       <span className={`inline-block w-1.5 h-1.5 rounded-full ${
@@ -587,7 +589,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {sidebarTab === "draft" && (
             <div className="space-y-2">
               {sectionNames.length === 0 ? (
-                <p className="text-sm text-stone-600">No sections drafted yet. Upload a submission form to get started.</p>
+                <p className="text-sm text-stone-600">{t("case.no_sections")}</p>
               ) : (
                 sectionNames.map((name) => {
                   const sec = sections[name];
@@ -607,7 +609,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         </span>
                       </div>
                       <div className="text-sm text-stone-600 mt-1">
-                        {sec.content ? `${sec.content.split(" ").length} words` : "empty"}
+                        {sec.content ? t("case.n_words", { n: sec.content.split(" ").length }) : t("case.empty")}
                       </div>
                     </div>
                   );
@@ -615,7 +617,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               )}
               {sectionNames.length > 0 && (
                 <div className="space-y-2 mt-3">
-                  <div className="text-sm font-medium text-stone-700">Export</div>
+                  <div className="text-sm font-medium text-stone-700">{t("case.export")}</div>
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => handleExport("pdf")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">PDF</button>
                     <button onClick={() => handleExport("docx")} className="text-sm px-2 py-1 bg-stone-100 rounded hover:bg-stone-200">DOCX</button>
@@ -629,9 +631,9 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           key={u.filename}
                           onClick={() => handleExport(ext, u.filename)}
                           className="text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                          title={`Fill template: ${u.filename}`}
+                          title={`${t("case.fill_template")}: ${u.filename}`}
                         >
-                          Fill {u.filename.slice(0, 20)}...
+                          {t("case.fill")} {u.filename.slice(0, 20)}...
                         </button>
                       );
                     })}
@@ -650,15 +652,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
           {/* Step 1: "What would you like to do next?" */}
           {!flowPath && (
             <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-5">
-              <h3 className="text-lg font-bold text-stone-800 mb-4">What would you like to do next?</h3>
+              <h3 className="text-lg font-bold text-stone-800 mb-4">{t("case.what_next")}</h3>
               <div className="grid grid-cols-3 gap-3">
                 {/* Upload a file */}
                 <button
                   onClick={() => setFlowPath("upload_file")}
                   className="text-left p-4 rounded-lg border-2 border-amber-200 bg-amber-50 hover:border-amber-400 transition-colors"
                 >
-                  <div className="text-base font-medium text-stone-800">Upload a file</div>
-                  <div className="text-sm text-stone-700 mt-1">Add documents to the case data bank</div>
+                  <div className="text-base font-medium text-stone-800">{t("case.upload_file")}</div>
+                  <div className="text-sm text-stone-700 mt-1">{t("case.upload_file_desc")}</div>
                 </button>
 
                 {/* Upload submission */}
@@ -666,8 +668,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   onClick={() => setFlowPath("upload_submission")}
                   className="text-left p-4 rounded-lg border-2 border-teal-200 bg-teal-50 hover:border-teal-400 transition-colors"
                 >
-                  <div className="text-base font-medium text-stone-800">Upload submission</div>
-                  <div className="text-sm text-stone-700 mt-1">Upload a grant application doc to parse and fill</div>
+                  <div className="text-base font-medium text-stone-800">{t("case.upload_submission")}</div>
+                  <div className="text-sm text-stone-700 mt-1">{t("case.upload_submission_desc")}</div>
                 </button>
 
                 {/* Ask questions */}
@@ -678,8 +680,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                   }}
                   className="text-left p-4 rounded-lg border-2 border-purple-200 bg-purple-50 hover:border-purple-400 transition-colors"
                 >
-                  <div className="text-base font-medium text-stone-800">Ask questions</div>
-                  <div className="text-sm text-stone-700 mt-1">Chatbot guides you to fill data gaps</div>
+                  <div className="text-base font-medium text-stone-800">{t("case.ask_questions")}</div>
+                  <div className="text-sm text-stone-700 mt-1">{t("case.ask_questions_desc")}</div>
                 </button>
               </div>
             </div>
@@ -698,15 +700,15 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                 }}
                 className="text-sm text-stone-600 hover:text-stone-600"
               >
-                &larr; Back to options
+                &larr; {t("case.back_to_options")}
               </button>
 
               {/* Path: Upload a file */}
               {flowPath === "upload_file" && (
                 <div className="bg-white border border-amber-200 rounded-lg shadow-sm p-5">
-                  <h3 className="text-lg font-bold text-stone-800 mb-1">Upload a file</h3>
+                  <h3 className="text-lg font-bold text-stone-800 mb-1">{t("case.upload_file")}</h3>
                   <p className="text-sm text-stone-700 mb-4">
-                    Upload documents one at a time. Each file will be analyzed and key information added to the case data bank.
+                    {t("case.upload_file_long")}
                   </p>
 
                   {botStatus === "working" ? (
@@ -724,7 +726,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         onClick={() => fileInputRef.current?.click()}
                         className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-base text-stone-700 hover:border-amber-400 hover:text-amber-600 transition-colors"
                       >
-                        Click to select a file
+                        {t("case.click_select_file")}
                       </button>
                     </>
                   )}
@@ -734,9 +736,9 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {/* Path: Upload submission */}
               {flowPath === "upload_submission" && (
                 <div className="bg-white border border-teal-200 rounded-lg shadow-sm p-5">
-                  <h3 className="text-lg font-bold text-stone-800 mb-1">Upload submission form</h3>
+                  <h3 className="text-lg font-bold text-stone-800 mb-1">{t("case.upload_submission_form")}</h3>
                   <p className="text-sm text-stone-700 mb-4">
-                    Upload the grant application document. It will be parsed into sections and automatically filled from the data bank.
+                    {t("case.upload_submission_long")}
                   </p>
 
                   {botStatus === "working" ? (
@@ -757,7 +759,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                                 onClick={() => handleExport(exportFmt, templateFillable ? submissionFilename : undefined)}
                                 className="flex-1 py-2 text-base bg-teal-600 text-white rounded-lg hover:bg-teal-700"
                               >
-                                Download as .{exportFmt}
+                                {t("case.download_as")} .{exportFmt}
                               </button>
                               {exportFmt !== "pdf" && (
                                 <button
@@ -792,7 +794,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         }}
                         className="text-sm text-stone-600 hover:text-stone-600"
                       >
-                        Upload another submission
+                        {t("case.upload_another")}
                       </button>
                     </div>
                   ) : (
@@ -806,7 +808,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         onClick={() => submissionInputRef.current?.click()}
                         className="w-full py-3 border-2 border-dashed border-stone-300 rounded-lg text-base text-stone-700 hover:border-teal-400 hover:text-teal-600 transition-colors"
                       >
-                        Click to select submission form (.pdf, .docx, .doc, .xlsx, .xls)
+                        {t("case.click_select_submission")}
                       </button>
                     </>
                   )}
@@ -817,8 +819,8 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
               {flowPath === "ask_questions" && (
                 <div className="bg-white border border-purple-200 rounded-lg shadow-sm flex flex-col font-[family-name:var(--font-dm-sans)]" style={{ minHeight: "400px" }}>
                   <div className="p-4 border-b border-purple-100">
-                    <h3 className="text-lg font-bold text-stone-800">Information gathering</h3>
-                    <p className="text-sm text-stone-700">Answer questions to fill gaps in the data bank</p>
+                    <h3 className="text-lg font-bold text-stone-800">{t("case.info_gathering")}</h3>
+                    <p className="text-sm text-stone-700">{t("case.info_gathering_desc")}</p>
                   </div>
 
                   {/* Q&A messages */}
@@ -848,7 +850,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                       </div>
                     ))}
                     {botStatus === "working" && !qaMessages.some((m, i) => i === qaMessages.length - 1 && m.role === "assistant" && m.content) && (
-                      <LoadingDots label={statusMessage || "Thinking..."} />
+                      <LoadingDots label={statusMessage || t("case.thinking")} />
                     )}
                   </div>
 
@@ -869,7 +871,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                             handleQaSend();
                           }
                         }}
-                        placeholder="Type your answer..."
+                        placeholder={t("case.type_answer")}
                         className="flex-1 px-3 py-2 text-base border border-stone-300 rounded-md focus:outline-none focus:border-purple-400"
                         disabled={botStatus === "working"}
                       />
@@ -878,7 +880,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                         disabled={botStatus === "working" || !qaInput.trim()}
                         className="px-4 py-2 text-base bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
                       >
-                        Send
+                        {t("case.send")}
                       </button>
                     </div>
                     <div className="mt-1 text-right">
@@ -887,7 +889,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
                           ? "text-red-500"
                           : "text-stone-300"
                       }`}>
-                        {qaInput.trim() ? qaInput.trim().split(/\s+/).filter(Boolean).length : 0}/150 words
+                        {qaInput.trim() ? qaInput.trim().split(/\s+/).filter(Boolean).length : 0}/150 {t("case.words")}
                       </span>
                     </div>
                   </div>
@@ -901,12 +903,12 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
             <div className="bg-white border border-stone-200 rounded-lg shadow-sm font-[family-name:var(--font-dm-sans)]">
               <div className="p-4 border-b border-stone-100">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-stone-800">Grant Summary</h2>
+                  <h2 className="text-lg font-bold text-stone-800">{t("case.grant_summary")}</h2>
                   <button
                     onClick={handleDownloadSummary}
                     className="text-sm px-2.5 py-1 bg-stone-100 text-stone-600 rounded hover:bg-stone-200"
                   >
-                    Download .md
+                    {t("case.download_md")}
                   </button>
                 </div>
               </div>

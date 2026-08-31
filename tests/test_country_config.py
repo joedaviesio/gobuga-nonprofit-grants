@@ -57,6 +57,7 @@ def test_nz_config_loads():
     assert config.currency == "NZD"
     assert config.timezone == "Pacific/Auckland"
     assert config.content_language == "en"
+    assert config.ui_languages == ["en"]
     assert "auckland" in config.regions
     assert "wellington" in config.regions
     assert "community" in config.tags
@@ -77,6 +78,7 @@ def test_md_config_loads():
     assert config.currency == "MDL"
     assert config.timezone == "Europe/Chisinau"
     assert config.content_language == "ro"
+    assert config.ui_languages == ["ro", "ru", "en"]  # first entry = default UI language
     assert "chisinau" in config.regions
     assert "balti" in config.regions
     assert "gagauzia" in config.regions
@@ -335,6 +337,8 @@ def test_country_config_endpoint_shape():
     assert hasattr(config, "slug")
     assert hasattr(config, "country_label")
     assert hasattr(config, "currency")
+    assert hasattr(config, "content_language")
+    assert hasattr(config, "ui_languages")
     assert hasattr(config, "tiers")
     assert hasattr(config, "tags")
     assert hasattr(config, "sector_slices")

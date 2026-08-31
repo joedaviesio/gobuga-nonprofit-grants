@@ -19,10 +19,27 @@ import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import OpportunitiesView from "./opportunities-view";
 import AnonLanding from "./anon-landing";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 
 const COUNTRY_SWEEP_ENABLED = process.env.NEXT_PUBLIC_COUNTRY_SWEEP_ENABLED === "true";
 
+const PRIORITY_KEYS: Record<string, MessageKey> = {
+  high: "tailored.priority_high",
+  medium: "tailored.priority_medium",
+  low: "tailored.priority_low",
+};
+
+const STATUS_KEYS: Record<string, MessageKey> = {
+  open: "cases.status_open",
+  submitted: "cases.status_submitted",
+  accepted: "cases.status_accepted",
+  approved: "cases.status_accepted",
+  rejected: "cases.status_rejected",
+  closed: "cases.status_closed",
+};
+
 function PriorityBadge({ priority }: { priority: string }) {
+  const { t } = useI18n();
   const colors =
     priority === "high"
       ? "bg-red-50 text-red-600 border border-red-200"
@@ -31,12 +48,13 @@ function PriorityBadge({ priority }: { priority: string }) {
       : "bg-amber-50 text-amber-600 border border-amber-200";
   return (
     <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
-      {priority}
+      {PRIORITY_KEYS[priority] ? t(PRIORITY_KEYS[priority]) : priority}
     </span>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useI18n();
   const colors =
     status === "open"
       ? "bg-blue-50 text-blue-600 border border-blue-200"
@@ -51,7 +69,7 @@ function StatusBadge({ status }: { status: string }) {
       : "bg-slate-50 text-slate-600 border border-slate-200";
   return (
     <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${colors}`}>
-      {status}
+      {STATUS_KEYS[status] ? t(STATUS_KEYS[status]) : status}
     </span>
   );
 }
@@ -70,6 +88,7 @@ function ReportView({
   openingCase: string | null;
   cases: CaseSummary[];
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
       {/* Historical banner */}
@@ -77,14 +96,14 @@ function ReportView({
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
           <div className="w-2 h-2 bg-amber-400 rounded-full" />
           <span className="text-sm text-amber-700">
-            Viewing report from <strong>{report.date}</strong> (not the latest)
+            {t("dashboard.viewing_report_from")} <strong>{report.date}</strong> {t("dashboard.not_latest")}
           </span>
         </div>
       )}
 
       {/* Opportunities */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-3 font-[family-name:var(--font-dm-sans)]">Opportunities</h2>
+        <h2 className="text-lg font-semibold text-slate-800 mb-3 font-[family-name:var(--font-dm-sans)]">{t("opps.tab_opportunities")}</h2>
         {(() => {
           const filtered = report.opportunities.filter((opp) => {
             if (opp.expired) return false;
@@ -118,9 +137,9 @@ function ReportView({
                     <p className="text-sm text-slate-600 mt-1">{opp.description}</p>
                   )}
                   <div className="flex flex-wrap gap-3 mt-2 text-sm text-slate-600">
-                    {opp.deadline && <span>Deadline: {opp.deadline}</span>}
-                    {opp.amount && <span>Amount: {opp.amount}</span>}
-                    {opp.funder && <span>Funder: {opp.funder}</span>}
+                    {opp.deadline && <span>{t("common.deadline")}: {opp.deadline}</span>}
+                    {opp.amount && <span>{t("common.amount")}: {opp.amount}</span>}
+                    {opp.funder && <span>{t("common.funder")}: {opp.funder}</span>}
                   </div>
                   {opp.details.length > 0 && (
                     <ul className="mt-2 space-y-0.5">
@@ -158,7 +177,7 @@ function ReportView({
                   if (opp.expired) {
                     return (
                       <span className="shrink-0 px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg">
-                        Expired
+                        {t("tailored.expired")}
                       </span>
                     );
                   }
@@ -168,7 +187,7 @@ function ReportView({
                         href={`/case/${existingCase.case_id}`}
                         className="shrink-0 px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
                       >
-                        View Case
+                        {t("opps.view_case")}
                       </a>
                     );
                   }
@@ -178,7 +197,7 @@ function ReportView({
                       disabled={openingCase === opp.id}
                       className="shrink-0 px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                     >
-                      {openingCase === opp.id ? "Creating..." : "Open Case"}
+                      {openingCase === opp.id ? t("tailored.creating") : t("opps.open_case")}
                     </button>
                   );
                 })()}
@@ -195,11 +214,11 @@ function ReportView({
 }
 
 const CASE_TABS = [
-  { key: "open", label: "Open", color: "text-blue-600 border-blue-600" },
-  { key: "submitted", label: "Submitted", color: "text-amber-600 border-amber-600" },
-  { key: "accepted", label: "Accepted", color: "text-green-600 border-green-600" },
-  { key: "rejected", label: "Rejected", color: "text-red-600 border-red-600" },
-  { key: "closed", label: "Closed", color: "text-slate-700 border-slate-500" },
+  { key: "open", labelKey: "cases.status_open", color: "text-blue-600 border-blue-600" },
+  { key: "submitted", labelKey: "cases.status_submitted", color: "text-amber-600 border-amber-600" },
+  { key: "accepted", labelKey: "cases.status_accepted", color: "text-green-600 border-green-600" },
+  { key: "rejected", labelKey: "cases.status_rejected", color: "text-red-600 border-red-600" },
+  { key: "closed", labelKey: "cases.status_closed", color: "text-slate-700 border-slate-500" },
 ] as const;
 
 type CaseTab = (typeof CASE_TABS)[number]["key"];
@@ -227,6 +246,7 @@ function isNewOpenCase(c: CaseSummary): boolean {
 }
 
 function CasesView({ cases }: { cases: CaseSummary[] }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<CaseTab>("open");
 
   const filtered = cases.filter((c) => {
@@ -239,27 +259,27 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
   });
 
   const counts: Record<string, number> = {};
-  for (const t of CASE_TABS) {
-    counts[t.key] = cases.filter((c) => {
-      if (t.key === "accepted") return c.status === "accepted" || c.status === "approved";
-      return c.status === t.key;
+  for (const tabDef of CASE_TABS) {
+    counts[tabDef.key] = cases.filter((c) => {
+      if (tabDef.key === "accepted") return c.status === "accepted" || c.status === "approved";
+      return c.status === tabDef.key;
     }).length;
   }
 
   return (
     <div>
       <div className="flex gap-1 mb-4 border-b border-slate-200">
-        {CASE_TABS.map((t) => (
+        {CASE_TABS.map((tabDef) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabDef.key}
+            onClick={() => setTab(tabDef.key)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? t.color
+              tab === tabDef.key
+                ? tabDef.color
                 : "text-slate-600 border-transparent hover:text-slate-600"
             }`}
           >
-            {t.label} ({counts[t.key]})
+            {t(tabDef.labelKey)} ({counts[tabDef.key]})
           </button>
         ))}
       </div>
@@ -267,8 +287,8 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
       {filtered.length === 0 ? (
         <p className="text-base text-slate-600 py-4">
           {cases.length === 0
-            ? "No cases yet. Open one from Opportunities."
-            : `No ${tab} cases.`}
+            ? t("cases.none_yet")
+            : t("cases.none_in_tab", { tab: t(STATUS_KEYS[tab]) })}
         </p>
       ) : (
         <div className="space-y-2">
@@ -289,9 +309,9 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
                 <StatusBadge status={c.status} />
               </div>
               <div className="mt-1 flex gap-4 text-sm text-slate-600">
-                <span>{c.sections_count} sections</span>
-                <span>{c.uploads_count} uploads</span>
-                <span>updated {new Date(c.updated).toLocaleDateString()}</span>
+                <span>{t("cases.n_sections", { n: c.sections_count })}</span>
+                <span>{t("cases.n_uploads", { n: c.uploads_count })}</span>
+                <span>{t("cases.updated", { date: new Date(c.updated).toLocaleDateString() })}</span>
               </div>
             </a>
           ))}
@@ -303,11 +323,12 @@ function CasesView({ cases }: { cases: CaseSummary[] }) {
 
 export default function Dashboard() {
   const { session, loading } = useAuth();
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="min-h-screen app-bg">
         <div className="max-w-5xl mx-auto px-6 py-8">
-          <LoadingBar label="Loading..." />
+          <LoadingBar label={t("common.loading")} />
         </div>
       </div>
     );
@@ -322,6 +343,7 @@ export default function Dashboard() {
 }
 
 function LegacyDashboard() {
+  const { t } = useI18n();
   const { session, refreshSession } = useAuth();
   const [report, setReport] = useState<Report | null>(null);
   const [latestDate, setLatestDate] = useState<string | null>(null);
@@ -338,41 +360,10 @@ function LegacyDashboard() {
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
   const phaseMessages: Record<string, string[]> = {
-    watcher: [
-      "Scanning grant databases",
-      "Checking government listings",
-      "Crawling foundation sites",
-      "Indexing new postings",
-      "Parsing eligibility criteria",
-      "Matching to your profile",
-      "Reviewing deadlines",
-      "Pulling application details",
-      "Screening requirements",
-      "Cross-referencing sources",
-    ],
-    analyst: [
-      "Evaluating fit scores",
-      "Comparing requirements",
-      "Analyzing eligibility",
-      "Ranking opportunities",
-      "Checking budget alignment",
-      "Scoring mission fit",
-      "Reviewing past awards",
-      "Assessing competitiveness",
-    ],
-    reporter: [
-      "Compiling brief",
-      "Summarizing top picks",
-      "Writing recommendations",
-      "Formatting results",
-      "Preparing opportunity cards",
-      "Generating insights",
-    ],
-    saving: [
-      "Saving report",
-      "Storing opportunities",
-      "Finalizing results",
-    ],
+    watcher: t("tailored.msgs_watcher").split("|"),
+    analyst: t("tailored.msgs_analyst").split("|"),
+    reporter: t("tailored.msgs_reporter").split("|"),
+    saving: t("tailored.msgs_saving").split("|"),
   };
 
   const [phaseMessageKey, setPhaseMessageKey] = useState(0);
@@ -427,7 +418,7 @@ function LegacyDashboard() {
           setCycleStatus("complete");
           setCyclePhase("complete");
           setCycleMessage(
-            `Cycle complete! Found ${status.opportunities || 0} opportunities.`
+            t("dashboard.cycle_complete_found", { n: status.opportunities || 0 })
           );
           const newReport = await getLatestReport().catch(() => null);
           if (newReport) {
@@ -442,19 +433,19 @@ function LegacyDashboard() {
         if (status.status === "error") {
           clearInterval(poll);
           setCycleStatus("error");
-          setCycleMessage("Cycle failed. Check the server logs.");
+          setCycleMessage(t("dashboard.cycle_failed"));
         }
       } catch {
         clearInterval(poll);
         setCycleStatus("error");
-        setCycleMessage("Lost connection to server.");
+        setCycleMessage(t("dashboard.lost_connection"));
       }
     }, 5000);
 
     const timeout = setTimeout(() => {
       clearInterval(poll);
       setCycleStatus("error");
-      setCycleMessage("Cycle timed out after 15 minutes.");
+      setCycleMessage(t("dashboard.cycle_timeout"));
     }, 900000);
 
     return () => {
@@ -491,7 +482,7 @@ function LegacyDashboard() {
       setCases(updatedCases);
       window.location.href = `/case/${newCase.case_id}`;
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Something went wrong.");
+      setErrorModal(err instanceof Error ? err.message : t("errors.generic"));
       setOpeningCase(null);
     }
   };
@@ -502,7 +493,7 @@ function LegacyDashboard() {
       setReport(r);
       setActiveView("brief");
     } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : "Something went wrong.");
+      setErrorModal(err instanceof Error ? err.message : t("errors.generic"));
     }
   };
 
@@ -529,11 +520,11 @@ function LegacyDashboard() {
       await refreshSession(); // update timer in header
     } catch (err) {
       setCycleStatus("idle");
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
       if (msg.includes("403")) {
-        setTriggerError("Invalid password.");
+        setTriggerError(t("dashboard.invalid_password"));
       } else if (msg.includes("409")) {
-        setTriggerError("Cycle already active.");
+        setTriggerError(t("dashboard.cycle_already_active"));
       } else {
         setTriggerError(msg);
       }
@@ -543,12 +534,12 @@ function LegacyDashboard() {
     // Step 2: Run the actual cycle
     try {
       await runCycle();
-      setCycleMessage("Cycle started. Scanning for grant opportunities...");
+      setCycleMessage(t("dashboard.cycle_started"));
       startCyclePolling();
     } catch (err) {
       setCycleStatus("error");
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      setCycleMessage(`Failed to start cycle: ${msg}`);
+      const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
+      setCycleMessage(`${t("tailored.start_failed")}: ${msg}`);
     }
   };
 
@@ -557,12 +548,12 @@ function LegacyDashboard() {
     setCycleMessage("");
     try {
       await runCycle();
-      setCycleMessage("Cycle started. Scanning for grant opportunities...");
+      setCycleMessage(t("dashboard.cycle_started"));
       startCyclePolling();
     } catch (err) {
       setCycleStatus("error");
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      setCycleMessage(`Failed to start cycle: ${msg}`);
+      const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
+      setCycleMessage(`${t("tailored.start_failed")}: ${msg}`);
     }
   };
 
@@ -570,7 +561,7 @@ function LegacyDashboard() {
     return (
       <div className="min-h-screen app-bg">
         <div className="max-w-5xl mx-auto px-6 py-8">
-          <LoadingBar label="Loading dashboard..." />
+          <LoadingBar label={t("dashboard.loading")} />
         </div>
       </div>
     );
@@ -592,7 +583,7 @@ function LegacyDashboard() {
               : "text-slate-600 hover:text-slate-600"
           }`}
         >
-          Opportunities
+          {t("opps.tab_opportunities")}
         </button>
         <button
           onClick={() => setActiveView("cases")}
@@ -602,7 +593,7 @@ function LegacyDashboard() {
               : "text-slate-600 hover:text-slate-600"
           }`}
         >
-          Cases ({cases.length})
+          {t("opps.tab_cases")} ({cases.length})
           {(() => {
             const newOpen = cases.filter(isNewOpenCase).length;
             return newOpen > 0 ? (
@@ -620,12 +611,12 @@ function LegacyDashboard() {
               : "text-slate-600 hover:text-slate-600"
           }`}
         >
-          Run Cycle
+          {t("dashboard.run_cycle")}
         </button>
         {report && (
           <span className="ml-auto text-sm text-slate-600">
-            {isHistorical ? `Viewing: ${report.date}` : `Last scan: ${report.date}`}
-            {" "}&middot; {report.evidence_count} evidence items
+            {isHistorical ? `${t("dashboard.viewing")}: ${report.date}` : `${t("dashboard.last_scan")}: ${report.date}`}
+            {" "}&middot; {t("dashboard.n_evidence", { n: report.evidence_count })}
           </span>
         )}
       </div>
@@ -638,12 +629,12 @@ function LegacyDashboard() {
               <div className="mx-auto mb-6 w-64 h-32 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
                 <div className="pixel-gradient w-full h-full" />
               </div>
-              <p className="text-base text-slate-600">No reports yet. Run a cycle first.</p>
+              <p className="text-base text-slate-600">{t("dashboard.no_reports")}</p>
               <button
                 onClick={() => setActiveView("cycle")}
                 className="mt-4 px-5 py-2 text-base btn-gradient rounded-lg transition-colors"
               >
-                Go to Run Cycle
+                {t("dashboard.go_to_run_cycle")}
               </button>
             </div>
           ) : (
@@ -654,7 +645,7 @@ function LegacyDashboard() {
                     onClick={handleViewLatest}
                     className="text-sm px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
                   >
-                    Back to latest ({latestDate})
+                    {t("dashboard.back_to_latest")} ({latestDate})
                   </button>
                 </div>
               )}
@@ -680,9 +671,9 @@ function LegacyDashboard() {
         <div className="max-w-lg mx-auto space-y-6">
           {/* Run controls */}
           <div className="card-gradient border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800 mb-1">Run Grant Scanning Cycle</h2>
+            <h2 className="text-lg font-semibold text-slate-800 mb-1">{t("dashboard.run_cycle_title")}</h2>
             <p className="text-sm text-slate-700 mb-4">
-              Scans for opportunities, assesses fit, and compiles your daily brief. Takes around 3 minutes.
+              {t("dashboard.run_cycle_desc")}
             </p>
 
             {cycleStatus === "idle" || cycleStatus === "error" ? (
@@ -691,13 +682,13 @@ function LegacyDashboard() {
                 {(!session?.cycle_timer || session.cycle_timer.expired) ? (
                   <>
                     <div>
-                      <label className="block text-sm text-slate-700 mb-1">Enter password to start cycle</label>
+                      <label className="block text-sm text-slate-700 mb-1">{t("dashboard.enter_password")}</label>
                       <input
                         type="password"
                         value={cyclePassword}
                         onChange={(e) => { setCyclePassword(e.target.value); setTriggerError(""); }}
                         onKeyDown={(e) => e.key === "Enter" && cyclePassword && handleTriggerAndRunCycle()}
-                        placeholder="Your account password"
+                        placeholder={t("dashboard.account_password")}
                         className="w-full px-3 py-2 text-base border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400"
                       />
                     </div>
@@ -709,7 +700,7 @@ function LegacyDashboard() {
                       disabled={!cyclePassword}
                       className="w-full px-4 py-2.5 text-base btn-gradient rounded-lg disabled:opacity-50 transition-colors"
                     >
-                      Run Cycle
+                      {t("dashboard.run_cycle")}
                     </button>
                   </>
                 ) : (
@@ -717,7 +708,7 @@ function LegacyDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                        <span className="text-sm font-medium text-blue-700">Next cycle available in</span>
+                        <span className="text-sm font-medium text-blue-700">{t("dashboard.next_cycle_in")}</span>
                       </div>
                       {session?.cycle_timer && (
                         <span className="text-base font-mono font-medium text-blue-600 tabular-nums">
@@ -738,7 +729,7 @@ function LegacyDashboard() {
               </div>
             ) : cycleStatus === "starting" ? (
               <div className="py-4">
-                <LoadingBar label="Starting cycle..." />
+                <LoadingBar label={t("dashboard.starting_cycle")} />
               </div>
             ) : cycleStatus === "running" ? (
               <div className="py-4">
@@ -746,11 +737,11 @@ function LegacyDashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full brand-gradient live-dot" />
-                    <span className="text-base font-medium text-slate-700">Cycle running</span>
+                    <span className="text-base font-medium text-slate-700">{t("tailored.cycle_running")}</span>
                   </div>
                   {itemsFound > 0 && (
                     <span key={itemsFound} className="text-sm font-mono font-medium text-slate-500 tabular-nums counter-tick">
-                      {itemsFound} items scanned
+                      {t("tailored.items_scanned", { n: itemsFound })}
                     </span>
                   )}
                 </div>
@@ -758,10 +749,10 @@ function LegacyDashboard() {
                 {/* Progress bar with shimmer */}
                 {(() => {
                   const phases = [
-                    { key: "watcher", label: "Watcher" },
-                    { key: "analyst", label: "Analyst" },
-                    { key: "reporter", label: "Reporter" },
-                    { key: "saving", label: "Saving" },
+                    { key: "watcher", label: t("tailored.phase_watcher") },
+                    { key: "analyst", label: t("tailored.phase_analyst") },
+                    { key: "reporter", label: t("tailored.phase_reporter") },
+                    { key: "saving", label: t("tailored.phase_saving") },
                   ];
                   const currentIndex = phases.findIndex((p) => p.key === cyclePhase);
                   const progress = currentIndex === -1 ? 3 : Math.min(((currentIndex + 0.5) / phases.length) * 100, 98);
@@ -813,7 +804,7 @@ function LegacyDashboard() {
                                 "text-slate-400"
                               }`}>
                                 {phase.label}
-                                {isDone && " — done"}
+                                {isDone && ` — ${t("tailored.done")}`}
                               </span>
                             </div>
                           );
@@ -824,7 +815,7 @@ function LegacyDashboard() {
                 })()}
 
                 <p className="text-[11px] text-slate-400 mt-4">
-                  ~3 min. You can switch tabs while it runs.
+                  {t("tailored.cycle_hint")}
                 </p>
               </div>
             ) : cycleStatus === "complete" ? (
@@ -832,7 +823,7 @@ function LegacyDashboard() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
                   <div className="flex items-center gap-2.5 mb-1">
                     <span className="text-green-500 text-xl">&#10003;</span>
-                    <span className="text-base font-semibold text-green-800">Cycle complete</span>
+                    <span className="text-base font-semibold text-green-800">{t("dashboard.cycle_complete")}</span>
                   </div>
                   {cycleMessage && (
                     <p className="text-sm text-green-600 ml-7">{cycleMessage}</p>
@@ -845,7 +836,7 @@ function LegacyDashboard() {
                   }}
                   className="w-full px-4 py-2.5 text-base btn-gradient rounded-lg transition-colors"
                 >
-                  View Opportunities
+                  {t("dashboard.view_opportunities")}
                 </button>
               </div>
             ) : null}
@@ -863,9 +854,9 @@ function LegacyDashboard() {
 
           {/* Cycle History */}
           <div className="card-gradient border border-slate-200 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Cycle History</h3>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">{t("dashboard.cycle_history")}</h3>
             {reportDates.length === 0 ? (
-              <p className="text-sm text-slate-600">No cycles have been run yet.</p>
+              <p className="text-sm text-slate-600">{t("dashboard.no_cycles")}</p>
             ) : (
               <div className="space-y-1">
                 {[...reportDates].sort((a, b) => b.localeCompare(a)).map((date) => (
@@ -882,11 +873,11 @@ function LegacyDashboard() {
                       )}
                       <span className="text-base font-mono text-slate-700">{date}</span>
                       {date === latestDate && (
-                        <span className="text-sm text-green-600 font-medium">latest</span>
+                        <span className="text-sm text-green-600 font-medium">{t("dashboard.latest")}</span>
                       )}
                     </div>
                     <span className="text-sm text-slate-600 group-hover:text-slate-600 transition-colors">
-                      View report
+                      {t("dashboard.view_report")}
                     </span>
                   </button>
                 ))}

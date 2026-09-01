@@ -36,6 +36,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* The Adobe Fonts kit serving 'clother' only carries the Western-Latin
+   default subset — no ș/ț/ă (U+0218–021B, U+0102/0103) and no Cyrillic —
+   so Romanian and Russian text renders uniformly in Inter instead of a
+   per-glyph mix of Clother and fallback. */
+:lang(ro), :lang(ru) {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+body:lang(ro), body:lang(ru) {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

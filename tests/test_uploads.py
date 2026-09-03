@@ -92,7 +92,7 @@ def create_test_case(label: str) -> str:
     return case_id
 
 
-def test_file_upload(case_id: str, filepath: str, filename: str) -> dict:
+def upload_reference_file(case_id: str, filepath: str, filename: str) -> dict:
     """Path 1: Upload file to data bank."""
     with open(filepath, "rb") as f:
         r = requests.post(
@@ -111,7 +111,7 @@ def test_file_upload(case_id: str, filepath: str, filename: str) -> dict:
     }
 
 
-def test_ingest(case_id: str, sanitized_name: str) -> dict:
+def ingest_file(case_id: str, sanitized_name: str) -> dict:
     """Ingest uploaded file into data bank."""
     r = requests.post(
         f"{API}/api/cases/{case_id}/bot/ingest",
@@ -128,7 +128,7 @@ def test_ingest(case_id: str, sanitized_name: str) -> dict:
     }
 
 
-def test_submission_upload(case_id: str, filepath: str, filename: str) -> dict:
+def upload_submission_file(case_id: str, filepath: str, filename: str) -> dict:
     """Path 2: Upload as submission form."""
     with open(filepath, "rb") as f:
         r = requests.post(
@@ -147,7 +147,7 @@ def test_submission_upload(case_id: str, filepath: str, filename: str) -> dict:
     }
 
 
-def test_parse(case_id: str, sanitized_name: str) -> dict:
+def parse_submission(case_id: str, sanitized_name: str) -> dict:
     """Bot B: parse submission form (this calls the LLM)."""
     r = requests.post(
         f"{API}/api/cases/{case_id}/bot/parse",
@@ -201,7 +201,7 @@ def run_tests():
         filepath = os.path.join(FIXTURES_DIR, filename)
         ext = os.path.splitext(filename)[1]
 
-        upload_result = test_file_upload(case_id, filepath, filename)
+        upload_result = upload_reference_file(case_id, filepath, filename)
         status = "OK" if upload_result["ok"] else "FAIL"
         san = upload_result.get("sanitized_name", "")
         print(f"  [{status:4s}] Upload  {ext:5s}  {filename}")
@@ -212,7 +212,7 @@ def run_tests():
         if not upload_result["ok"]:
             continue
 
-        ingest_result = test_ingest(case_id, upload_result["sanitized_name"])
+        ingest_result = ingest_file(case_id, upload_result["sanitized_name"])
         status = "OK" if ingest_result["ok"] else "FAIL"
         entries = ingest_result.get("entries_added", "?")
         print(f"  [{status:4s}] Ingest  {ext:5s}  → {entries} entries")
@@ -237,7 +237,7 @@ def run_tests():
         filepath = os.path.join(FIXTURES_DIR, filename)
         ext = os.path.splitext(filename)[1]
 
-        upload_result = test_submission_upload(case_id2, filepath, filename)
+        upload_result = upload_submission_file(case_id2, filepath, filename)
         status = "OK" if upload_result["ok"] else "FAIL"
         san = upload_result.get("sanitized_name", "")
         print(f"  [{status:4s}] Upload  {ext:5s}  {filename}")
@@ -249,7 +249,7 @@ def run_tests():
             continue
 
         print(f"         Parsing with Bot B...")
-        parse_result = test_parse(case_id2, upload_result["sanitized_name"])
+        parse_result = parse_submission(case_id2, upload_result["sanitized_name"])
         status = "OK" if parse_result["ok"] else "FAIL"
         sections = parse_result.get("sections_found", "?")
         print(f"  [{status:4s}] Parse   {ext:5s}  → {sections} sections")
@@ -289,6 +289,79 @@ def run_tests():
 
     print(f"\n{'=' * 70}")
     return 0 if failed == 0 else 1
+
+
+
+# --- pytest entry points -----------------------------------------------------
+# The `backend` fixture (tests/conftest.py) boots an isolated server. Upload
+# tests are free; ingest/parse call Anthropic and are opt-in via
+# GOBUGA_TEST_LLM=1 so a routine run never spends model budget.
+
+import pytest
+
+pytestmark = pytest.mark.integration
+
+FIXTURE_FILES = (
+    sorted(f for f in os.listdir(FIXTURES_DIR) if not f.startswith("."))
+    if os.path.isdir(FIXTURES_DIR) else []
+)
+LLM_TESTS_ENABLED = os.environ.get("GOBUGA_TEST_LLM") == "1"
+needs_llm = pytest.mark.skipif(
+    not LLM_TESTS_ENABLED, reason="calls Anthropic; set GOBUGA_TEST_LLM=1 to run"
+)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _authenticated(backend):
+    setup_auth()
+    if not TOKEN:
+        pytest.fail("Could not authenticate a test org against the backend")
+
+
+@pytest.fixture(scope="module")
+def reference_case(_authenticated):
+    case_id = create_test_case("pytest-reference")
+    assert case_id, "Could not create reference test case"
+    return case_id
+
+
+@pytest.fixture(scope="module")
+def submission_case(_authenticated):
+    case_id = create_test_case("pytest-submission")
+    assert case_id, "Could not create submission test case"
+    return case_id
+
+
+@pytest.mark.parametrize("filename", FIXTURE_FILES)
+def test_reference_upload(reference_case, filename):
+    result = upload_reference_file(reference_case, os.path.join(FIXTURES_DIR, filename), filename)
+    assert result["ok"], f"{result['status']}: {result['error']}"
+    assert result["sanitized_name"]
+
+
+@pytest.mark.parametrize("filename", FIXTURE_FILES)
+def test_submission_upload(submission_case, filename):
+    result = upload_submission_file(submission_case, os.path.join(FIXTURES_DIR, filename), filename)
+    assert result["ok"], f"{result['status']}: {result['error']}"
+    assert result["sanitized_name"]
+
+
+@needs_llm
+@pytest.mark.parametrize("filename", FIXTURE_FILES)
+def test_reference_ingest(reference_case, filename):
+    uploaded = upload_reference_file(reference_case, os.path.join(FIXTURES_DIR, filename), filename)
+    assert uploaded["ok"], f"{uploaded['status']}: {uploaded['error']}"
+    result = ingest_file(reference_case, uploaded["sanitized_name"])
+    assert result["ok"], f"{result['status']}: {result['error']}"
+
+
+@needs_llm
+@pytest.mark.parametrize("filename", FIXTURE_FILES)
+def test_submission_parse(submission_case, filename):
+    uploaded = upload_submission_file(submission_case, os.path.join(FIXTURES_DIR, filename), filename)
+    assert uploaded["ok"], f"{uploaded['status']}: {uploaded['error']}"
+    result = parse_submission(submission_case, uploaded["sanitized_name"])
+    assert result["ok"], f"{result['status']}: {result['error']}"
 
 
 if __name__ == "__main__":

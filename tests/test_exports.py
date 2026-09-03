@@ -26,6 +26,7 @@ import time
 import json
 import shutil
 import requests
+import pytest
 
 API = os.environ.get("API_URL", "http://localhost:8102")
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -33,6 +34,21 @@ FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 PASS = 0
 FAIL = 0
 RESULTS = []
+
+
+# --- pytest wiring -----------------------------------------------------------
+# Under pytest the `backend` fixture (tests/conftest.py) boots an isolated
+# server; the script-style check()/log() helpers below stay as they are.
+
+pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _authenticated(backend):
+    """Register a fresh org against the live backend before any test runs."""
+    if not setup_auth():
+        pytest.fail("Could not register a test org against the backend")
+
 
 
 def log(msg, indent=0):
@@ -85,6 +101,13 @@ def setup_auth():
         "sectors": ["Education"],
         "geographies": ["New Zealand"],
     }, headers=json_headers())
+
+    # Exports are Officer-only and Scanner caps open cases at 3; the suite
+    # creates a case per test, so upgrade via the dev toggle.
+    r = requests.post(f"{API}/api/org/toggle-tier", headers=json_headers())
+    if not r.ok or r.json().get("tier") != "officer":
+        log(f"[FATAL] Could not upgrade test org to Officer: {r.status_code} {r.text[:200]}")
+        return False
     return True
 
 
@@ -842,6 +865,24 @@ ALL_TESTS = {
     11: ("Empty sections", test_11_empty_sections),
     12: ("Unicode content", test_12_unicode),
 }
+
+
+def _strict(fn):
+    """Under pytest, make script-style check() failures fail the test."""
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper():
+        before = FAIL
+        fn()
+        failed = FAIL - before
+        assert failed == 0, f"{failed} check(s) failed — see captured stdout"
+    return wrapper
+
+
+for _name, _fn in list(globals().items()):
+    if _name.startswith("test_") and callable(_fn):
+        globals()[_name] = _strict(_fn)
 
 
 def main():

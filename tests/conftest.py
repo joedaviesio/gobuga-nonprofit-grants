@@ -4,7 +4,9 @@
 (default http://localhost:8102 — the project's registered backend port):
 
 - If something healthy is already listening there (e.g. the operator's dev
-  server), it is reused as-is.
+  server), it is reused as-is. That server must have been started with
+  GOBUGA_DEV_TIER_TOGGLE=1, or tests that upgrade the test org to Officer
+  via POST /api/org/toggle-tier (tests/test_exports.py) will fail with 404.
 - Otherwise a fresh uvicorn process is booted for the session against a
   throwaway GOBUGA_DATA_DIR, so test orgs never land in the repo's `orgs/`
   or `platform/`. The startup sweep is disabled so no paid sweep is
@@ -69,6 +71,9 @@ def backend():
         "GOBUGA_DATA_DIR": data_dir,
         "GOBUGA_COUNTRY": os.environ.get("GOBUGA_COUNTRY", "nz"),
         "STARTUP_SWEEP_DISABLED": "1",
+        # Unlocks POST /api/org/toggle-tier so tests can put the throwaway
+        # org on Officer without Stripe. Never set in production.
+        "GOBUGA_DEV_TIER_TOGGLE": "1",
     }
     log_path = os.path.join(data_dir, "backend.log")
     log = open(log_path, "w")

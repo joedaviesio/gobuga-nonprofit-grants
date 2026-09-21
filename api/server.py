@@ -1,3 +1,4 @@
+# Copyright © 2026 GoBuga Limited (formerly Proxy Matches Limited). All rights reserved.
 """FastAPI server — multi-tenant case management + chatbot API."""
 
 import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy
@@ -41,7 +42,7 @@ from api.usage_log import read_usage, usage_summary
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.24",
+    version="0.2.25",
 )
 
 _app_url = os.environ.get("APP_URL", "http://localhost:3002")
@@ -421,7 +422,14 @@ def api_seeding_complete(org_id: str = Depends(get_current_org)):
 
 @app.post("/api/org/toggle-tier")
 def api_toggle_tier(org_id: str = Depends(get_current_org)):
-    """Toggle between scanner and officer tiers (dev toggle)."""
+    """Dev-only: put the caller's org on the Officer tier without Stripe.
+
+    Disabled unless GOBUGA_DEV_TIER_TOGGLE=1 (never set in production). Returns
+    404 rather than 403 so the route does not advertise itself. The test suite
+    sets the flag on the backend it boots (tests/conftest.py).
+    """
+    if os.environ.get("GOBUGA_DEV_TIER_TOGGLE") != "1":
+        raise HTTPException(404, "Not found")
     from api.limits import toggle_tier, get_tier, get_cycle_timer
     new_tier_key = toggle_tier(org_id)
     tier = get_tier(org_id)

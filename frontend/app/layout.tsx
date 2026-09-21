@@ -1,3 +1,4 @@
+// Copyright © 2026 GoBuga Limited (formerly Proxy Matches Limited). All rights reserved.
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, DM_Sans, Inter } from "next/font/google";
 import "./globals.css";

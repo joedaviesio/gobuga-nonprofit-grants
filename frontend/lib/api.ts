@@ -268,9 +268,6 @@ export interface TierInfo {
   cycle_timer: CycleTimer | null;
 }
 
-export const toggleTier = () =>
-  request<TierInfo>("/org/toggle-tier", { method: "POST" });
-
 export const getTierInfo = () =>
   request<TierInfo & { can_trigger_cycle: boolean; trigger_message: string | null }>("/org/tier");
 

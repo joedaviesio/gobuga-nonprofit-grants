@@ -257,10 +257,12 @@ export const en = {
 
   // Settings
   "settings.active": "Active",
+  "settings.billed_by": "Billed by GoBuga Limited (NZ company 9398197). Prices in {currency}.",
   "settings.billing_failed": "Failed to open billing portal",
   "settings.checkout_failed": "Failed to start checkout",
   "settings.current": "Current",
   "settings.geographies": "Geographies",
+  "settings.licensed_badge": "Provided under licence",
   "settings.loading": "Loading settings...",
   "settings.manage_billing": "Manage billing",
   "settings.name": "Name",
@@ -282,6 +284,7 @@ export const en = {
   "settings.tailored_title": "Tailored Opportunities",
   "settings.tailored_upsell_after": "Upgrade above to unlock weekly tailored cycles.",
   "settings.tailored_upsell_before": "Available on",
+  "settings.tier_privacy_link": "Privacy & data policy",
   "settings.upgrade_success": "Upgrade successful! Welcome to Grant Officer.",
   "settings.upgrade_to": "Upgrade to {tier}",
   "settings.upload_file": "Upload file",

@@ -100,6 +100,10 @@ export interface TierDefinition {
   model: string;
 }
 
+// Why an org holds Officer: Stripe subscription, platform licence, or the dev
+// toggle. null on Scanner or when a paid plan has no recorded source.
+export type TierSource = "stripe" | "licence" | "dev" | null;
+
 export interface VerifyResponse {
   valid: boolean;
   user_id: string;
@@ -109,6 +113,7 @@ export interface VerifyResponse {
   seeding_complete: boolean;
   tier: "scanner" | "officer";
   tier_label: string;
+  tier_source: TierSource;
   cycle_timer: CycleTimer | null;
   country: string;
   country_label: string;
@@ -259,6 +264,7 @@ export const getBillingPortal = () =>
 export interface TierInfo {
   tier: "scanner" | "officer";
   tier_label: string;
+  tier_source: TierSource;
   cycle_timer: CycleTimer | null;
 }
 

@@ -271,6 +271,8 @@ function SettingsContent() {
   }
 
   const currentTier = session?.tier || "scanner";
+  const tierSource = session?.tier_source ?? null;
+  const currency = getDeploymentConfig().currency;
 
   const orgCountryConfig = findCountry(org?.country);
   const orgSectorOptions = orgCountryConfig?.sectors ?? [];
@@ -613,6 +615,9 @@ function SettingsContent() {
               >
                 {checkingOut ? t("settings.redirecting_checkout") : t("settings.upgrade_to", { tier: officerInfo.label })}
               </button>
+              <p className="text-xs text-blue-700/80 mt-2">
+                {t("settings.billed_by", { currency })}
+              </p>
             </div>
           </>
         ) : (
@@ -621,9 +626,15 @@ function SettingsContent() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-base font-medium text-blue-700">{officerInfo.label}</span>
-                <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{t("settings.active")}</span>
+                {tierSource === "licence" ? (
+                  <span className="text-sm bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">{t("settings.licensed_badge")}</span>
+                ) : (
+                  <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{t("settings.active")}</span>
+                )}
               </div>
-              <span className="text-sm text-stone-700">{officerInfo.price}</span>
+              {tierSource !== "licence" && (
+                <span className="text-sm text-stone-700">{officerInfo.price}</span>
+              )}
               <ul className="space-y-1 mt-2">
                 {officerInfo.features.map((f) => (
                   <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
@@ -633,15 +644,28 @@ function SettingsContent() {
               </ul>
             </div>
 
-            <button
-              onClick={handleManageBilling}
-              className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
-            >
-              {t("settings.manage_billing")}
-            </button>
+            {/* Only Stripe-backed orgs have a customer record the portal can open.
+                Licensed (and any unexplained) grants get no billing button. */}
+            {tierSource === "stripe" && (
+              <>
+                <button
+                  onClick={handleManageBilling}
+                  className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
+                >
+                  {t("settings.manage_billing")}
+                </button>
+                <p className="text-xs text-stone-600 mt-2">
+                  {t("settings.billed_by", { currency })}
+                </p>
+              </>
+            )}
           </>
         );
         })()}
+
+        <p className="text-xs text-stone-600 mt-4 pt-3 border-t border-stone-100">
+          <a href="/privacy" className="text-blue-600 underline hover:text-blue-800">{t("settings.tier_privacy_link")}</a>
+        </p>
       </div>
 
       {/* Tailored Opportunities */}

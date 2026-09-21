@@ -9,6 +9,7 @@ import AuthGate, { useAuth } from "../auth-gate";
 
 import { getDeploymentConfig } from "@/lib/countries";
 import { useI18n } from "@/lib/i18n";
+import { TERMS_ENABLED } from "@/lib/terms";
 
 type Translate = ReturnType<typeof useI18n>["t"];
 
@@ -665,6 +666,12 @@ function SettingsContent() {
 
         <p className="text-xs text-stone-600 mt-4 pt-3 border-t border-stone-100">
           <a href="/privacy" className="text-blue-600 underline hover:text-blue-800">{t("settings.tier_privacy_link")}</a>
+          {TERMS_ENABLED && (
+            <>
+              {" · "}
+              <a href="/terms" className="text-blue-600 underline hover:text-blue-800">{t("terms.title")}</a>
+            </>
+          )}
         </p>
       </div>
 

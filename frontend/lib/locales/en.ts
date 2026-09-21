@@ -50,6 +50,8 @@ export const en = {
   "tiers.fallback_scanner_4": "Markdown export",
 
   // Auth
+  "auth.agree_prefix": "By creating an account you agree to our",
+  "auth.and": "and",
   "auth.already_have_account": "Already have an account?",
   "auth.at_least_8_chars": "At least 8 characters",
   "auth.back_to_sign_in": "Back to sign in",
@@ -351,6 +353,33 @@ export const en = {
   "privacy.title": "Privacy & Data Policy",
   "privacy.use_body": "Your data is used to scan for grant opportunities, assist with applications, and operate the service (rate limiting, billing). We do not sell your data or use it for advertising.",
   "privacy.use_title": "How We Use It",
+
+  // Terms of service (placeholder wording — replace with the approved text
+  // from GoBuga Limited before setting NEXT_PUBLIC_TERMS_ENABLED=1)
+  "terms.title": "Terms of Service",
+  "terms.pending_body": "Our terms of service are being finalised and will be published here. Questions in the meantime? Contact",
+  "terms.intro": "These terms govern your use of the GoBuga platform. By creating an account or using the service you agree to them.",
+  "terms.parties_title": "Who You Are Contracting With",
+  "terms.parties_body": "The platform is provided by GoBuga Limited, New Zealand company number 9398197 (\"GoBuga\", \"we\"). You are the organisation that registers an account and the people who use it on that organisation's behalf.",
+  "terms.service_title": "The Service",
+  "terms.service_body": "GoBuga scans public sources for grant opportunities and helps you draft applications. Opportunity data is gathered automatically and may be incomplete or out of date; always confirm details with the funder before relying on them.",
+  "terms.accounts_title": "Accounts",
+  "terms.accounts_body": "You are responsible for keeping your login details secure and for everything done under your account. One account represents one organisation.",
+  "terms.fees_title": "Fees and Billing",
+  "terms.fees_body": "Grant Scanner is free. Grant Officer is billed monthly in advance by GoBuga Limited through Stripe in the currency shown at checkout, unless your organisation holds a separate platform licence. You can cancel at any time; access continues to the end of the paid period.",
+  "terms.data_title": "Your Data",
+  "terms.data_body": "You keep ownership of the documents and content you upload. We use them only to provide the service, as described in our",
+  "terms.acceptable_use_title": "Acceptable Use",
+  "terms.acceptable_use_body": "Do not use the service to break the law, to misrepresent your organisation to funders, or to attempt to access other organisations' data.",
+  "terms.termination_title": "Ending the Agreement",
+  "terms.termination_body": "You can close your account at any time. We may suspend or close accounts that breach these terms. Data is deleted within 30 days of closure.",
+  "terms.liability_title": "Liability",
+  "terms.liability_body": "The service is provided as is. To the extent permitted by law, GoBuga Limited's liability for any claim is limited to the fees you paid in the three months before the claim arose.",
+  "terms.changes_title": "Changes to These Terms",
+  "terms.changes_body": "We may update these terms. Material changes will be announced in the app at least 14 days before they take effect.",
+  "terms.contact_title": "Contact",
+  "terms.contact_body": "Questions about these terms? Contact",
+  "terms.footer": "Placeholder text pending approval by GoBuga Limited.",
 
   // Case detail
   "case.added_to_databank": "Added {name} to data bank.",

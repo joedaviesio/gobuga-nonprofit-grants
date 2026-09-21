@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
+import { TERMS_ENABLED } from "@/lib/terms";
 
 export default function PrivacyPage() {
   const { t } = useI18n();
@@ -49,6 +50,11 @@ export default function PrivacyPage() {
           <p className="text-sm text-stone-600 pt-2 border-t border-stone-100">
             {t("privacy.footer")} <a href="mailto:privacy@gobuga.org" className="text-blue-600 underline hover:text-blue-800">privacy@gobuga.org</a>.
             <br />{t("privacy.owned_by")} {t("privacy.owner_entity")}.
+            {TERMS_ENABLED && (
+              <>
+                <br /><a href="/terms" className="text-blue-600 underline hover:text-blue-800">{t("terms.title")}</a>
+              </>
+            )}
           </p>
         </div>
       </div>

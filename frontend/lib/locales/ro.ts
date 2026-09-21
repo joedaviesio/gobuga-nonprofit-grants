@@ -340,8 +340,9 @@ export const ro: Record<keyof typeof en, string> = {
   // Privacy
   "privacy.collect_body": "Detalii de cont (email, parolă criptată, numele organizației), profilul organizației (țară, sectoare, regiuni), documente încărcate, dosare de granturi și conversații, precum și metrici de utilizare.",
   "privacy.collect_title": "Ce colectăm",
-  "privacy.footer": "Ultima actualizare: martie 2026. Întrebări? Contactați",
+  "privacy.footer": "Ultima actualizare: septembrie 2026. Întrebări? Contactați",
   "privacy.owned_by": "GoBuga este deținută de",
+  "privacy.owner_entity": "GoBuga Limited, companie înregistrată în Noua Zeelandă, numărul 9398197",
   "privacy.retention_body": "Datele sunt păstrate cât timp contul este activ. Dacă vă închideți contul, toate datele sunt șterse definitiv în termen de 30 de zile.",
   "privacy.retention_title": "Păstrarea datelor",
   "privacy.rights_body": "Puteți vizualiza, actualiza și exporta datele dvs. oricând prin platformă. Puteți șterge documentele încărcate din setări. Pentru ștergerea completă a contului, scrieți-ne la",

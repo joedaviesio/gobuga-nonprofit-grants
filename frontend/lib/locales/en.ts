@@ -339,8 +339,9 @@ export const en = {
   // Privacy
   "privacy.collect_body": "Account details (email, hashed password, organisation name), organisation profile (country, sectors, geographies), uploaded documents, grant cases and conversations, and usage metrics.",
   "privacy.collect_title": "What We Collect",
-  "privacy.footer": "Last updated: March 2026. Questions? Contact",
+  "privacy.footer": "Last updated: September 2026. Questions? Contact",
   "privacy.owned_by": "GoBuga is owned by",
+  "privacy.owner_entity": "GoBuga Limited, New Zealand company number 9398197",
   "privacy.retention_body": "Data is retained while your account is active. If you close your account, all data is permanently deleted within 30 days.",
   "privacy.retention_title": "Retention",
   "privacy.rights_body": "You can view, update, and export your data at any time through the platform. You can delete uploaded documents from settings. For full account deletion, email us at",

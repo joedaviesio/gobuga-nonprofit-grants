@@ -35,9 +35,46 @@ def get_tier(org_id: str) -> dict:
     return tiers.get(get_tier_key(org_id), tiers["scanner"])
 
 
+# Why an org holds a paid tier. Explicit on the org record as `tier_source`;
+# inferred for records written before the field existed.
+#   stripe  — active Stripe subscription (billing.py keeps it in sync)
+#   licence — platform licence agreed outside Stripe (operator-set, see
+#             scripts/audit_tier_grants.py --mark-licence)
+#   dev     — dev toggle (POST /api/org/toggle-tier); never legitimate in prod
+TIER_SOURCES = ("stripe", "licence", "dev")
+
+
+def tier_source_for(org: dict | None) -> str | None:
+    """Return the tier source for an org record, or None on a free tier.
+
+    Falls back to "stripe" when a paid plan has a subscription id and the
+    field is missing; a paid plan with neither is unexplained (None) and
+    shows up in the audit script.
+    """
+    if not org:
+        return None
+    plan = org.get("plan", "free")
+    if _PLAN_TO_TIER.get(plan, plan) != "officer":
+        return None
+    source = org.get("tier_source")
+    if source in TIER_SOURCES:
+        return source
+    if org.get("stripe_subscription_id"):
+        return "stripe"
+    return None
+
+
+def get_tier_source(org_id: str) -> str | None:
+    return tier_source_for(get_org(org_id))
+
+
 def toggle_tier(org_id: str) -> str:
-    """Activate starter (officer) tier. Downgrades are handled by Stripe webhooks."""
-    update_org(org_id, {"plan": "starter"})
+    """Activate starter (officer) tier via the dev toggle.
+
+    Marks the grant as tier_source="dev" so it is visible in the audit.
+    Downgrades are handled by Stripe webhooks.
+    """
+    update_org(org_id, {"plan": "starter", "tier_source": "dev"})
     return "officer"
 
 

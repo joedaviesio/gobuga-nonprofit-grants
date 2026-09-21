@@ -156,7 +156,7 @@ def api_verify(request: Request):
         reconcile_from_stripe(session["org_id"])
     org = get_org(session["org_id"])
     from api.country_config import get_country_config
-    from api.limits import get_tier_key, get_tier, get_cycle_timer
+    from api.limits import get_tier_key, get_tier, get_cycle_timer, tier_source_for
     config = get_country_config()
     tier_key = get_tier_key(session["org_id"])
     tier = get_tier(session["org_id"])
@@ -170,6 +170,7 @@ def api_verify(request: Request):
         "seeding_complete": org.get("seeding_complete", True) if org else True,
         "tier": tier_key,
         "tier_label": tier["label"],
+        "tier_source": tier_source_for(org),
         "cycle_timer": cycle_timer,
         "country": config.slug,
         "country_label": config.country_label,
@@ -435,7 +436,7 @@ def api_toggle_tier(org_id: str = Depends(get_current_org)):
 @app.get("/api/org/tier")
 def api_get_tier(org_id: str = Depends(get_current_org)):
     """Get current tier info and cycle timer."""
-    from api.limits import get_tier_key, get_tier, get_cycle_timer, can_trigger_cycle
+    from api.limits import get_tier_key, get_tier, get_cycle_timer, can_trigger_cycle, get_tier_source
     tier_key = get_tier_key(org_id)
     tier = get_tier(org_id)
     cycle_timer = get_cycle_timer(org_id)
@@ -443,6 +444,7 @@ def api_get_tier(org_id: str = Depends(get_current_org)):
     return {
         "tier": tier_key,
         "tier_label": tier["label"],
+        "tier_source": get_tier_source(org_id),
         "cycle_timer": cycle_timer,
         "can_trigger_cycle": can_trigger["allowed"],
         "trigger_message": can_trigger["message"],

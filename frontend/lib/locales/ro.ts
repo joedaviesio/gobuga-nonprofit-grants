@@ -51,6 +51,8 @@ export const ro: Record<keyof typeof en, string> = {
   "tiers.fallback_scanner_4": "Export Markdown",
 
   // Auth
+  "auth.agree_prefix": "Prin crearea unui cont, sunteți de acord cu",
+  "auth.and": "și",
   "auth.already_have_account": "Aveți deja un cont?",
   "auth.at_least_8_chars": "Cel puțin 8 caractere",
   "auth.back_to_sign_in": "Înapoi la autentificare",
@@ -340,8 +342,9 @@ export const ro: Record<keyof typeof en, string> = {
   // Privacy
   "privacy.collect_body": "Detalii de cont (email, parolă criptată, numele organizației), profilul organizației (țară, sectoare, regiuni), documente încărcate, dosare de granturi și conversații, precum și metrici de utilizare.",
   "privacy.collect_title": "Ce colectăm",
-  "privacy.footer": "Ultima actualizare: martie 2026. Întrebări? Contactați",
+  "privacy.footer": "Ultima actualizare: septembrie 2026. Întrebări? Contactați",
   "privacy.owned_by": "GoBuga este deținută de",
+  "privacy.owner_entity": "GoBuga Limited, companie înregistrată în Noua Zeelandă, numărul 9398197",
   "privacy.retention_body": "Datele sunt păstrate cât timp contul este activ. Dacă vă închideți contul, toate datele sunt șterse definitiv în termen de 30 de zile.",
   "privacy.retention_title": "Păstrarea datelor",
   "privacy.rights_body": "Puteți vizualiza, actualiza și exporta datele dvs. oricând prin platformă. Puteți șterge documentele încărcate din setări. Pentru ștergerea completă a contului, scrieți-ne la",
@@ -351,6 +354,32 @@ export const ro: Record<keyof typeof en, string> = {
   "privacy.title": "Politica de confidențialitate și date",
   "privacy.use_body": "Datele dvs. sunt folosite pentru a scana oportunități de granturi, a asista la cereri și a opera serviciul (limitare de trafic, facturare). Nu vindem datele dvs. și nu le folosim pentru publicitate.",
   "privacy.use_title": "Cum le folosim",
+
+  // Termeni de utilizare (text provizoriu — a se înlocui cu textul aprobat)
+  "terms.title": "Termeni de utilizare",
+  "terms.pending_body": "Termenii noștri de utilizare sunt în curs de finalizare și vor fi publicați aici. Întrebări între timp? Contactați",
+  "terms.intro": "Acești termeni reglementează utilizarea platformei GoBuga. Prin crearea unui cont sau utilizarea serviciului, sunteți de acord cu ei.",
+  "terms.parties_title": "Cu cine încheiați contractul",
+  "terms.parties_body": "Platforma este furnizată de GoBuga Limited, companie înregistrată în Noua Zeelandă cu numărul 9398197 (\"GoBuga\", \"noi\"). Dumneavoastră sunteți organizația care înregistrează un cont și persoanele care îl folosesc în numele acesteia.",
+  "terms.service_title": "Serviciul",
+  "terms.service_body": "GoBuga scanează surse publice pentru oportunități de finanțare și vă ajută să redactați cereri. Datele sunt colectate automat și pot fi incomplete sau depășite; confirmați întotdeauna detaliile cu finanțatorul înainte de a vă baza pe ele.",
+  "terms.accounts_title": "Conturi",
+  "terms.accounts_body": "Sunteți responsabil pentru păstrarea în siguranță a datelor de autentificare și pentru tot ce se face din contul dumneavoastră. Un cont reprezintă o singură organizație.",
+  "terms.fees_title": "Tarife și facturare",
+  "terms.fees_body": "Grant Scanner este gratuit. Grant Officer se facturează lunar în avans de către GoBuga Limited prin Stripe, în moneda afișată la plată, cu excepția cazului în care organizația dumneavoastră deține o licență de platformă separată. Puteți anula oricând; accesul continuă până la sfârșitul perioadei plătite.",
+  "terms.data_title": "Datele dumneavoastră",
+  "terms.data_body": "Rămâneți proprietarul documentelor și conținutului încărcat. Le folosim doar pentru a furniza serviciul, conform",
+  "terms.acceptable_use_title": "Utilizare acceptabilă",
+  "terms.acceptable_use_body": "Nu folosiți serviciul pentru a încălca legea, pentru a prezenta eronat organizația în fața finanțatorilor sau pentru a încerca să accesați datele altor organizații.",
+  "terms.termination_title": "Încetarea acordului",
+  "terms.termination_body": "Puteți închide contul oricând. Putem suspenda sau închide conturile care încalcă acești termeni. Datele sunt șterse în termen de 30 de zile de la închidere.",
+  "terms.liability_title": "Răspundere",
+  "terms.liability_body": "Serviciul este furnizat ca atare. În măsura permisă de lege, răspunderea GoBuga Limited pentru orice pretenție este limitată la tarifele plătite în cele trei luni anterioare apariției pretenției.",
+  "terms.changes_title": "Modificări ale termenilor",
+  "terms.changes_body": "Putem actualiza acești termeni. Modificările importante vor fi anunțate în aplicație cu cel puțin 14 zile înainte de intrarea în vigoare.",
+  "terms.contact_title": "Contact",
+  "terms.contact_body": "Întrebări despre acești termeni? Contactați",
+  "terms.footer": "Text provizoriu, în așteptarea aprobării de către GoBuga Limited.",
 
   // Case detail
   "case.added_to_databank": "{name} a fost adăugat în banca de date.",

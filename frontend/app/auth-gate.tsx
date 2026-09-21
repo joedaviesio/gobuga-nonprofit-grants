@@ -6,7 +6,7 @@ import { verifySession, logout, getToken, clearToken, type VerifyResponse } from
 import { loadDeploymentConfig } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 
-const PUBLIC_PATHS = ["/login", "/register", "/setup", "/seed", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/login", "/register", "/setup", "/seed", "/forgot-password", "/reset-password", "/privacy", "/terms"];
 
 interface AuthContextType {
   logout: () => void;

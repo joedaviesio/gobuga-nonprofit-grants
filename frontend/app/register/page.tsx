@@ -5,6 +5,7 @@ import { registerAccount, getToken } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
 import PasswordInput from "@/app/password-input";
 import { useI18n, type MessageKey } from "@/lib/i18n";
+import { TERMS_ENABLED } from "@/lib/terms";
 
 function validateEmail(v: string): MessageKey | "" {
   if (!v.trim()) return "auth.email_required";
@@ -175,6 +176,17 @@ export default function RegisterPage() {
               <p className="text-sm text-red-600 mt-1">{t(fieldErrors.confirmPassword)}</p>
             )}
           </div>
+
+          <p className="text-sm text-stone-600">
+            {t("auth.agree_prefix")}{" "}
+            {TERMS_ENABLED && (
+              <>
+                <a href="/terms" className="text-blue-600 hover:underline">{t("terms.title")}</a>
+                {" "}{t("auth.and")}{" "}
+              </>
+            )}
+            <a href="/privacy" className="text-blue-600 hover:underline">{t("privacy.title")}</a>.
+          </p>
 
           {loading && (
             <LoadingBar label={t("auth.creating_account")} />

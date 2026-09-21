@@ -1,3 +1,4 @@
+# Copyright © 2026 GoBuga Limited (formerly Proxy Matches Limited). All rights reserved.
 """FastAPI server — multi-tenant case management + chatbot API."""
 
 import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy

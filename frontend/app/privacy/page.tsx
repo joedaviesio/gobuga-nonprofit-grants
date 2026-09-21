@@ -48,7 +48,7 @@ export default function PrivacyPage() {
 
           <p className="text-sm text-stone-600 pt-2 border-t border-stone-100">
             {t("privacy.footer")} <a href="mailto:privacy@gobuga.org" className="text-blue-600 underline hover:text-blue-800">privacy@gobuga.org</a>.
-            <br />{t("privacy.owned_by")} <a href="https://proxymatches.com" target="_blank" rel="noopener" className="text-blue-600 underline hover:text-blue-800">Proxy Matches</a>.
+            <br />{t("privacy.owned_by")} {t("privacy.owner_entity")}.
           </p>
         </div>
       </div>

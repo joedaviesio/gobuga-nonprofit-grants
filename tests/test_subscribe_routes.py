@@ -391,3 +391,22 @@ def test_subscribe_routes_are_not_opened_to_other_origins(client):
     r = client.options(URL, headers={"Origin": "https://evil.example",
                                      "Access-Control-Request-Method": "POST"})
     assert r.headers.get("access-control-allow-origin") != "https://evil.example"
+
+
+# --- Audit addition: the redirect keeps the visitor's language ------------------
+
+def test_form_redirect_carries_a_non_default_language(monkeypatch):
+    from api import subscribe_routes as routes
+    from api.country_config import clear_config_cache
+    monkeypatch.setenv("GOBUGA_COUNTRY", "md")
+    monkeypatch.setenv("APP_URL", "https://md.gobuga.org")
+    clear_config_cache()
+    try:
+        assert routes._form_redirect("sent", "ru").headers["location"] == \
+            "https://md.gobuga.org/subscribe?state=sent&lang=ru"
+        # The default language, an unknown one and a hostile one add nothing.
+        for lang in ("ro", "xx", "ru&state=invalid", None, 5):
+            assert routes._form_redirect("sent", lang).headers["location"] == \
+                "https://md.gobuga.org/subscribe?state=sent"
+    finally:
+        clear_config_cache()

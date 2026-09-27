@@ -30,8 +30,8 @@ from fastapi.routing import APIRoute
 from api import metrics, public_stats, published
 from api.errors import PublicError
 from api.fit import (
-    ENTITY_VOCAB, NEEDS, PARAM_ORDER, SIZE_BAND_REVENUE, SIZE_BANDS,
-    FitParamError, parse_fit_params, score_fit,
+    NEEDS, PARAM_ORDER, SIZE_BAND_REVENUE, SIZE_BANDS,
+    FitParamError, entity_vocab_for, parse_fit_params, score_fit,
 )
 from api.public_context import (
     JSON, MAX_LIMIT, PARAM_DOCS as _P, Ctx, filtered, invalid, json_response, list_body,
@@ -351,7 +351,7 @@ def taxonomy(request: Request):
         "tags": [{"slug": t, "label": labels.get(t)} for t in cfg.tags],
         "regions": list(cfg.regions),
         "sector_labels": dict(cfg.sector_label_to_tag),
-        "entity_vocab": list(ENTITY_VOCAB),
+        "entity_vocab": list(entity_vocab_for(ctx.country)),
         "size_bands": [{"slug": s, "revenue_min": SIZE_BAND_REVENUE[s][0],
                         "revenue_max": SIZE_BAND_REVENUE[s][1], "currency": cfg.currency}
                        for s in SIZE_BANDS],

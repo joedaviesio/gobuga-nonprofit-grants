@@ -17,6 +17,7 @@ import os
 import re
 import unicodedata
 from datetime import date, datetime, time, timezone
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from api.funders import canonicalise_funder, slugify_funder
@@ -143,6 +144,22 @@ def funder_ref(raw_name: str, country: str, base: str) -> dict:
     }
 
 
+def http_url(value) -> str | None:
+    """The URL if it is absolute http(s) with a host, else None.
+
+    Source URLs are read from funder pages by the sweep, so they are
+    untrusted; a page or an agent that links one must never be handed a
+    `javascript:` or `data:` URL.
+    """
+    if not isinstance(value, str) or any(ord(c) <= 0x20 or ord(c) == 0x7f for c in value):
+        return None
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return None
+    return value if parts.scheme.lower() in ("http", "https") and parts.hostname else None
+
+
 def _provenance(row: dict) -> dict:
     """Stored provenance, keeping only the three public keys per field."""
     out = {}
@@ -151,7 +168,9 @@ def _provenance(row: dict) -> dict:
         return out
     for field, entry in stored.items():
         if isinstance(entry, dict):
-            out[field] = {k: entry.get(k) for k in ("source_url", "verified_at", "excerpt")}
+            out[field] = {"source_url": http_url(entry.get("source_url")),
+                          "verified_at": entry.get("verified_at"),
+                          "excerpt": entry.get("excerpt")}
     return out
 
 
@@ -179,7 +198,7 @@ def public_record(row: dict, *, base: str, retrieved_at: str) -> dict:
             "state": state,
             "date": row.get("deadline") if _date(row.get("deadline")) else None,
             "verified_at": dl_prov.get("verified_at") or row.get("verified_at"),
-            "source_url": dl_prov.get("source_url") or row.get("source_url"),
+            "source_url": dl_prov.get("source_url") or http_url(row.get("source_url")),
             "excerpt": dl_prov.get("excerpt") or row.get("source_excerpt"),
         },
         "amount": {
@@ -192,7 +211,7 @@ def public_record(row: dict, *, base: str, retrieved_at: str) -> dict:
         "eligibility": row.get("eligibility"),
         "eligible_entities": _str_list(row.get("eligible_entities")),
         "summary": row.get("summary"),
-        "source_url": row.get("source_url"),
+        "source_url": http_url(row.get("source_url")),
         "apply_url": f"{base}/out/{opp_id}",
         "canonical_url": canonical,
         "json_url": f"{canonical}.json",

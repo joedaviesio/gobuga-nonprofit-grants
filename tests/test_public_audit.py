@@ -128,3 +128,58 @@ def test_a_500_on_the_public_api_is_readable_from_any_origin(client, monkeypatch
     assert r.status_code == 500
     assert r.headers["access-control-allow-origin"] == "*"
     assert "private detail" not in r.text
+
+
+# --- Audit additions after the public pages landed -------------------------------
+
+def hits(tmp_path_platform):
+    lines = []
+    for f in tmp_path_platform.glob("metrics/nz/*.jsonl"):
+        lines += [json.loads(l) for l in f.read_text().splitlines() if l.strip()]
+    return [l for l in lines if l.get("kind") == "hit"]
+
+
+def test_the_frontends_own_reads_are_not_counted(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("INTERNAL_HIT_SECRET", "s3cret")
+    client.get("/api/v1/taxonomy", headers={"Authorization": "Bearer s3cret"})
+    assert hits(tmp_path / "platform") == []
+    client.get("/api/v1/taxonomy", headers={"Authorization": "Bearer wrong"})
+    client.get("/api/v1/taxonomy")
+    assert len(hits(tmp_path / "platform")) == 2
+
+
+def test_no_secret_configured_means_every_read_is_counted(client, tmp_path, monkeypatch):
+    monkeypatch.delenv("INTERNAL_HIT_SECRET", raising=False)
+    client.get("/api/v1/taxonomy", headers={"Authorization": "Bearer "})
+    assert len(hits(tmp_path / "platform")) == 1
+
+
+@pytest.mark.parametrize("bad", ["javascript:alert(1)", "data:text/html,x", "//no-scheme.example",
+                                 "ftp://funder.example/x", "https://", "http://a b.example/", "", None, 7])
+def test_only_http_urls_leave_the_backend(bad):
+    from api.public_data import public_record
+    row = {**NOW_ROW, "status": "live", "source_url": bad,
+           "provenance": {"deadline": {"source_url": bad, "verified_at": "x", "excerpt": "y"}}}
+    record = public_record(row, base="https://gobuga.org", retrieved_at="2026-10-01")
+    assert record["source_url"] is None
+    assert record["deadline"]["source_url"] is None
+    assert record["provenance"]["deadline"]["source_url"] is None
+    assert record["provenance"]["deadline"]["excerpt"] == "y"
+
+
+def test_entity_vocabulary_follows_the_country(monkeypatch):
+    from api.fit import ENTITY_VOCAB, FitParamError, entity_vocab_for, parse_fit_params
+    assert entity_vocab_for("nz") == ENTITY_VOCAB
+    md = entity_vocab_for("md")
+    assert "marae" not in md and "iwi-hapu" not in md and "club" in md
+    assert parse_fit_params({"status": "marae"}, "nz").status == "marae"
+    with pytest.raises(FitParamError) as exc:
+        parse_fit_params({"status": "marae"}, "md")
+    assert "marae" not in exc.value.allowed
+
+
+def test_taxonomy_lists_the_countrys_entities(client, monkeypatch):
+    assert "marae" in client.get("/api/v1/taxonomy").json()["entity_vocab"]
+    monkeypatch.setenv("GOBUGA_COUNTRY", "md")
+    clear_config_cache()
+    assert "marae" not in client.get("/api/v1/taxonomy").json()["entity_vocab"]

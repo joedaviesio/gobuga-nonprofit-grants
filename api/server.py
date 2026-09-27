@@ -101,7 +101,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     print(f"[ERROR] {request.url}: {exc}\n{tb}")
     headers = {}
     origin = request.headers.get("origin")
-    if origin in _allowed_origins:
+    if request.url.path == "/api/v1" or request.url.path.startswith("/api/v1/"):
+        headers = {"Access-Control-Allow-Origin": "*"}  # public: see PublicCORSMiddleware
+    elif origin in _allowed_origins:
         headers = {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
     return JSONResponse(status_code=500, content=INTERNAL_ERROR_BODY, headers=headers)
 
@@ -1615,6 +1617,12 @@ from api.internal_hit import router as internal_hit_router
 app.include_router(internal_hit_router)
 from api.subscribe_routes import router as subscribe_router
 app.include_router(subscribe_router)
+from api.public_v1 import router as public_v1_router
+app.include_router(public_v1_router)
+# Added last so it runs outside CORSMiddleware: /api/v1 is readable from any
+# origin; every other path keeps the allow-list above.
+from api.public_http import PublicCORSMiddleware
+app.add_middleware(PublicCORSMiddleware)
 
 
 # --- Health (public) ---

@@ -131,15 +131,19 @@ _DEFAULT_FUNDER_ALIASES: dict[str, list[str]] = {
     ],
 }
 
+# The free tier (scanner) has no limits: the workspace is free and unlimited
+# while the paid question is parked (plan of 27 Sep 2026). It keeps the cheap
+# model; cost is bounded by the daily LLM budget in api/llm_budget.py.
+# The officer tier is kept as-is for the existing paying and licensed orgs.
 _DEFAULT_TIERS: dict = {
     "scanner": {
         "label": "Grant Scanner",
         "price_monthly": 0,
-        "opportunities_per_cycle": {"high": 2, "medium": 2, "low": 1},
-        "max_open_cases": 3,
-        "chat_messages_per_case": 5,
-        "bots_bcd": False,
-        "export_docx": False,
+        "opportunities_per_cycle": None,
+        "max_open_cases": -1,
+        "chat_messages_per_case": -1,
+        "bots_bcd": True,
+        "export_docx": True,
         "model": "claude-haiku-4-5-20251001",
     },
     "officer": {

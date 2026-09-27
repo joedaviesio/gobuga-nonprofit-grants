@@ -111,6 +111,15 @@ async def get_current_session(request: Request) -> dict:
     return session
 
 
+def _require_llm_budget(org_id: str) -> None:
+    """Refuse with 429 when the org has used today's LLM budget. Call it at
+    every route that starts LLM work, before any side effect."""
+    from api.llm_budget import check_llm_budget
+    check = check_llm_budget(org_id)
+    if not check["allowed"]:
+        raise HTTPException(429, check["message"])
+
+
 # --- Auth endpoints (public) ---
 
 class RegisterRequest(BaseModel):
@@ -176,7 +185,6 @@ def api_verify(request: Request):
         "country": config.slug,
         "country_label": config.country_label,
         "currency": config.currency,
-        "tiers": config.tiers,
     }
 
 
@@ -260,8 +268,10 @@ def api_latest_reset_token(email: str):
 # --- Org setup ---
 
 class OrgSetupRequest(BaseModel):
-    org_name: str
-    country: str
+    # Every field is optional: the one sign-up screen can be skipped entirely.
+    # Fields left out keep the org's current value (see setup_org).
+    org_name: str = ""
+    country: str = ""
     website: str = ""
     charitable_status: str = ""
     mission: str = ""
@@ -272,10 +282,11 @@ class OrgSetupRequest(BaseModel):
 
 @app.post("/api/org/setup")
 def api_org_setup(req: OrgSetupRequest, org_id: str = Depends(get_current_org)):
-    """Save org profile from onboarding wizard and generate configs."""
+    """Save org profile from the sign-up screen and generate configs.
+    Accepts an empty or partial body."""
     from api.org_setup import setup_org
     try:
-        result = setup_org(org_id, req.model_dump())
+        result = setup_org(org_id, req.model_dump(exclude_unset=True))
         return result
     except Exception as e:
         print(f"[Setup error] {e}\n{traceback.format_exc()}")
@@ -534,6 +545,7 @@ def api_create_case(req: CreateCaseRequest, org_id: str = Depends(get_current_or
     limit_check = check_case_limit(org_id)
     if not limit_check["allowed"]:
         raise HTTPException(403, limit_check["message"])
+    _require_llm_budget(org_id)  # create_case runs Bot A for the summary
     case = create_case(org_id, req.grant_id, req.grant_brief, req.officer)
     return case
 
@@ -581,6 +593,7 @@ def api_chat(case_id: str, req: ChatRequest, org_id: str = Depends(get_current_o
     chat_check = check_chat_limit(org_id, case_id)
     if not chat_check["allowed"]:
         raise HTTPException(403, chat_check["message"])
+    _require_llm_budget(org_id)
     result = chat(org_id, case_id, req.message)
     if "error" in result:
         raise HTTPException(400, result["error"])
@@ -738,6 +751,7 @@ def api_open_case_from_opportunity(req: CreateCaseFromOpportunity, org_id: str =
     limit_check = check_case_limit(org_id)
     if not limit_check["allowed"]:
         raise HTTPException(403, limit_check["message"])
+    _require_llm_budget(org_id)  # create_case runs Bot A for the summary
 
     report = load_report(org_id, req.cycle_date)
     if report is None:
@@ -914,7 +928,8 @@ def api_public_stats(request: Request, response: Response):
 
 @app.get("/api/public/country-config")
 def api_public_country_config(request: Request, response: Response):
-    """Non-sensitive country config for the frontend (tiers, labels, currency)."""
+    """Non-sensitive country config for the frontend (labels, currency, taxonomy).
+    Tier definitions and prices are left out: nothing is for sale."""
     _check_public_rate_limit(request)
     from api.country_config import get_country_config
     config = get_country_config()
@@ -926,7 +941,6 @@ def api_public_country_config(request: Request, response: Response):
         "currency": config.currency,
         "content_language": config.content_language,
         "ui_languages": config.ui_languages,
-        "tiers": config.tiers,
         "tags": config.tags,
         "sector_slices": config.sector_slices,
         "regions": config.regions,
@@ -989,6 +1003,7 @@ def api_open_case_from_pool(
     limit_check = check_case_limit(org_id)
     if not limit_check["allowed"]:
         raise HTTPException(403, limit_check["message"])
+    _require_llm_budget(org_id)  # create_case runs Bot A for the summary
 
     org = get_org(org_id) or {}
     country = country_slug(req.country or org.get("country"))
@@ -1096,6 +1111,7 @@ class RunCycleRequest(BaseModel):
 def api_run_cycle(req: RunCycleRequest, org_id: str = Depends(get_current_org)):
     if _cycle_state["running"]:
         raise HTTPException(409, "A cycle is already running")
+    _require_llm_budget(org_id)
 
     from orchestrator.main import run_cycle
     from datetime import datetime, timezone
@@ -1134,7 +1150,7 @@ def api_run_cycle(req: RunCycleRequest, org_id: str = Depends(get_current_org)):
     return {"status": "started", "date": cycle_date or "today"}
 
 
-# --- Tailored Opportunities (paid tier — wraps the legacy per-org cycle) ---
+# --- Tailored Opportunities (every account — wraps the legacy per-org cycle) ---
 
 class ToggleTailoredRequest(BaseModel):
     enabled: bool
@@ -1142,20 +1158,17 @@ class ToggleTailoredRequest(BaseModel):
 
 @app.patch("/api/tailored/toggle")
 def api_tailored_toggle(req: ToggleTailoredRequest, org_id: str = Depends(get_current_org)):
-    """Officer-only: turn the Tailored Opportunities feature on or off.
-    Off by default. Turning it off does NOT cancel an in-flight cycle."""
+    """Record the org's Tailored Opportunities preference. The flag no longer
+    gates access (see limits.check_tailored_access); no UI calls this now."""
     from api.limits import set_tailored_enabled, get_cycle_timer
-    try:
-        result = set_tailored_enabled(org_id, req.enabled)
-    except PermissionError as e:
-        raise HTTPException(403, str(e))
+    result = set_tailored_enabled(org_id, req.enabled)
     return {**result, "cycle_timer": get_cycle_timer(org_id)}
 
 
 @app.get("/api/tailored/access")
 def api_tailored_access(org_id: str = Depends(get_current_org)):
     """Returns the current gate state — used by the UI to decide whether
-    to show the toggle, the upgrade CTA, or the run button."""
+    to show the run button or the cooldown timer."""
     from api.limits import check_tailored_access
     org = get_org(org_id) or {}
     access = check_tailored_access(org_id)
@@ -1167,7 +1180,7 @@ def api_tailored_access(org_id: str = Depends(get_current_org)):
 
 @app.post("/api/tailored/run")
 def api_tailored_run(org_id: str = Depends(get_current_org)):
-    """Trigger an Officer's weekly per-org cycle. Reuses the legacy
+    """Trigger the org's weekly per-org cycle. Reuses the legacy
     `run_cycle` engine (Watcher → Analyst → Reporter) and the existing
     `_cycle_state` for status polling. Starts the 7-day cooldown timer."""
     from api.limits import check_tailored_access, trigger_cycle, get_model_overrides
@@ -1181,6 +1194,9 @@ def api_tailored_run(org_id: str = Depends(get_current_org)):
 
     if _cycle_state["running"]:
         raise HTTPException(409, "A cycle is already running")
+
+    # Before the timer starts, so a refused run does not cost the org a week
+    _require_llm_budget(org_id)
 
     # Start the 7-day cooldown immediately on trigger so re-clicks are gated
     timer = trigger_cycle(org_id)
@@ -1258,6 +1274,7 @@ def api_bot_summary(case_id: str, org_id: str = Depends(get_current_org)):
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    _require_llm_budget(org_id)
     try:
         result = bot_a_generate_summary(org_id, case_id)
     except Exception as e:
@@ -1282,6 +1299,7 @@ def api_bot_parse(case_id: str, req: ParseDocumentRequest, org_id: str = Depends
     access = check_feature_access(org_id, "bots_bcd")
     if not access["allowed"]:
         raise HTTPException(403, access["message"])
+    _require_llm_budget(org_id)
     try:
         result = bot_b_parse_document(org_id, case_id, req.filename)
     except Exception as e:
@@ -1302,6 +1320,7 @@ def api_bot_fill(case_id: str, org_id: str = Depends(get_current_org)):
     access = check_feature_access(org_id, "bots_bcd")
     if not access["allowed"]:
         raise HTTPException(403, access["message"])
+    _require_llm_budget(org_id)
     try:
         result = bot_c_fill_sections(org_id, case_id)
     except Exception as e:
@@ -1322,6 +1341,7 @@ def api_bot_parse_and_fill(case_id: str, req: ParseDocumentRequest, org_id: str 
     access = check_feature_access(org_id, "bots_bcd")
     if not access["allowed"]:
         raise HTTPException(403, access["message"])
+    _require_llm_budget(org_id)
     try:
         parse_result = bot_b_parse_document(org_id, case_id, req.filename)
         if "error" in parse_result:
@@ -1364,6 +1384,7 @@ def api_bot_questions(case_id: str, org_id: str = Depends(get_current_org)):
     access = check_feature_access(org_id, "bots_bcd")
     if not access["allowed"]:
         raise HTTPException(403, access["message"])
+    _require_llm_budget(org_id)
     try:
         result = bot_d_analyze_gaps(org_id, case_id)
     except Exception as e:
@@ -1388,6 +1409,7 @@ def api_bot_answer(case_id: str, req: AnswerRequest, org_id: str = Depends(get_c
     access = check_feature_access(org_id, "bots_bcd")
     if not access["allowed"]:
         raise HTTPException(403, access["message"])
+    _require_llm_budget(org_id)
     try:
         result = bot_d_process_answer(org_id, case_id, req.message)
     except Exception as e:
@@ -1408,6 +1430,7 @@ def api_bot_answer_stream(case_id: str, req: AnswerRequest, org_id: str = Depend
     access = check_feature_access(org_id, "bots_bcd")
     if not access["allowed"]:
         raise HTTPException(403, access["message"])
+    _require_llm_budget(org_id)
     return StreamingResponse(
         bot_d_process_answer_stream(org_id, case_id, req.message),
         media_type="text/event-stream",
@@ -1425,6 +1448,7 @@ def api_bot_ingest(case_id: str, req: IngestFileRequest, org_id: str = Depends(g
     case = load_case(org_id, case_id)
     if case is None:
         raise HTTPException(404, f"Case {case_id} not found")
+    _require_llm_budget(org_id)
     try:
         result = ingest_file_to_databank(org_id, case_id, req.filename)
     except Exception as e:
@@ -1496,7 +1520,15 @@ class CheckoutRequest(BaseModel):
 
 @app.post("/api/billing/checkout")
 def api_billing_checkout(req: CheckoutRequest, org_id: str = Depends(get_current_org)):
-    """Create a Stripe Checkout session for plan upgrade."""
+    """Create a Stripe Checkout session for plan upgrade.
+
+    Frozen while the workspace is free (plan of 27 Sep 2026): no new
+    subscription can start. BILLING_CHECKOUT_ENABLED=1 switches it back on
+    without a code change. The portal and webhook below stay live so the
+    existing paying orgs can manage or cancel.
+    """
+    if os.environ.get("BILLING_CHECKOUT_ENABLED") != "1":
+        raise HTTPException(410, "New subscriptions are closed. The workspace is free to use, with nothing to buy.")
     from api.billing import create_checkout_session, stripe_configured
     if not stripe_configured():
         raise HTTPException(503, "Billing is not enabled for this deployment.")

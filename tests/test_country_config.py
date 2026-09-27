@@ -115,12 +115,17 @@ def test_nz_tiers():
     scanner = config.tiers["scanner"]
     assert scanner["label"] == "Grant Scanner"
     assert scanner["price_monthly"] == 0
-    assert scanner["max_open_cases"] == 3  # NZ scanner limited to 3
-    assert scanner["chat_messages_per_case"] == 5  # NZ scanner limited to 5
-    assert scanner["bots_bcd"] is False  # NZ scanner can't use bots B/C/D
+    # Free workspace (plan of 27 Sep 2026): NZ scanner is unlimited too
+    assert scanner["opportunities_per_cycle"] is None
+    assert scanner["max_open_cases"] == -1
+    assert scanner["chat_messages_per_case"] == -1
+    assert scanner["bots_bcd"] is True
+    assert scanner["export_docx"] is True
+    assert scanner["model"] == "claude-haiku-4-5-20251001"  # still the cheap model
     officer = config.tiers["officer"]
     assert officer["max_open_cases"] == -1  # unlimited
     assert officer["bots_bcd"] is True
+    assert officer["model"] == "claude-sonnet-5"
     _reset_to_nz()
 
 

@@ -198,7 +198,7 @@ export default function SeedPage() {
     try {
       await setupOrg(data);
       await completeSeedingStep();
-      window.location.href = "/";
+      window.location.href = "/workspace";
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.save"));
       setSaving(false);

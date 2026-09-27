@@ -804,9 +804,26 @@ def test_malformed_queries_never_500(client, dataset, url):
     assert r.headers["content-type"].startswith("application/json")
 
 
-def test_legacy_redacted_feed_still_served(client):
-    r = client.get("/api/public/opportunities")
-    assert r.status_code == 200 and "opportunities" in r.json()
+def test_legacy_redacted_feed_is_gone(client):
+    # The public pages render full facts from /api/v1; the redacted feed ended.
+    assert client.get("/api/public/opportunities").status_code == 404
+    assert client.get("/api/public/stats").status_code == 404
+
+
+def test_country_config_carries_timezone_and_languages(client):
+    body = client.get("/api/public/country-config").json()
+    assert body["timezone"] == "Pacific/Auckland"
+    assert body["content_language"] == "en" and body["ui_languages"] == ["en"]
+    assert "tiers" not in body
+
+
+def test_country_config_rate_limit_exempts_the_frontend(client, monkeypatch):
+    monkeypatch.setenv("PUBLIC_RATE_LIMIT_PER_MIN", "2")
+    monkeypatch.setenv("INTERNAL_HIT_SECRET", "s3cret")
+    statuses = [client.get("/api/public/country-config").status_code for _ in range(3)]
+    assert statuses == [200, 200, 429]
+    internal = {"Authorization": "Bearer s3cret"}
+    assert client.get("/api/public/country-config", headers=internal).status_code == 200
 
 
 # --- CORS ----------------------------------------------------------------------------------

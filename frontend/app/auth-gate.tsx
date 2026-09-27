@@ -7,7 +7,8 @@ import { loadDeploymentConfig } from "@/lib/countries";
 import { onboardingRedirect } from "@/lib/onboarding";
 import LoadingBar from "@/app/loading-bar";
 
-// /seed checks the session itself; /setup is redirected to /seed in next.config.ts.
+// Workspace-layout pages that render without a session. /seed checks the
+// session itself; /setup is redirected to /seed in next.config.ts.
 const PUBLIC_PATHS = ["/login", "/register", "/seed", "/forgot-password", "/reset-password", "/privacy", "/terms"];
 
 interface AuthContextType {
@@ -43,15 +44,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
     const token = getToken();
     if (!token) {
-      // Anon visitors see the landing feed at "/"; everywhere else still
-      // redirects to login. The page component branches on `session === null`.
-      if (pathname === "/") {
-        // Deliberate mount-time setState: the token lives in localStorage,
-        // which can only be read on the client after hydration.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setLoading(false);
-        return;
-      }
+      // The public pages (/, /grants, ...) have their own layout and never
+      // reach this gate; every workspace page needs a session.
       window.location.href = "/login";
       return;
     }

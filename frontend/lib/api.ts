@@ -89,19 +89,9 @@ export interface CycleTimer {
   expired: boolean;
 }
 
-export interface TierDefinition {
-  label: string;
-  price_monthly: number;
-  opportunities_per_cycle: number | null;
-  max_open_cases: number;
-  chat_messages_per_case: number;
-  bots_bcd: boolean;
-  export_docx: boolean;
-  model: string;
-}
-
 // Why an org holds Officer: Stripe subscription, platform licence, or the dev
-// toggle. null on Scanner or when a paid plan has no recorded source.
+// toggle. null on Scanner or when a paid plan has no recorded source. The UI
+// uses it only to show "Manage billing" to orgs with a Stripe subscription.
 export type TierSource = "stripe" | "licence" | "dev" | null;
 
 export interface VerifyResponse {
@@ -118,7 +108,6 @@ export interface VerifyResponse {
   country: string;
   country_label: string;
   currency: string;
-  tiers: Record<string, TierDefinition>;
 }
 
 export const verifySession = async (): Promise<VerifyResponse | null> => {
@@ -175,9 +164,10 @@ export const logout = async () => {
 
 // --- Org Setup ---
 
+// Every field is optional; a field left out keeps the org's current value.
 export interface OrgSetupData {
-  org_name: string;
-  country: string;
+  org_name?: string;
+  country?: string;
   website?: string;
   charitable_status?: string;
   org_status?: string;
@@ -249,12 +239,8 @@ export const completeSeedingStep = () =>
   request<{ ok: boolean }>("/org/seeding-complete", { method: "POST" });
 
 // --- Billing ---
-
-export const createCheckout = (plan: string) =>
-  request<{ url: string; session_id: string }>("/billing/checkout", {
-    method: "POST",
-    body: JSON.stringify({ plan }),
-  });
+// Checkout is frozen server-side (410); only existing subscriptions remain,
+// managed through the Stripe portal.
 
 export const getBillingPortal = () =>
   request<{ url: string }>("/billing/portal");
@@ -502,27 +488,18 @@ export const openCaseFromPool = (opportunityId: string, country?: string, month?
     body: JSON.stringify({ opportunity_id: opportunityId, country, month }),
   });
 
-// --- Tailored Opportunities (paid-tier wrapper around the legacy per-org cycle) ---
+// --- Tailored Opportunities (every account; wraps the legacy per-org cycle) ---
 
 export interface TailoredAccess {
   tailored_enabled: boolean;
   allowed: boolean;
-  reason: "upgrade" | "disabled" | "cooldown" | null;
+  reason: "cooldown" | null;
   message: string | null;
   timer: CycleTimer | null;
 }
 
 export const getTailoredAccess = () =>
   request<TailoredAccess>("/tailored/access");
-
-export const toggleTailored = (enabled: boolean) =>
-  request<{ tailored_enabled: boolean; tier: string; cycle_timer: CycleTimer | null }>(
-    "/tailored/toggle",
-    {
-      method: "PATCH",
-      body: JSON.stringify({ enabled }),
-    }
-  );
 
 export const runTailoredCycle = () =>
   request<{ status: string; date: string; cycle_timer: CycleTimer | null }>(
@@ -884,7 +861,6 @@ export interface PublicCountryConfig {
   currency: string;
   content_language: string;
   ui_languages: string[];
-  tiers: Record<string, TierDefinition>;
   tags: string[];
   sector_slices: { id: string; label: string; tags: string[] }[];
   regions: string[];

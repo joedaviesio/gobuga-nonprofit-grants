@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  createCheckout,
   getCycleStatus,
   getLatestReport,
   getTailoredAccess,
@@ -84,6 +83,8 @@ export default function TailoredView() {
   // Rotate the message every 2s while running
   useEffect(() => {
     if (!running) return;
+    // Restart the rotation for each phase, alongside the interval below
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessageKey(0);
     const i = setInterval(() => setMessageKey((k) => k + 1), 2000);
     return () => clearInterval(i);
@@ -92,6 +93,7 @@ export default function TailoredView() {
   // Items-found counter ticks up during watcher/analyst phases
   useEffect(() => {
     if (!running) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItemsFound(0);
       return;
     }
@@ -108,34 +110,14 @@ export default function TailoredView() {
   // Flash on phase transitions
   useEffect(() => {
     if (phase && prevPhase && phase !== prevPhase) {
+      // Start the flash; the timeout below ends it
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhaseJustCompleted(prevPhase);
       const t = setTimeout(() => setPhaseJustCompleted(null), 800);
       return () => clearTimeout(t);
     }
     setPrevPhase(phase);
   }, [phase, prevPhase]);
-
-  // Initial load
-  useEffect(() => {
-    Promise.all([
-      getTailoredAccess().catch(() => null),
-      getLatestReport().catch(() => null),
-      listCases().catch(() => []),
-      getCycleStatus().catch(() => null),
-    ])
-      .then(([a, r, c, cs]) => {
-        setAccess(a);
-        setReport(r);
-        setCases(c);
-        if (cs && cs.status === "running") {
-          setRunning(true);
-          setPhase(cs.phase || null);
-          startPolling();
-        }
-      })
-      .finally(() => setLoading(false));
-    return () => stopPolling();
-  }, []);
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -182,6 +164,28 @@ export default function TailoredView() {
     }, 4000);
   };
 
+  // Initial load (declared after the polling helpers it calls)
+  useEffect(() => {
+    Promise.all([
+      getTailoredAccess().catch(() => null),
+      getLatestReport().catch(() => null),
+      listCases().catch(() => []),
+      getCycleStatus().catch(() => null),
+    ])
+      .then(([a, r, c, cs]) => {
+        setAccess(a);
+        setReport(r);
+        setCases(c);
+        if (cs && cs.status === "running") {
+          setRunning(true);
+          setPhase(cs.phase || null);
+          startPolling();
+        }
+      })
+      .finally(() => setLoading(false));
+    return () => stopPolling();
+  }, []);
+
   const handleRun = async () => {
     setRunning(true);
     setPhase("starting");
@@ -201,7 +205,7 @@ export default function TailoredView() {
     setOpeningCase(opp.id);
     try {
       const newCase = await openCaseFromOpportunity(opp.id, opp.cycle_date);
-      window.location.href = `/case/${newCase.case_id}`;
+      window.location.assign(`/case/${newCase.case_id}`);
     } catch (err) {
       setErrorModal(err instanceof Error ? err.message : t("opps.open_failed"));
       setOpeningCase(null);
@@ -209,11 +213,6 @@ export default function TailoredView() {
   };
 
   if (loading) return <LoadingBar label={t("tailored.loading")} />;
-
-  // Scanner tier — show the upgrade pitch instead of the cycle UI
-  if (access?.reason === "upgrade") {
-    return <UpgradePitch onError={(m) => setErrorModal(m)} />;
-  }
 
   const opportunities = report?.opportunities ?? [];
   const priorityOrder: Array<"high" | "medium" | "low"> = ["high", "medium", "low"];
@@ -443,84 +442,6 @@ export default function TailoredView() {
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-
-// --- Upgrade pitch (shown to Scanner-tier users when they click the tab) ---
-
-function UpgradePitch({ onError }: { onError: (msg: string) => void }) {
-  const { t } = useI18n();
-  const [redirecting, setRedirecting] = useState(false);
-
-  const handleUpgrade = async () => {
-    setRedirecting(true);
-    try {
-      const { url } = await createCheckout("starter");
-      window.location.href = url;
-    } catch (err) {
-      onError(err instanceof Error ? err.message : t("tailored.checkout_failed"));
-      setRedirecting(false);
-    }
-  };
-
-  return (
-    <div className="max-w-2xl mx-auto">
-      {/* Hero */}
-      <div className="card-gradient border border-slate-200 p-6 shadow-sm mb-4">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="shrink-0 w-9 h-9 rounded-lg brand-gradient flex items-center justify-center text-white text-xl">★</div>
-          <div className="flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-1">
-              {t("tiers.officer")}
-            </div>
-            <h2 className="text-xl font-semibold text-slate-900 font-[family-name:var(--font-dm-sans)]">
-              {t("tailored.pitch_title")}
-            </h2>
-            <p className="text-base text-slate-700 mt-1.5">
-              {t("tailored.pitch_body")}
-            </p>
-          </div>
-        </div>
-
-        {/* What you get */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-          {([
-            { titleKey: "tailored.feat1_title", descKey: "tailored.feat1_desc" },
-            { titleKey: "tailored.feat2_title", descKey: "tailored.feat2_desc" },
-            { titleKey: "tailored.feat3_title", descKey: "tailored.feat3_desc" },
-            { titleKey: "tailored.feat4_title", descKey: "tailored.feat4_desc" },
-          ] as { titleKey: MessageKey; descKey: MessageKey }[]).map((f) => (
-            <div key={f.titleKey} className="bg-white/60 border border-slate-200 rounded-lg p-3">
-              <div className="text-sm font-semibold text-slate-800 mb-0.5">{t(f.titleKey)}</div>
-              <div className="text-[11px] text-slate-700">{t(f.descKey)}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Pricing + CTA */}
-        <div className="mt-5 flex items-center justify-between gap-3 pt-4 border-t border-slate-200">
-          <div>
-            <div className="text-3xl font-bold text-slate-900 font-[family-name:var(--font-dm-sans)]">
-              $9 <span className="text-base font-normal text-slate-700">NZD / {t("tailored.month")}</span>
-            </div>
-            <div className="text-[11px] text-slate-600">{t("tailored.cancel_anytime")}</div>
-          </div>
-          <button
-            onClick={handleUpgrade}
-            disabled={redirecting}
-            className="px-5 py-2.5 text-base btn-gradient rounded-lg disabled:opacity-50 transition-colors font-medium"
-          >
-            {redirecting ? t("tailored.redirecting") : `${t("tailored.upgrade_to_officer")} →`}
-          </button>
-        </div>
-      </div>
-
-      {/* Reassurance */}
-      <p className="text-[11px] text-slate-600 text-center px-4">
-        {t("tailored.reassurance")}
-      </p>
     </div>
   );
 }

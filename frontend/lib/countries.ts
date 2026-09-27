@@ -91,7 +91,6 @@ const NZ_DEFAULT: DeploymentConfig = {
   sectorLabelToTag: NZ_SECTOR_LABEL_TO_TAG,
   tags: NZ_TAGS,
   regionSlugs: NZ_REGION_SLUGS,
-  tiers: {},
 };
 
 // --- Deployment config type ---
@@ -107,7 +106,6 @@ export interface DeploymentConfig {
   sectorLabelToTag: Record<string, string>;
   tags: string[];
   regionSlugs: string[];
-  tiers: Record<string, unknown>;
 }
 
 // --- Cached config ---
@@ -138,7 +136,6 @@ function _mapPublicConfig(raw: PublicCountryConfig): DeploymentConfig {
     sectorLabelToTag,
     tags: raw.tags,
     regionSlugs: raw.regions,
-    tiers: raw.tiers,
   };
 }
 
@@ -166,7 +163,7 @@ export function getDeploymentConfig(): DeploymentConfig {
 }
 
 // --- Backward-compatible exports ---
-// These are used by setup/page.tsx and settings/page.tsx.
+// These are used by seed/page.tsx and settings/page.tsx.
 // In the country-as-config world each deployment IS one country, so
 // ENABLED_COUNTRIES has exactly one entry: the deployment's country.
 

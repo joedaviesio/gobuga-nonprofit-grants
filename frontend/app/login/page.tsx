@@ -18,12 +18,9 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const result = await login(email, password);
-      if (!result.setup_complete) {
-        window.location.href = "/setup";
-      } else {
-        window.location.href = "/";
-      }
+      await login(email, password);
+      // The auth gate sends an account that has not finished sign-up to /seed
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.login_failed"));
     } finally {

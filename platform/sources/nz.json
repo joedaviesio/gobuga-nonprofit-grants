@@ -265,15 +265,11 @@
     "scanner": {
       "label": "Grant Scanner",
       "price_monthly": 0,
-      "opportunities_per_cycle": {
-        "high": 2,
-        "medium": 2,
-        "low": 1
-      },
-      "max_open_cases": 3,
-      "chat_messages_per_case": 5,
-      "bots_bcd": false,
-      "export_docx": false,
+      "opportunities_per_cycle": null,
+      "max_open_cases": -1,
+      "chat_messages_per_case": -1,
+      "bots_bcd": true,
+      "export_docx": true,
       "model": "claude-haiku-4-5-20251001"
     },
     "officer": {

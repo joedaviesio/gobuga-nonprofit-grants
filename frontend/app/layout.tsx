@@ -1,10 +1,10 @@
 // Copyright © 2026 GoBuga Limited (formerly Proxy Matches Limited). All rights reserved.
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono, DM_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import AuthGate from "./auth-gate";
 import { HeaderLogout } from "./header-logout";
-import { HeaderTierLabel } from "./header-tier-label";
 import { LanguageSwitcher } from "./language-switcher";
 import { I18nProvider } from "@/lib/i18n";
 
@@ -47,11 +47,10 @@ export default function RootLayout({
         <I18nProvider>
           <AuthGate>
             <header className="border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-              <a href="/" className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/gobuga-wordmark.svg" alt="gobuga.org" className="h-9 w-auto" />
-                <HeaderTierLabel />
-              </a>
+              </Link>
               <div className="flex items-center gap-3">
                 <LanguageSwitcher />
                 <HeaderLogout />

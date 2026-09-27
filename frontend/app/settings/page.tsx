@@ -1,51 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrgProfile, createCheckout, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, getTailoredAccess, toggleTailored, type OrgProfile, type TailoredAccess } from "@/lib/api";
+import { getOrgProfile, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, getTailoredAccess, type OrgProfile, type TailoredAccess } from "@/lib/api";
 import { getEnabledCountries, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import AuthGate, { useAuth } from "../auth-gate";
 
-import { getDeploymentConfig } from "@/lib/countries";
 import { useI18n } from "@/lib/i18n";
 import { TERMS_ENABLED } from "@/lib/terms";
 
-type Translate = ReturnType<typeof useI18n>["t"];
-
-function getTierInfo(tierKey: string, t: Translate): { label: string; price: string; features: string[] } {
-  const config = getDeploymentConfig();
-  const tierDef = (config.tiers as Record<string, { label?: string; price_monthly?: number; max_open_cases?: number; chat_messages_per_case?: number; bots_bcd?: boolean; export_docx?: boolean }>)?.[tierKey];
-
-  if (!tierDef) {
-    // Fallback for when config hasn't loaded yet
-    return tierKey === "officer"
-      ? { label: t("tiers.officer"), price: t("tiers.paid"), features: [t("tiers.fallback_officer_1"), t("tiers.fallback_officer_2"), t("tiers.fallback_officer_3"), t("tiers.fallback_officer_4")] }
-      : { label: t("tiers.scanner"), price: t("tiers.free"), features: [t("tiers.fallback_scanner_1"), t("tiers.fallback_scanner_2"), t("tiers.fallback_scanner_3"), t("tiers.fallback_scanner_4")] };
-  }
-
-  const price = tierDef.price_monthly === 0 ? t("tiers.free") : `$${tierDef.price_monthly} ${config.currency}/${t("tiers.mo")}`;
-  const cases = tierDef.max_open_cases === -1 ? t("tiers.unlimited_cases") : t("tiers.n_open_cases", { n: tierDef.max_open_cases ?? 0 });
-  const chat = tierDef.chat_messages_per_case === -1 ? t("tiers.unlimited_chat") : t("tiers.n_chat_messages", { n: tierDef.chat_messages_per_case ?? 0 });
-  const features: string[] = [
-    t("tiers.search_grants", { country: config.countryLabel }),
-    cases,
-    chat,
-  ];
-  if (tierDef.bots_bcd) features.push(t("tiers.parse_fill_bots"));
-  if (tierDef.export_docx) features.push(t("tiers.docx_export"));
-  if (tierKey === "officer") features.unshift(t("tiers.weekly_tailored"));
-
-  return { label: tierDef.label || tierKey, price, features };
-}
-
 function SettingsContent() {
   const { t } = useI18n();
-  const { session, refreshSession } = useAuth();
+  const { session } = useAuth();
   const [org, setOrg] = useState<OrgProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [checkingOut, setCheckingOut] = useState(false);
-  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
   // Uploads state
   const [uploads, setUploads] = useState<{ filename: string; size: number }[]>([]);
@@ -56,7 +25,6 @@ function SettingsContent() {
 
   // Tailored Opportunities state
   const [tailored, setTailored] = useState<TailoredAccess | null>(null);
-  const [savingTailored, setSavingTailored] = useState(false);
 
   // Editing state
   const [editing, setEditing] = useState<string | null>(null); // "name" | "country" | "website" | "sectors" | "geographies"
@@ -77,19 +45,6 @@ function SettingsContent() {
       setLoading(false);
     });
   }, []);
-
-  const handleToggleTailored = async (enabled: boolean) => {
-    setSavingTailored(true);
-    try {
-      await toggleTailored(enabled);
-      const fresh = await getTailoredAccess();
-      setTailored(fresh);
-    } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : t("errors.save"));
-    } finally {
-      setSavingTailored(false);
-    }
-  };
 
   const formatRemaining = (seconds: number): string => {
     if (seconds <= 0) return t("tailored.ready_now");
@@ -197,33 +152,6 @@ function SettingsContent() {
     );
   };
 
-  // Handle ?checkout=success/cancel query params
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const checkout = params.get("checkout");
-    if (checkout === "success") {
-      setCheckoutMessage(t("settings.upgrade_success"));
-      refreshSession();
-      // Clean up URL
-      window.history.replaceState({}, "", "/settings");
-    } else if (checkout === "cancel") {
-      setCheckoutMessage(null);
-      window.history.replaceState({}, "", "/settings");
-    }
-  }, []);
-
-  const handleUpgrade = async () => {
-    setCheckingOut(true);
-    try {
-      const { url } = await createCheckout("starter");
-      window.location.href = url;
-    } catch (err) {
-      setErrorModal(err instanceof Error ? err.message : t("settings.checkout_failed"));
-      setCheckingOut(false);
-    }
-  };
-
   const handleManageBilling = async () => {
     try {
       const { url } = await getBillingPortal();
@@ -271,9 +199,9 @@ function SettingsContent() {
     );
   }
 
-  const currentTier = session?.tier || "scanner";
-  const tierSource = session?.tier_source ?? null;
-  const currency = getDeploymentConfig().currency;
+  // Only orgs with a Stripe subscription (from before the workspace went free)
+  // have a customer record the portal can open.
+  const hasStripeSubscription = session?.tier_source === "stripe";
 
   const orgCountryConfig = findCountry(org?.country);
   const orgSectorOptions = orgCountryConfig?.sectors ?? [];
@@ -566,165 +494,37 @@ function SettingsContent() {
         )}
       </div>
 
-      {/* Tier */}
-      <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-lg font-bold text-stone-700 mb-3">{t("settings.service_tier")}</h2>
-
-        {checkoutMessage && (
-          <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-700">
-            {checkoutMessage}
-          </div>
-        )}
-
-        {(() => {
-          const scannerInfo = getTierInfo("scanner", t);
-          const officerInfo = getTierInfo("officer", t);
-          return currentTier === "scanner" ? (
-          <>
-            {/* Current plan */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-base font-medium text-stone-800">{scannerInfo.label}</span>
-                <span className="text-sm bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">{t("settings.current")}</span>
-              </div>
-              <ul className="space-y-1 mb-4">
-                {scannerInfo.features.map((f) => (
-                  <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
-                    <span className="text-green-500">&#10003;</span> {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Upgrade card */}
-            <div className="border border-blue-200 bg-blue-50/50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-medium text-blue-800">{officerInfo.label}</span>
-                <span className="text-base font-bold text-blue-700">{officerInfo.price}</span>
-              </div>
-              <ul className="space-y-1 mb-3">
-                {officerInfo.features.map((f) => (
-                  <li key={f} className="text-sm text-blue-700 flex items-center gap-1.5">
-                    <span className="text-blue-500">&#10003;</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={handleUpgrade}
-                disabled={checkingOut}
-                className="w-full px-4 py-2.5 text-base font-medium btn-gradient rounded-md disabled:opacity-50"
-              >
-                {checkingOut ? t("settings.redirecting_checkout") : t("settings.upgrade_to", { tier: officerInfo.label })}
-              </button>
-              <p className="text-xs text-blue-700/80 mt-2">
-                {t("settings.billed_by", { currency })}
-              </p>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Active plan */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-base font-medium text-blue-700">{officerInfo.label}</span>
-                {tierSource === "licence" ? (
-                  <span className="text-sm bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">{t("settings.licensed_badge")}</span>
-                ) : (
-                  <span className="text-sm bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{t("settings.active")}</span>
-                )}
-              </div>
-              {tierSource !== "licence" && (
-                <span className="text-sm text-stone-700">{officerInfo.price}</span>
-              )}
-              <ul className="space-y-1 mt-2">
-                {officerInfo.features.map((f) => (
-                  <li key={f} className="text-sm text-stone-700 flex items-center gap-1.5">
-                    <span className="text-green-500">&#10003;</span> {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Only Stripe-backed orgs have a customer record the portal can open.
-                Licensed (and any unexplained) grants get no billing button. */}
-            {tierSource === "stripe" && (
-              <>
-                <button
-                  onClick={handleManageBilling}
-                  className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
-                >
-                  {t("settings.manage_billing")}
-                </button>
-                <p className="text-xs text-stone-600 mt-2">
-                  {t("settings.billed_by", { currency })}
-                </p>
-              </>
-            )}
-          </>
-        );
-        })()}
-
-        <p className="text-xs text-stone-600 mt-4 pt-3 border-t border-stone-100">
-          <a href="/privacy" className="text-blue-600 underline hover:text-blue-800">{t("settings.tier_privacy_link")}</a>
-          {TERMS_ENABLED && (
-            <>
-              {" · "}
-              <a href="/terms" className="text-blue-600 underline hover:text-blue-800">{t("terms.title")}</a>
-            </>
-          )}
-        </p>
-      </div>
+      {/* Billing: only for orgs still holding a Stripe subscription from
+          before the workspace went free, so they can manage or cancel it.
+          Licensed (and any unexplained) paid grants get nothing here. */}
+      {hasStripeSubscription && (
+        <div className="card-gradient border border-stone-200 p-5">
+          <h2 className="text-lg font-bold text-stone-700 mb-1">{t("settings.billing_title")}</h2>
+          <p className="text-sm text-stone-600 mb-3">{t("settings.billing_desc")}</p>
+          <button
+            onClick={handleManageBilling}
+            className="px-4 py-2 text-base font-medium text-stone-700 bg-white border border-stone-200 hover:border-stone-300 rounded-md transition-colors"
+          >
+            {t("settings.manage_billing")}
+          </button>
+        </div>
+      )}
 
       {/* Tailored Opportunities */}
       <div className="card-gradient border border-stone-200 p-5">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1">
-            <h2 className="text-lg font-bold text-stone-700">{t("settings.tailored_title")}</h2>
-            <p className="text-sm text-stone-700 mt-1">
-              {t("settings.tailored_desc")}
-            </p>
-          </div>
-          {currentTier === "officer" ? (
-            <button
-              onClick={() => handleToggleTailored(!tailored?.tailored_enabled)}
-              disabled={savingTailored}
-              className={`shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
-                tailored?.tailored_enabled ? "bg-blue-600" : "bg-stone-300"
-              }`}
-              aria-label={t("settings.tailored_title")}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  tailored?.tailored_enabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          ) : (
-            <span className="shrink-0 text-sm px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
-              {t("settings.officer_tier_badge")}
+        <h2 className="text-lg font-bold text-stone-700">{t("settings.tailored_title")}</h2>
+        <p className="text-sm text-stone-700 mt-1 mb-3">
+          {t("settings.tailored_desc")}
+        </p>
+        <div className="text-sm text-stone-700">
+          {tailored?.timer && !tailored.timer.expired ? (
+            <span>
+              ● {t("settings.tailored_cooldown")} <strong>{formatRemaining(tailored.timer.remaining_seconds)}</strong>.
             </span>
+          ) : (
+            <span>● {t("settings.tailored_ready")}</span>
           )}
         </div>
-
-        {currentTier === "officer" ? (
-          <div className="text-sm text-stone-700">
-            {tailored?.tailored_enabled ? (
-              tailored.timer && !tailored.timer.expired ? (
-                <span>
-                  ● {t("settings.tailored_cooldown")} <strong>{formatRemaining(tailored.timer.remaining_seconds)}</strong>.
-                </span>
-              ) : (
-                <span>● {t("settings.tailored_ready")}</span>
-              )
-            ) : (
-              <span className="text-stone-600">{t("settings.tailored_off")}</span>
-            )}
-          </div>
-        ) : (
-          <div className="text-sm text-stone-700">
-            {t("settings.tailored_upsell_before")} <strong>{t("tiers.officer")}</strong>. {t("settings.tailored_upsell_after")}
-          </div>
-        )}
       </div>
 
       {/* Privacy & Data Policy */}
@@ -733,6 +533,9 @@ function SettingsContent() {
           <div>
             <h2 className="text-lg font-bold text-stone-700">{t("privacy.title")}</h2>
             <p className="text-sm text-stone-600 mt-0.5">{t("settings.privacy_desc")}</p>
+            {TERMS_ENABLED && (
+              <a href="/terms" className="text-sm text-blue-600 underline hover:text-blue-800">{t("terms.title")}</a>
+            )}
           </div>
           <a
             href="/privacy"

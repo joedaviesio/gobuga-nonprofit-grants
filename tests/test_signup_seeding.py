@@ -1,12 +1,20 @@
 """
-Test script: 5 use cases for signup + data seeding flow.
+Test script: use cases for the signup + seeding flow.
+
+Sign-up is register, then one optional screen (/seed), then the feed. The
+screen posts whatever the person filled in (sectors, regions, website — all
+optional) to POST /api/org/setup, uploads any documents, then calls
+POST /api/org/seeding-complete. In-process equivalents live in
+tests/test_open_workspace.py.
 
 Use cases:
-  1. Full flow — register with URL, complete setup, upload all 5 doc types, complete seeding
-  2. Skip seeding — register, setup, skip straight to dashboard
-  3. Partial uploads — register, setup, upload 2 of 5 docs, then continue
+  1. Full flow — register, fill the screen, upload all 5 doc types, complete
+  2. Skip everything — register, submit the screen empty, land on the feed
+  3. Partial uploads — register, fill the screen, upload 2 of 5 docs, then continue
   4. Replace upload — upload a doc, then replace it with a different file
   5. Existing org backward compat — login as pre-existing org, verify seeding_complete defaults True
+  6. Bad doc type rejected
+  7. Partial screen — only sectors filled in; name from registration is kept
 
 Usage:
     python3 tests/test_signup_seeding.py
@@ -51,14 +59,14 @@ def check(label, condition, detail=""):
 
 
 def register_user(suffix=""):
-    """Register a new user and return (token, org_id)."""
+    """Register a new user and return (token, org_id, email). The website
+    moved from the register form to the seeding screen, so none is sent."""
     ts = int(time.time() * 1000)
     email = f"test-seed-{ts}{suffix}@gobuga-test.org"
     r = requests.post(f"{API}/api/auth/register", json={
         "email": email,
         "password": "TestPass123!",
         "org_name": f"Test Org {ts}",
-        "website_url": "https://example.com",
     })
     if not r.ok:
         log(f"  Register failed: {r.status_code} {r.text[:200]}")
@@ -82,17 +90,19 @@ def verify(token):
     return r.json()
 
 
-def do_setup(token):
-    """Run org setup wizard."""
-    r = requests.post(f"{API}/api/org/setup", json={
-        "org_name": "Test Org Seeding",
-        "country": "New Zealand",
-        "website": "https://example.com",
-        "charitable_status": "Registered Charity",
-        "mission": "Bridging the digital divide in Aotearoa",
-        "sectors": ["Digital inclusion", "Education"],
-        "geographies": ["New Zealand"],
-    }, headers=json_headers(token))
+SCREEN_FILLED = {
+    "sectors": ["Education & research", "Youth & children"],
+    "geographies": ["New Zealand"],
+    "website": "https://example.com",
+}
+
+
+def do_setup(token, payload=None):
+    """Submit the one sign-up screen. Every field is optional; `{}` is a skip.
+    Note: a website makes the backend fetch it for the org's data."""
+    r = requests.post(f"{API}/api/org/setup",
+                      json=SCREEN_FILLED if payload is None else payload,
+                      headers=json_headers(token))
     return r
 
 
@@ -130,10 +140,10 @@ def complete_seeding(token):
 
 def case_1_full_flow():
     log("\n" + "=" * 70)
-    log("USE CASE 1: Full flow — register, setup, upload all 5 docs, complete")
+    log("USE CASE 1: Full flow — register, fill the screen, upload all 5 docs, complete")
     log("=" * 70)
 
-    # 1. Register with website URL
+    # 1. Register (no website on the register form any more)
     token, org_id, email = register_user("-c1")
     check("Register returns token", token is not None)
     if not token:
@@ -144,7 +154,7 @@ def case_1_full_flow():
     check("Verify: setup_complete is False", session and not session["setup_complete"])
     check("Verify: seeding_complete is False", session and not session["seeding_complete"])
 
-    # 3. Complete setup wizard
+    # 3. Submit the screen with sectors, region and website
     r = do_setup(token)
     check("Setup completes successfully", r.ok, r.text[:200] if not r.ok else "")
 
@@ -183,7 +193,7 @@ def case_1_full_flow():
 
 def case_2_skip_seeding():
     log("\n" + "=" * 70)
-    log("USE CASE 2: Skip seeding — register, setup, skip to dashboard")
+    log("USE CASE 2: Skip everything — register, submit the screen empty, feed")
     log("=" * 70)
 
     token, org_id, _ = register_user("-c2")
@@ -191,22 +201,23 @@ def case_2_skip_seeding():
     if not token:
         return
 
-    r = do_setup(token)
-    check("Setup OK", r.ok)
+    # Skip: nothing filled in, nothing uploaded
+    r = do_setup(token, {})
+    check("Empty setup submission OK", r.ok, r.text[:200] if not r.ok else "")
 
-    # Don't upload anything — just complete seeding
     uploads = list_uploads(token)
-    # Only the website scrape should exist (or nothing if scrape failed)
-    check("No user uploads before skip", all(
-        not any(f["filename"].startswith(dt + "_") for dt in DOC_TYPE_FILES)
-        for f in uploads
-    ))
+    check("No uploads after skip", uploads == [], f"Got {uploads}")
 
     r = complete_seeding(token)
     check("Complete seeding (skip) OK", r.ok)
 
     session = verify(token)
+    check("setup_complete is True after skip", session and session["setup_complete"])
     check("seeding_complete is True after skip", session and session["seeding_complete"])
+
+    # The feed works unranked
+    r = requests.get(f"{API}/api/opportunities", headers=auth_headers(token))
+    check("Feed loads after skip", r.ok, f"Got {r.status_code}")
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -361,6 +372,30 @@ def case_bonus_bad_doc_type():
 
 
 # ─────────────────────────────────────────────────────────────────
+# USE CASE 7: Partial screen
+# ─────────────────────────────────────────────────────────────────
+
+def case_7_partial_screen():
+    log("\n" + "=" * 70)
+    log("USE CASE 7: Partial screen — only sectors filled in")
+    log("=" * 70)
+
+    token, org_id, _ = register_user("-c7")
+    check("Register OK", token is not None)
+    if not token:
+        return
+    org_name = verify(token)["org_name"]
+
+    r = do_setup(token, {"sectors": ["Sport & recreation"]})
+    check("Partial setup submission OK", r.ok, r.text[:200] if not r.ok else "")
+
+    r = requests.get(f"{API}/api/org/profile", headers=auth_headers(token))
+    profile = r.json() if r.ok else {}
+    check("Sectors saved", profile.get("sectors") == ["Sport & recreation"], f"Got {profile.get('sectors')}")
+    check("Name from registration kept", profile.get("name") == org_name, f"Got {profile.get('name')}")
+
+
+# ─────────────────────────────────────────────────────────────────
 # Runner
 # ─────────────────────────────────────────────────────────────────
 
@@ -371,6 +406,7 @@ ALL_CASES = {
     4: ("Replace upload", case_4_replace_upload),
     5: ("Existing org compat", case_5_existing_org_compat),
     6: ("Bad doc type rejected", case_bonus_bad_doc_type),
+    7: ("Partial screen", case_7_partial_screen),
 }
 
 

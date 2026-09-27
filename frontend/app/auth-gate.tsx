@@ -4,9 +4,11 @@ import { useEffect, useState, createContext, useContext } from "react";
 import { usePathname } from "next/navigation";
 import { verifySession, logout, getToken, clearToken, type VerifyResponse } from "@/lib/api";
 import { loadDeploymentConfig } from "@/lib/countries";
+import { onboardingRedirect } from "@/lib/onboarding";
 import LoadingBar from "@/app/loading-bar";
 
-const PUBLIC_PATHS = ["/login", "/register", "/setup", "/seed", "/forgot-password", "/reset-password", "/privacy", "/terms"];
+// /seed checks the session itself; /setup is redirected to /seed in next.config.ts.
+const PUBLIC_PATHS = ["/login", "/register", "/seed", "/forgot-password", "/reset-password", "/privacy", "/terms"];
 
 interface AuthContextType {
   logout: () => void;
@@ -31,21 +33,22 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(!isPublic);
 
   useEffect(() => {
-    // Load deployment config (country, tiers, tags) on startup.
+    // Load deployment config (country, taxonomy, languages) on startup.
     // This is fire-and-forget — the config caches itself and
     // components access it synchronously via getDeploymentConfig().
     loadDeploymentConfig();
 
-    if (isPublic) {
-      setLoading(false);
-      return;
-    }
+    // Public paths start with loading=false and render without waiting
+    if (isPublic) return;
 
     const token = getToken();
     if (!token) {
       // Anon visitors see the landing feed at "/"; everywhere else still
       // redirects to login. The page component branches on `session === null`.
       if (pathname === "/") {
+        // Deliberate mount-time setState: the token lives in localStorage,
+        // which can only be read on the client after hydration.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(false);
         return;
       }
@@ -59,12 +62,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         window.location.href = "/login";
         return;
       }
-      if (!result.setup_complete) {
-        window.location.href = "/setup";
-        return;
-      }
-      if (!result.seeding_complete) {
-        window.location.href = "/seed";
+      const redirect = onboardingRedirect(result, pathname);
+      if (redirect) {
+        window.location.href = redirect;
         return;
       }
       setSession(result);

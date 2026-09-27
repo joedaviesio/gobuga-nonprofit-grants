@@ -1,7 +1,11 @@
 """Tools that bots can call during their agentic loop (multi-tenant)."""
 
+import ipaddress
 import json
 import os
+import socket
+from urllib.parse import urljoin, urlsplit
+
 import httpx
 from dotenv import load_dotenv
 from orchestrator.evidence import save_evidence
@@ -81,12 +85,55 @@ TOOL_DEFINITIONS = {
 
 # --- Tool handlers ---
 
+MAX_FETCH_REDIRECTS = 5
+
+
+class UnsafeUrlError(ValueError):
+    """The URL does not point at the public internet."""
+
+
+def assert_public_url(url: str, resolve=None) -> None:
+    """Raise UnsafeUrlError unless `url` is http(s) and every address its host
+    resolves to is a public one.
+
+    URLs reach the fetcher from people (the website a user types at sign-up)
+    and from model output (a watcher following a link), so without this the
+    server could be pointed at its own loopback, the private network or a
+    cloud metadata address. The check runs on every redirect hop as well.
+    It does not defend against a host that changes its DNS answer between
+    this check and the request.
+    """
+    resolve = resolve or socket.getaddrinfo
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise UnsafeUrlError(f"not an http(s) URL: {url}")
+    try:
+        infos = resolve(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80),
+                        type=socket.SOCK_STREAM)
+    except OSError as e:
+        raise UnsafeUrlError(f"cannot resolve {parts.hostname}: {e}") from e
+    if not infos:
+        raise UnsafeUrlError(f"cannot resolve {parts.hostname}")
+    for info in infos:
+        address = ipaddress.ip_address(info[4][0].split("%", 1)[0])
+        if not address.is_global:
+            raise UnsafeUrlError(f"{parts.hostname} resolves to a non-public address")
+
+
 def handle_web_fetch(args: dict, timeout: float = 15, max_chars: int = 8000) -> str:
-    """Fetch a URL and return text content (at most `max_chars`)."""
+    """Fetch a public URL and return text content (at most `max_chars`)."""
     url = args["url"]
     try:
-        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-            resp = client.get(url, headers={"User-Agent": "GoBuga-GrantBot/0.1"})
+        with httpx.Client(timeout=timeout, follow_redirects=False) as client:
+            current = url
+            for _ in range(MAX_FETCH_REDIRECTS + 1):
+                assert_public_url(current)
+                resp = client.get(current, headers={"User-Agent": "GoBuga-GrantBot/0.1"})
+                if not resp.is_redirect:
+                    break
+                current = urljoin(current, resp.headers.get("location", ""))
+            else:
+                raise UnsafeUrlError(f"more than {MAX_FETCH_REDIRECTS} redirects")
             resp.raise_for_status()
             text = resp.text
             import re

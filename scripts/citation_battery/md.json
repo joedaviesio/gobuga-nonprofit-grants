@@ -1,0 +1,25 @@
+{
+  "country": "md",
+  "questions": [
+    {"id": "md-01", "language": "ro", "text": "Ce granturi pot obține ONG-urile din Chișinău pentru proiecte de tineret?"},
+    {"id": "md-02", "language": "ro", "text": "Există finanțări pentru renovarea caselor de cultură din satele raionului Cahul?"},
+    {"id": "md-03", "language": "ro", "text": "Unde poate aplica o asociație obștească din Bălți pentru un grant de mediu?"},
+    {"id": "md-04", "language": "ro", "text": "Ce programe de granturi sunt deschise acum pentru antreprenoriat social în Republica Moldova?"},
+    {"id": "md-05", "language": "ro", "text": "Ce fonduri există pentru festivaluri și proiecte culturale în nordul Moldovei?"},
+    {"id": "md-06", "language": "ro", "text": "Cum găsesc granturi pentru o școală din Ungheni care vrea să renoveze sala de sport?"},
+    {"id": "md-07", "language": "ro", "text": "Ce finanțări sunt disponibile pentru organizațiile care sprijină persoanele cu dizabilități în Moldova?"},
+    {"id": "md-08", "language": "ro", "text": "Există granturi pentru eficiență energetică și panouri solare pentru primăriile din Moldova?"},
+    {"id": "md-09", "language": "ro", "text": "Ce donatori finanțează proiecte de dezvoltare comunitară în raionul Orhei?"},
+    {"id": "md-10", "language": "ro", "text": "Unde găsesc un grant pentru un club sportiv de copii din Soroca?"},
+    {"id": "md-11", "language": "ru", "text": "Какие гранты доступны для НКО в Молдове на молодёжные проекты?"},
+    {"id": "md-12", "language": "ru", "text": "Где общественная организация из Комрата может получить финансирование на культурный проект?"},
+    {"id": "md-13", "language": "ru", "text": "Какие гранты на экологические проекты открыты в Молдове в этом году?"},
+    {"id": "md-14", "language": "ru", "text": "Какие фонды поддерживают проекты для пожилых людей в Кишинёве?"},
+    {"id": "md-15", "language": "ru", "text": "Есть ли гранты для сельских библиотек в Молдове?"},
+    {"id": "md-16", "language": "ru", "text": "Где найти финансирование для женского предпринимательства в Гагаузии?"},
+    {"id": "md-17", "language": "ru", "text": "Какие гранты может получить детский спортивный клуб в Бельцах?"},
+    {"id": "md-18", "language": "ru", "text": "Какие международные доноры сейчас финансируют гражданское общество в Молдове?"},
+    {"id": "md-19", "language": "ru", "text": "Есть ли гранты на ремонт детского сада в Кэушенском районе?"},
+    {"id": "md-20", "language": "ru", "text": "Какие грантовые программы поддерживают цифровые навыки и IT-образование в Молдове?"}
+  ]
+}

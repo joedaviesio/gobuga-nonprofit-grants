@@ -1562,6 +1562,8 @@ async def api_billing_webhook(request: Request):
 
 from api.internal_hit import router as internal_hit_router
 app.include_router(internal_hit_router)
+from api.subscribe_routes import router as subscribe_router
+app.include_router(subscribe_router)
 
 
 # --- Health (public) ---

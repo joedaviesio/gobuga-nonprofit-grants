@@ -264,6 +264,36 @@ def test_status_excluded_when_stated_list_leaves_it_out():
     assert fit(rows, status="club") == []
 
 
+@pytest.mark.parametrize("status, entities", [
+    # a legal form against a kind of body, and the reverse: independent questions
+    ("incorporated-society", ["club"]),
+    ("charitable-trust", ["marae"]),
+    ("club", ["incorporated-society", "charitable-trust"]),
+    ("school", ["charitable-trust"]),
+])
+def test_status_on_another_axis_is_unknown_not_mismatch(status, entities):
+    res = fit([make_row(1, eligible_entities=entities)], status=status)
+    assert len(res) == 1 and res[0]["score"] == 0 and res[0]["why"] == []
+
+
+@pytest.mark.parametrize("status, entities", [
+    ("company", ["incorporated-society", "charitable-trust"]),   # same axis: form
+    ("informal", ["incorporated-society"]),
+    ("club", ["school", "marae"]),                                # same axis: kind
+    ("club", ["individual"]),                                     # for individuals only
+    ("incorporated-society", ["local-authority"]),
+    ("individual", ["club", "incorporated-society"]),             # organisations only
+    ("local-authority", ["school"]),
+])
+def test_status_mismatch_on_the_same_axis_excludes(status, entities):
+    assert fit([make_row(1, eligible_entities=entities)], status=status) == []
+
+
+def test_every_entity_has_an_axis():
+    from api.fit import ENTITY_AXIS
+    assert set(ENTITY_AXIS) == set(ENTITY_VOCAB)
+
+
 def test_status_unknown_is_not_mismatch():
     rows = [make_row(1, eligible_entities=[])]
     res = fit(rows, status="informal")

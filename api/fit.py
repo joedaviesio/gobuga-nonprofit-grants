@@ -17,8 +17,9 @@ Public interface (see plan/2026-09-28-build-contract.md, "Phase 2 interface"):
     score_fit(rows, profile, *, today=None) -> list[{"row", "score", "why"}]
 
 Exclusion is conservative: a row is dropped only on a confident mismatch
-(its stated entity list leaves the requested status out, or it names only
-known regions and none is the requested one), or when it is closed or stale.
+(its stated entity list leaves the requested status out on the same axis,
+see ENTITY_AXIS, or it names only known regions and none is the requested
+one), or when it is closed or stale.
 Everything unknown scores neutrally.
 """
 
@@ -44,6 +45,19 @@ ENTITY_VOCAB: tuple[str, ...] = (
 )
 SIZE_BANDS: tuple[str, ...] = ("under-50k", "50k-250k", "250k-1m", "over-1m")
 NEEDS: tuple[str, ...] = ("operating", "capital", "project", "event", "equipment")
+
+# The vocabulary mixes two questions. "What legal form is it?" and "what kind
+# of body is it?" are independent: a sports club is usually also an
+# incorporated society, a marae is often also a charitable trust. A row that
+# answers one question says nothing about the other, so a status is only ever
+# a mismatch against entries on its own axis. Individuals and local
+# authorities are neither: they are a mismatch against everything else.
+ENTITY_AXIS: dict[str, str] = {
+    "incorporated-society": "form", "charitable-trust": "form",
+    "informal": "form", "company": "form",
+    "marae": "kind", "school": "kind", "club": "kind", "iwi-hapu": "kind",
+    "individual": "alone", "local-authority": "alone",
+}
 
 # Parameter order in canonical fit URLs. Never reorder: cached URLs depend on it.
 PARAM_ORDER: tuple[str, ...] = ("sector", "region", "status", "size", "need")
@@ -795,6 +809,25 @@ def _row_entities(row: dict, country: str) -> list[str]:
     return parse_eligible_entities(row.get("eligibility"), country)
 
 
+def _status_mismatch(status: str, entities: list[str]) -> bool:
+    """True when a stated entity list confidently leaves `status` out.
+
+    A list that names the status is a match. Otherwise it is a mismatch only
+    if the list speaks to the status's own axis ("schools" against a club),
+    or names nothing but individuals and local authorities, or the status is
+    itself one of those two. "Sports clubs" against an incorporated society
+    is unknown: the club may well be one.
+    """
+    if not entities or status in entities:
+        return False
+    axis = ENTITY_AXIS[status]
+    if axis == "alone":
+        return True
+    if all(ENTITY_AXIS[e] == "alone" for e in entities):
+        return True
+    return any(ENTITY_AXIS[e] == axis for e in entities)
+
+
 def _deadline(row: dict, today: date) -> tuple[str, int | None]:
     """(kind, days_left). kind is dated, rolling-confirmed, rolling, closed or
     unknown. Legacy rows without deadline_state infer it from `deadline`."""
@@ -874,12 +907,13 @@ def _score_row(row: dict, ctx: _Context):
     score = 0
     why: list[str] = []
 
-    # Legal status. Excluded only when a stated list leaves the status out.
+    # Legal status. Excluded only when a stated list leaves the status out
+    # on its own axis; the boost and the reason need the status to be named.
     if profile.status:
         entities = _row_entities(row, profile.country)
-        if entities and profile.status not in entities:
+        if _status_mismatch(profile.status, entities):
             return None
-        if entities and len(entities) <= SPECIFIC_ENTITY_LIST_MAX:
+        if profile.status in entities and len(entities) <= SPECIFIC_ENTITY_LIST_MAX:
             score += WEIGHTS["status_named"]
             why.append(text["open_to"].format(
                 entities=_ENTITY_LABELS[lang][profile.status]))

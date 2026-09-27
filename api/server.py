@@ -38,11 +38,18 @@ from api.bots import (
 )
 from api.databank import get_entries, add_entry, delete_entry, format_databank_for_prompt
 from api.usage_log import read_usage, usage_summary
+from api.errors import INTERNAL_ERROR_BODY, register_error_handlers
 
+# The internal OpenAPI schema and its docs UIs are switched off: they described
+# every workspace route to anyone. A curated public schema is served at
+# /api/v1/openapi.json once the public API lands.
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
     version="0.2.26",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
 )
 
 _app_url = os.environ.get("APP_URL", "http://localhost:3002")
@@ -59,6 +66,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# {"error": {code, message}} envelopes for the public routes.
+register_error_handlers(app)
+
 # Note: HTTPS enforcement is handled by Railway's edge proxy.
 # HTTPSRedirectMiddleware breaks CORS on Railway because internal
 # traffic arrives as HTTP even when the external URL is HTTPS.
@@ -74,13 +84,22 @@ def _seed_pool_on_startup() -> None:
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Catch unhandled exceptions so CORS headers are still sent."""
+    """Catch unhandled exceptions so CORS headers are still sent.
+
+    The exception text and traceback go to the log only; the response is a
+    fixed envelope so nothing internal leaks to the client.
+
+    Starlette runs this handler in its outermost middleware, outside
+    CORSMiddleware, so the CORS header is added here by hand for an allowed
+    origin; without it the browser hides the 500 behind a CORS failure.
+    """
     tb = traceback.format_exc()
     print(f"[ERROR] {request.url}: {exc}\n{tb}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": str(exc)},
-    )
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin in _allowed_origins:
+        headers = {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
+    return JSONResponse(status_code=500, content=INTERNAL_ERROR_BODY, headers=headers)
 
 
 

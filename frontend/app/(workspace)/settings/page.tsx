@@ -5,7 +5,7 @@ import { getOrgProfile, getBillingPortal, updateOrgProfile, listOrgUploads, uplo
 import { getEnabledCountries, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
-import AuthGate, { useAuth } from "../auth-gate";
+import AuthGate, { useAuth } from "@/app/auth-gate";
 
 import { useI18n } from "@/lib/i18n";
 import { TERMS_ENABLED } from "@/lib/terms";

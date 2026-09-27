@@ -14,11 +14,10 @@ import {
   type Opportunity,
   type CaseSummary,
 } from "@/lib/api";
-import { useAuth } from "./auth-gate";
+import { useAuth } from "@/app/auth-gate";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
-import OpportunitiesView from "./opportunities-view";
-import AnonLanding from "./anon-landing";
+import OpportunitiesView from "@/app/opportunities-view";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 
 const COUNTRY_SWEEP_ENABLED = process.env.NEXT_PUBLIC_COUNTRY_SWEEP_ENABLED === "true";
@@ -334,7 +333,9 @@ export default function Dashboard() {
     );
   }
   if (!session) {
-    return <AnonLanding />;
+    // The auth gate sends a visitor without a session to /login; nothing
+    // shows in the moment before that redirect lands.
+    return null;
   }
   if (COUNTRY_SWEEP_ENABLED) {
     return <OpportunitiesView />;

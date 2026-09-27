@@ -1,7 +1,12 @@
-"""Country sweep — once-a-month exhaustive grant collection per country.
+"""Country sweep — exhaustive grant collection per country.
+
+Runs every two months per country (`api.published.SWEEP_INTERVAL_MONTHS`),
+and only when the director triggers it: a full sweep costs real money.
 
 Replaces the per-org cycle for discovery. Produces a single shared
-`opportunities.json` at `platform/cycles/<country>/<month>/latest/`.
+`opportunities.json` at `platform/cycles/<country>/<month>/latest/` for the
+workspace, then verifies each row against its source page and publishes the
+rows that pass into the public dataset (`api.published`).
 
 CLI:
     python -m orchestrator.sweep nz 2026-04           # real run
@@ -32,6 +37,7 @@ from api.sources import (
     validate_coverage,
 )
 from api.country_config import get_country_config
+from api.published import PublishBlocked, publish_pool
 from api.tenant import (
     ensure_platform_dirs,
     platform_cycles_dir,
@@ -49,6 +55,7 @@ from orchestrator.config import (
 )
 from orchestrator.deadline_resolver import resolve_deadlines_for_rows
 from orchestrator.sweep_evidence import load_sweep_evidence, make_sweep_org_id
+from orchestrator.verify_pass import verify_rows
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -283,10 +290,15 @@ def run_country_sweep(
     watcher_iterations: int | None = None,
     promote_latest: bool = True,
 ) -> dict:
-    """Run a monthly grant-collection sweep for one country.
+    """Run a grant-collection sweep for one country.
 
-    Returns a summary dict (paths, counts, coverage). On dry_run, returns
-    only the plan and writes nothing.
+    Returns a summary dict (paths, counts, coverage, verify, publish). On
+    dry_run, returns only the plan and writes nothing.
+
+    With `promote_latest` the verified rows are also published to the public
+    dataset. A blocked or failed publish never loses the run: its files are
+    written, `latest` is promoted, and `summary["publish"]` says why the
+    public dataset was not updated.
 
     `sectors_filter`: list of sector ids to include (default: all from country config).
     `watcher_iterations`: per-worker iteration cap (default: WATCHER_ITERATIONS_COUNTRY).
@@ -415,12 +427,35 @@ def run_country_sweep(
     with open(os.path.join(run_dir, "opportunities.json"), "w") as f:
         json.dump({"opportunities": opportunities}, f, indent=2)
 
+    # ---- Phase 3: verify pass -----------------------------------------------
+    # Works on copies: the workspace pool written above is unchanged.
+    print(f"\n--- Phase 3: verify pass ---")
+    verified, verify_stats = verify_rows(
+        opportunities, country=country, org_id_for_usage=sweep_org, cycle_date=cycle_date
+    )
+    with open(os.path.join(run_dir, "verified.json"), "w") as f:
+        json.dump({"opportunities": verified}, f, indent=2)
+    print(f"  Dated: {verify_stats['dated']}, rolling confirmed: {verify_stats['rolling_confirmed']}, "
+          f"closed: {verify_stats['closed']}, unresolved: {verify_stats['unresolved']}, "
+          f"fetch failures: {verify_stats['fetch_failures']}, cost: ${verify_stats['cost_usd']:.4f}")
+
+    # ---- Phase 4: publish ---------------------------------------------------
+    if promote_latest:
+        print(f"\n--- Phase 4: publish public dataset ---")
+        publish = _publish(country, month, verified, run_ts)
+    else:
+        publish = {"published": False, "reason": "non-promoting run: public dataset not touched"}
+    print(f"  Public dataset: {'updated' if publish['published'] else 'NOT updated'}"
+          + ("" if publish["published"] else f" — {publish['reason']}"))
+
     # Coverage telemetry
     coverage = validate_coverage(opportunities, country)
     coverage["sweep_run_ts"] = run_ts
     coverage["watcher_evidence_count"] = len(watcher_evidence)
     coverage["opportunities_total"] = len(opportunities)
     coverage["deadline_resolution"] = dl_stats
+    coverage["verify"] = verify_stats
+    coverage["publish"] = publish
     with open(os.path.join(run_dir, "coverage.json"), "w") as f:
         json.dump(coverage, f, indent=2)
 
@@ -455,7 +490,81 @@ def run_country_sweep(
         "run_dir": run_dir,
         "opportunities": len(opportunities),
         "coverage": coverage,
+        "verify": verify_stats,
+        "publish": publish,
     }
+
+
+def _publish(country: str, month: str, rows: list[dict], run_ts: str) -> dict:
+    """Publish verified rows. Never raises: the sweep's own files must survive
+    a blocked or broken publish."""
+    try:
+        report = publish_pool(country, month, rows, run_ts=run_ts)
+        return {**report, "reason": None}
+    except PublishBlocked as exc:
+        return {**exc.report, "published": False,
+                "reason": f"must-appear funders missing: {', '.join(exc.missing)}"}
+    except Exception as exc:
+        print(f"  ✗ publish failed: {exc}")
+        return {"published": False, "reason": f"publish failed: {exc}"}
+
+
+def _brief_line(row: dict) -> str:
+    return (f"{row.get('id')} {row.get('funder') or ''} — {row.get('title') or ''} "
+            f"({row.get('source_url') or 'no URL'})")
+
+
+def _render_integrity_md(coverage: dict) -> list[str]:
+    """Verify and publish sections, including the internal unresolved report."""
+    v = coverage.get("verify") or {}
+    p = coverage.get("publish") or {}
+    lines = [
+        "", "## Verify pass", "",
+        f"- Rows: {v.get('rows', 0)}, distinct source pages: {v.get('distinct_urls', 0)}, "
+        f"fetch failures: {v.get('fetch_failures', 0)}",
+        f"- Dated: {v.get('dated', 0)}, rolling confirmed: {v.get('rolling_confirmed', 0)}, "
+        f"closed: {v.get('closed', 0)}, unresolved: {v.get('unresolved', 0)}",
+        f"- Excerpts rejected (not found in page): {v.get('excerpt_rejected', 0)}",
+        f"- Model calls: {v.get('api_calls', 0)}, cost: ${v.get('cost_usd', 0):.4f}",
+    ]
+    for reason, n in sorted((v.get("unresolved_reasons") or {}).items()):
+        lines.append(f"- Unresolved, {reason}: {n}")
+
+    lines += ["", "## Public dataset", ""]
+    if p.get("published"):
+        c = p.get("counts", {})
+        forced = f" (FORCED by {p.get('forced_by') or 'unknown'})" if p.get("forced") else ""
+        lines.append(f"- Published{forced}")
+        lines.append(f"- New: {c.get('new', 0)}, changed: {c.get('changed', 0)}, "
+                     f"closed: {c.get('closed', 0)}, merged duplicates: {c.get('merges', 0)}")
+        lines.append(f"- Dataset: {c.get('published_total', 0)} rows, {c.get('live', 0)} live")
+    else:
+        lines.append(f"- NOT updated: {p.get('reason')}")
+    missing = (p.get("must_appear") or {}).get("missing") or []
+    if missing:
+        lines += ["", "### Must-appear funders with no verified row", ""]
+        lines += [f"- {name}" for name in missing]
+
+    sections = [
+        ("Held rows (unresolved, not published)", p.get("held") or [],
+         lambda h: f"- {_brief_line(h)}: {h.get('reason')}"),
+        ("Merged duplicates", p.get("merges") or [],
+         lambda m: f"- {m['into']} kept {_brief_line(m['kept'])}; merged "
+                   + "; ".join(_brief_line(x) for x in m["merged"])
+                   + f" [{', '.join(m['rules'])}]"),
+        ("Shared source URLs (kept separate, check by hand)", p.get("shared_url_groups") or [],
+         lambda g: f"- {g['source_url']}: "
+                   + "; ".join(f"{r.get('id')} {r.get('title')}" for r in g["rows"])),
+        ("Possible duplicates of published rows (not merged)", p.get("refused_merges") or [],
+         lambda m: f"- [{m['rule']}] " + " / ".join(_brief_line(r) for r in m["rows"])),
+        ("Same dedupe key, unrelated titles (not merged)", p.get("key_conflicts") or [],
+         lambda m: "- " + " / ".join(_brief_line(r) for r in m["rows"])),
+    ]
+    for title, items, fmt in sections:
+        if items:
+            lines += ["", f"### {title}", ""]
+            lines += [fmt(item) for item in items]
+    return lines
 
 
 def _render_report_md(plan: dict, coverage: dict, opportunities: list[dict]) -> str:
@@ -470,6 +579,7 @@ def _render_report_md(plan: dict, coverage: dict, opportunities: list[dict]) -> 
         lines += ["", "## Missing must-appear funders", ""]
         for f in coverage['missing']:
             lines.append(f"- {f}")
+    lines += _render_integrity_md(coverage)
     lines += ["", "## Opportunities", ""]
     for opp in opportunities:
         lines.append(f"### {opp.get('funder', '')} — {opp.get('title', '')}")

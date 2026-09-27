@@ -1562,6 +1562,12 @@ async def api_billing_webhook(request: Request):
 
 from api.internal_hit import router as internal_hit_router
 app.include_router(internal_hit_router)
+from api.public_v1 import router as public_v1_router
+app.include_router(public_v1_router)
+# Added last so it runs outside CORSMiddleware: /api/v1 is readable from any
+# origin; every other path keeps the allow-list above.
+from api.public_http import PublicCORSMiddleware
+app.add_middleware(PublicCORSMiddleware)
 
 
 # --- Health (public) ---

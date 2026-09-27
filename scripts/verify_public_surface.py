@@ -312,6 +312,20 @@ def check_twins(fe: str, be: str, sample: dict) -> None:
         if ok:
             ET.fromstring(a.body)
         check(ok, f"feed {public} equals {backend} and parses as XML", a.content_type)
+    # /mcp reaches the backend's MCP endpoint (POST only): same answer both ways.
+    rpc = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}).encode()
+    answers = []
+    for url in (f"{fe}/mcp", f"{be}/mcp"):
+        req = Request(url, data=rpc, method="POST", headers={
+            "Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+            "User-Agent": CURL_UA})
+        try:
+            with _opener.open(req, timeout=30) as res:
+                answers.append((res.status, res.read()))
+        except HTTPError as err:
+            answers.append((err.code, err.read()))
+    check(answers[0] == answers[1], "POST /mcp through the frontend reaches the backend's MCP endpoint",
+          f"{answers[0][0]} vs {answers[1][0]}")
     # The ID is not swallowed by the .json suffix, and an unknown one is the API's 404.
     missing = get(f"{fe}/grants/OPP-NOPE-0000.json")
     check(missing.status == 404 and missing.content_type == "application/json", "unknown twin is a JSON 404")

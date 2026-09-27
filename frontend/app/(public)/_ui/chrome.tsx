@@ -65,7 +65,8 @@ export function SiteFooter({ site }: { site: Site }) {
           {site.t("footer_machines")}{" "}
           <a href="/api/v1">{site.t("footer_api")}</a>{" · "}
           <a href="/llms.txt">{site.t("footer_llms")}</a>{" · "}
-          <a href="/mcp">{site.t("footer_mcp")}</a>
+          {/* The MCP endpoint takes POST only, so it is named, not linked. */}
+          {site.t("footer_mcp")}: <code>{site.base}/mcp</code>
         </p>
         <p className="text-sm">
           <a href="/privacy">{site.t("footer_privacy")}</a>{" · "}

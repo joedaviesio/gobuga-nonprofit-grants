@@ -8,11 +8,13 @@ const SCHEME = [
   { page: "/grants/{id}", public: "/grants/{id}.json", backend: "/api/v1/opportunities/{id}", format: "json" },
   { page: "/fit", public: "/fit/feed.xml", backend: "/api/v1/fit/feed.xml", format: "atom" },
   { page: null, public: "/out/{id}", backend: "/out/{id}", format: "redirect" },
+  { page: null, public: "/mcp", backend: "/mcp", format: "mcp" },
 ];
 
 function build(lang, overrides = {}) {
   return buildLlmsTxt({
     base: "https://md.example",
+    mcpUrl: "https://md.example/mcp",
     countryLabel: "Moldova",
     licence: "Facts are free to reuse with attribution.",
     scheme: SCHEME,
@@ -35,6 +37,7 @@ test("the URL scheme comes from the index, on the deployment's origin", () => {
   assert.ok(text.includes("- https://md.example/grants/{id}.json: JSON of the page https://md.example/grants/{id}"));
   assert.ok(text.includes("- https://md.example/fit/feed.xml: Atom feed of the page https://md.example/fit"));
   assert.ok(text.includes("- https://md.example/out/{id}: redirects to the funder's own page"));
+  assert.ok(text.includes("- https://md.example/mcp: Model Context Protocol endpoint (POST)"));
   assert.equal(text.includes("gobuga.org"), false);
 });
 

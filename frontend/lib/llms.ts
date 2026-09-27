@@ -10,6 +10,7 @@ import type { PublicKey } from "@/lib/public-i18n";
 
 export interface LlmsInput {
   base: string;
+  mcpUrl: string;
   countryLabel: string;
   licence: string;
   scheme: { page: string | null; public: string; backend: string; format: string }[];
@@ -19,6 +20,7 @@ export interface LlmsInput {
 
 function schemeLine(base: string, row: LlmsInput["scheme"][number]): string {
   if (row.format === "redirect") return `- ${base}${row.public}: redirects to the funder's own page`;
+  if (row.format === "mcp") return `- ${base}${row.public}: Model Context Protocol endpoint (POST)`;
   const kind = row.format === "atom" ? "Atom feed" : "JSON";
   const page = row.page ? ` of the page ${base}${row.page}` : "";
   return `- ${base}${row.public}: ${kind}${page} (API: ${base}${row.backend})`;
@@ -61,7 +63,7 @@ export function buildLlmsTxt(input: LlmsInput): string {
     "",
     `## ${t("llms_mcp_title")}`,
     "",
-    t("llms_mcp", { url: `${base}/mcp` }),
+    t("llms_mcp", { url: input.mcpUrl }),
     "",
     `## ${t("llms_licence_title")}`,
     "",

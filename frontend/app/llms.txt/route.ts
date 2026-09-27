@@ -25,6 +25,7 @@ export async function GET() {
   const live = ids.body.data.find((row) => row.status === "live") ?? ids.body.data[0];
   const text = buildLlmsTxt({
     base: index.body.base_url.replace(/\/+$/, ""),
+    mcpUrl: index.body.mcp_url ?? `${index.body.base_url.replace(/\/+$/, "")}/mcp`,
     countryLabel: index.body.country_label,
     licence: index.body.licence.summary,
     scheme: index.body.url_scheme,

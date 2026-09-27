@@ -143,6 +143,7 @@ export interface ApiIndex {
   api_base_url: string;
   openapi_url: string;
   taxonomy_url: string;
+  mcp_url?: string;
   licence: { id: string; summary: string };
   url_scheme: { page: string | null; public: string; backend: string; format: string }[];
   meta: ListMeta;

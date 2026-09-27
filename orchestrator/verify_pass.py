@@ -8,8 +8,8 @@ page and answer in strict JSON, and checks that answer against the page:
   normalised), or the row is `unresolved`. This is the defence against a
   model inventing a deadline;
 - a date must parse, be plausible (not more than about two years ahead, not
-  before the year before the row was first seen) and its day of the month
-  must appear in the excerpt;
+  before the year before the row was first seen), its day of the month must
+  appear in the excerpt, and any year the excerpt names must be its year;
 - a date already past means the round is `closed`.
 
 The row gets `deadline_state`, `verified_at`, `verified_by`,
@@ -159,6 +159,13 @@ def _day_in(excerpt: str, d: date) -> bool:
     return re.search(rf"(?<!\d)0?{d.day}(?!\d)", excerpt) is not None
 
 
+def _year_conflicts(excerpt: str, d: date) -> bool:
+    """The excerpt names a year, and none of the years it names is the
+    deadline's. Stops last year's closing date being read as this year's."""
+    years = re.findall(r"(?<!\d)(20\d{2})(?!\d)", excerpt)
+    return bool(years) and str(d.year) not in years
+
+
 def interpret_answer(answer, page_text: str, row: dict, today: date) -> tuple[dict | None, str]:
     """Check a parsed model answer against the page.
 
@@ -186,6 +193,8 @@ def interpret_answer(answer, page_text: str, row: dict, today: date) -> tuple[di
         deadline, why = _plausible_date(answer.get("deadline"), row, today)
         if deadline is not None and not _day_in(excerpt, deadline):
             deadline, why = None, "excerpt does not state the deadline date"
+        if deadline is not None and _year_conflicts(excerpt, deadline):
+            deadline, why = None, "excerpt states a different year from the deadline"
         if deadline is None and state == "dated":
             return None, why
     if state == "dated" and deadline < today:

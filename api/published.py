@@ -127,10 +127,27 @@ def _dumps(obj) -> str:
     return json.dumps(obj, indent=2, ensure_ascii=False) + "\n"
 
 
+# Parsed pool per path, keyed by the file's (mtime, size). Public pages read
+# the pool on every request; it changes once per publish.
+_rows_cache: dict[str, tuple[tuple[int, int], list[dict]]] = {}
+
+
 def _load_rows(country: str) -> list[dict]:
-    data = _read_json(_path(country, "pool.json"), {})
-    rows = data.get("opportunities") if isinstance(data, dict) else data
-    return [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+    path = _path(country, "pool.json")
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return []
+    signature = (stat.st_mtime_ns, stat.st_size)
+    cached = _rows_cache.get(path)
+    if cached is None or cached[0] != signature:
+        data = _read_json(path, {})
+        rows = data.get("opportunities") if isinstance(data, dict) else data
+        rows = [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+        _rows_cache[path] = cached = (signature, rows)
+    # A new list each call; the row dicts are shared, so callers copy before
+    # changing one (`_with_status` and `_dedupe` both do).
+    return list(cached[1])
 
 
 # --- Dates and status ---------------------------------------------------------

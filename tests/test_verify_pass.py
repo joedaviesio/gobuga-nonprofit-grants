@@ -177,6 +177,21 @@ def test_excerpt_must_state_the_date_it_supports():
     assert "does not state the deadline date" in out[0]["unresolved_reason"]
 
 
+def test_excerpt_naming_another_year_is_unresolved():
+    # Last year's closing date, read as this year's: same day, wrong year.
+    out, _ = run([row()], answer(deadline="2027-11-30"))
+    assert out[0]["deadline_state"] == "unresolved"
+    assert "different year" in out[0]["unresolved_reason"]
+
+
+def test_excerpt_with_no_year_is_accepted():
+    page = "Community Grants. Applications for this round close on 30 November at 5pm sharp."
+    out, _ = run([row()], answer(deadline_excerpt="Applications for this round close on 30 November at 5pm sharp."),
+                 fetch=FakeFetch(default=page))
+    assert out[0]["deadline_state"] == "dated"
+    assert out[0]["deadline"] == "2026-11-30"
+
+
 def test_too_short_excerpt_rejected():
     out, _ = run([row()], answer(deadline_excerpt="30 November"))
     assert out[0]["unresolved_reason"] == "deadline excerpt not found in page"

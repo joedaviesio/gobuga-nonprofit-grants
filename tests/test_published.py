@@ -506,3 +506,19 @@ def test_cli_status_and_publish_holds_unverified_rows(isolated, capsys):
     assert published.main(["status", "nz"]) == 0
     assert json.loads(capsys.readouterr().out)["held_count"] == 1
     assert published.main(["bogus"]) == 2
+
+
+def test_pool_cache_sees_a_new_publish_and_hands_out_fresh_lists(monkeypatch):
+    from api import published
+    published._rows_cache.clear()
+    assert published._load_rows("nz") == []
+    path = published._path("nz", "pool.json")
+    published._write_files_atomically(
+        {path: published._dumps({"opportunities": [{"id": "A"}]})})
+    first = published._load_rows("nz")
+    assert [r["id"] for r in first] == ["A"]
+    first.append({"id": "leak"})
+    assert [r["id"] for r in published._load_rows("nz")] == ["A"]
+    published._write_files_atomically(
+        {path: published._dumps({"opportunities": [{"id": "A"}, {"id": "B"}]})})
+    assert [r["id"] for r in published._load_rows("nz")] == ["A", "B"]

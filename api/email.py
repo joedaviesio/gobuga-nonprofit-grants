@@ -7,6 +7,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def send_text_email(to_email: str, subject: str, text: str):
+    """Send a plain-text email. Logs to stdout if RESEND_API_KEY is not set."""
+    api_key = os.getenv("RESEND_API_KEY")
+    from_addr = os.getenv("RESEND_FROM", "gobuga <noreply@gobuga.org>")
+
+    if not api_key:
+        print(f"[EMAIL] No RESEND_API_KEY — would send to {to_email}: {subject}")
+        return
+
+    import resend
+
+    resend.api_key = api_key
+    resend.Emails.send({
+        "from": from_addr,
+        "to": [to_email],
+        "subject": subject,
+        "text": text,
+    })
+
+
 def send_reset_email(to_email: str, reset_url: str):
     """Send a password reset email. Logs to stdout if RESEND_API_KEY is not set."""
     api_key = os.getenv("RESEND_API_KEY")

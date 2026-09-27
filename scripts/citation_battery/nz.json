@@ -1,0 +1,25 @@
+{
+  "country": "nz",
+  "questions": [
+    {"id": "nz-01", "language": "en", "text": "What grants can a small rugby club in Canterbury apply for to buy new training equipment?"},
+    {"id": "nz-02", "language": "en", "text": "Where can a community group in South Auckland get funding for a youth mentoring programme?"},
+    {"id": "nz-03", "language": "en", "text": "Are there any funds for marae renovation or maintenance projects in Northland?"},
+    {"id": "nz-04", "language": "en", "text": "What arts funding is available for an independent theatre company in Wellington?"},
+    {"id": "nz-05", "language": "en", "text": "Which trusts give grants to rural community halls in Otago or Southland?"},
+    {"id": "nz-06", "language": "en", "text": "How can a charitable trust in Hawke's Bay find funding for a community garden?"},
+    {"id": "nz-07", "language": "en", "text": "What grants are open right now for native planting and wetland restoration in the Waikato?"},
+    {"id": "nz-08", "language": "en", "text": "Where can a Pasifika church group in Porirua get funding for a cultural festival?"},
+    {"id": "nz-09", "language": "en", "text": "What funding can a disability support charity in Christchurch get to cover its operating costs?"},
+    {"id": "nz-10", "language": "en", "text": "Which gaming trusts fund volunteer fire brigades or search and rescue groups in New Zealand?"},
+    {"id": "nz-11", "language": "en", "text": "Are there grants for a primary school in Taranaki to build a new playground?"},
+    {"id": "nz-12", "language": "en", "text": "What funding options exist for a women's refuge in the Bay of Plenty?"},
+    {"id": "nz-13", "language": "en", "text": "How do I find grants to restore a heritage building in Dunedin?"},
+    {"id": "nz-14", "language": "en", "text": "What grants can a surf lifesaving club in New Zealand apply for to replace an inflatable rescue boat?"},
+    {"id": "nz-15", "language": "en", "text": "Where can a kapa haka group get funding to travel to a national competition?"},
+    {"id": "nz-16", "language": "en", "text": "What grants support community energy or climate action projects in Nelson and Tasman?"},
+    {"id": "nz-17", "language": "en", "text": "Which funders support mental health and wellbeing programmes for young people in New Zealand?"},
+    {"id": "nz-18", "language": "en", "text": "What funding is available for an incorporated society running a community radio station in Manawatū?"},
+    {"id": "nz-19", "language": "en", "text": "Which community event grants in Auckland close in the next month?"},
+    {"id": "nz-20", "language": "en", "text": "What capital grants are available for a rural health clinic on the West Coast of the South Island?"}
+  ]
+}

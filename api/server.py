@@ -594,7 +594,8 @@ def api_chat(case_id: str, req: ChatRequest, org_id: str = Depends(get_current_o
     if not chat_check["allowed"]:
         raise HTTPException(403, chat_check["message"])
     _require_llm_budget(org_id)
-    result = chat(org_id, case_id, req.message)
+    from api.limits import get_model_for_org
+    result = chat(org_id, case_id, req.message, model=get_model_for_org(org_id))
     if "error" in result:
         raise HTTPException(400, result["error"])
     return result
@@ -1111,7 +1112,20 @@ class RunCycleRequest(BaseModel):
 def api_run_cycle(req: RunCycleRequest, org_id: str = Depends(get_current_org)):
     if _cycle_state["running"]:
         raise HTTPException(409, "A cycle is already running")
+
     _require_llm_budget(org_id)
+
+    # One run per trigger. POST /api/org/trigger-cycle starts the 7-day timer;
+    # this route then runs the cycle for it, once. Without this any account
+    # could call the route in a loop and spend web-search credits, which the
+    # LLM budget does not count.
+    from api.limits import get_cycle_timer
+    timer = get_cycle_timer(org_id)
+    if timer is None or timer["expired"]:
+        raise HTTPException(409, "Start a cycle before running it.")
+    if (get_org(org_id) or {}).get("cycle_run_for_trigger") == timer["triggered_at"]:
+        raise HTTPException(409, "This cycle has already run. The next one is available when the timer expires.")
+    update_org(org_id, {"cycle_run_for_trigger": timer["triggered_at"]})
 
     from orchestrator.main import run_cycle
     from datetime import datetime, timezone
@@ -1238,6 +1252,11 @@ def api_tailored_run(org_id: str = Depends(get_current_org)):
 def api_cycle_status(org_id: str = Depends(get_current_org)):
     """Check cycle run status."""
     from datetime import date as date_type
+
+    # The state is one global for the whole deployment. Another org's run,
+    # error text or completion is not this org's to see.
+    if _cycle_state.get("org_id") != org_id:
+        return {"status": "idle"}
 
     if _cycle_state["running"]:
         return {

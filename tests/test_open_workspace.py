@@ -9,6 +9,7 @@ because api/billing.py calls load_dotenv(), which can pick up a real .env
 
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -537,3 +538,49 @@ def test_profile_edit_no_longer_sends_a_finished_org_back_to_seeding(client):
     org = get_org(org_id)
     assert org["sectors"] == ["Education"]
     assert org["seeding_complete"] is True and org["setup_complete"] is True
+
+
+# --- Audit additions: cost and tenancy guards on the legacy cycle and chat ----
+
+def test_cycle_run_needs_a_trigger_and_runs_once_per_trigger(client, monkeypatch):
+    runs = []
+    monkeypatch.setattr(orchestrator_main, "run_cycle",
+                        lambda org_id, *a, **kw: runs.append(org_id))
+    org_id, headers = _register(client)
+
+    r = client.post("/api/cycle/run", headers=headers, json={})
+    assert r.status_code == 409 and "Start a cycle" in r.json()["detail"]
+
+    limits.trigger_cycle(org_id)
+    assert client.post("/api/cycle/run", headers=headers, json={}).status_code == 200
+    for _ in range(50):
+        if not server._cycle_state["running"]:
+            break
+        time.sleep(0.02)
+    r = client.post("/api/cycle/run", headers=headers, json={})
+    assert r.status_code == 409 and "already run" in r.json()["detail"]
+    assert runs == [org_id]
+
+
+def test_cycle_status_does_not_show_another_orgs_run(client, monkeypatch):
+    _, mine = _register(client, "Mine")
+    other_id, theirs = _register(client, "Theirs")
+    monkeypatch.setitem(server._cycle_state, "org_id", other_id)
+    monkeypatch.setitem(server._cycle_state, "running", False)
+    monkeypatch.setitem(server._cycle_state, "error", "their private failure text")
+    assert client.get("/api/cycle/status", headers=mine).json() == {"status": "idle"}
+    assert client.get("/api/cycle/status", headers=theirs).json()["status"] == "error"
+
+
+def test_chat_uses_the_orgs_tier_model(client, monkeypatch):
+    seen = []
+
+    def fake_chat(org_id, case_id, message, model=None):
+        seen.append(model)
+        return {"response": "ok"}
+    monkeypatch.setattr(server, "chat", fake_chat)
+    org_id, headers = _register(client)
+    case_id = _open_case(client, headers, 1).json()["case_id"]
+    client.post(f"/api/cases/{case_id}/chat", headers=headers, json={"message": "hi"})
+    assert seen == [limits.get_tier(org_id)["model"]]
+    assert "haiku" in seen[0]

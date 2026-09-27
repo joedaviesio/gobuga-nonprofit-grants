@@ -47,7 +47,7 @@ from api.request_log import HitLogMiddleware
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.31",
+    version="0.2.32",
     openapi_url=None,
     docs_url=None,
     redoc_url=None,

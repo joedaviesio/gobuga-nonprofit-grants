@@ -74,7 +74,10 @@ def usage(value: dict, endpoints: list[str]) -> dict:
         "fit_urls_built": api.get("/api/v1/fit", 0),
         "api_calls": {"total": by_surface.get("api", 0),
                       "by_endpoint": {k: api.get(k, 0) for k in endpoints}},
-        "mcp_calls": {"total": by_surface.get("mcp", 0),
+        # Tool calls: one `mcp:<tool>` line each. The `mcp` surface count also
+        # holds a transport line for every POST (initialize, tools/list, ...),
+        # so it is not a count of calls.
+        "mcp_calls": {"total": sum(n for n in mcp.values() if isinstance(n, int)),
                       "by_tool": {t: mcp.get(t, 0) for t in MCP_TOOLS}},
         # Every surface: pages, API, MCP and click-outs.
         "crawler_hits": {"total": sum(by_agent.get(c, 0) for c in bots),

@@ -17,7 +17,7 @@ import {
   type DatabankEntry,
 } from "@/lib/api";
 import DOMPurify from "dompurify";
-import ErrorModal from "@/app/error-modal";
+import ErrorModal, { isModalError } from "@/app/error-modal";
 import { useI18n } from "@/lib/i18n";
 
 const API_BASE = "/api";
@@ -217,7 +217,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setStatusMessage(t("case.added_to_databank", { name: sanitizedName }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
-      if (msg.includes("403")) {
+      if (isModalError(msg)) {
         setErrorModal(msg);
         setBotStatus("idle");
         setStatusMessage("");
@@ -252,7 +252,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
-      if (msg.includes("403")) {
+      if (isModalError(msg)) {
         setErrorModal(msg);
         setBotStatus("idle");
         setStatusMessage("");
@@ -277,7 +277,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setStatusMessage("");
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("dashboard.unknown_error");
-      if (msg.includes("403")) {
+      if (isModalError(msg)) {
         setErrorModal(msg);
         setBotStatus("idle");
         setStatusMessage("");
@@ -325,7 +325,7 @@ export default function CaseDetail({ params }: { params: Promise<{ id: string }>
       setStatusMessage("");
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : t("dashboard.unknown_error");
-      if (errMsg.includes("403")) {
+      if (isModalError(errMsg)) {
         // Remove the empty assistant message we added for streaming
         setQaMessages((prev) => {
           const updated = [...prev];

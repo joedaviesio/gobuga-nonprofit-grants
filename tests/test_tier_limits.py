@@ -1,13 +1,17 @@
 """
 Test script: tier system limits and cycle timer.
 
+Since the 27 Sep 2026 plan the free tier (scanner) is unlimited; these cases
+assert that, and that the officer tier is unchanged. In-process equivalents
+live in tests/test_open_workspace.py.
+
 Tests:
-  1. Scanner tier enforces opportunity limits (2H + 2M + 1L)
-  2. Scanner tier enforces 3 open case limit
-  3. Scanner tier enforces 5 chat messages/case
+  1. Scanner tier has no opportunity cap
+  2. Scanner tier opens more than 3 cases
+  3. Scanner tier has unlimited chat messages per case
   4. Officer tier has no limits
   5. Cycle timer enforces 7-day cooldown
-  6. Feature access gating (bots_bcd, export_docx)
+  6. Scanner tier has every feature (bots_bcd, export_docx)
 
 Usage:
     python3 tests/test_tier_limits.py
@@ -89,14 +93,12 @@ def set_tier(tier_key):
 # Case 1 — Scanner tier opportunity limits
 # ---------------------------------------------------------------------------
 def case_1():
-    log("\n=== Case 1: Scanner tier opportunity limits ===")
+    log("\n=== Case 1: Scanner tier has no opportunity cap ===")
     from api.limits import filter_opportunities_for_tier, _get_tiers
 
     scanner = _get_tiers()["scanner"]
-    limits = scanner["opportunities_per_cycle"]
-    check("Scanner allows 2 high", limits.get("high") == 2)
-    check("Scanner allows 2 medium", limits.get("medium") == 2)
-    check("Scanner allows 1 low", limits.get("low") == 1)
+    check("Scanner has no opportunity cap", scanner["opportunities_per_cycle"] is None,
+          f"Got {scanner['opportunities_per_cycle']}")
 
     # Build a list of 10 opportunities: 5 high, 3 medium, 2 low
     opps = []
@@ -107,53 +109,16 @@ def case_1():
     for i in range(2):
         opps.append({"id": f"opp-l{i}", "priority": "low", "title": f"Low {i}"})
 
-    # Use a fake org_id that resolves to scanner tier
-    org_id = "_test_tier_scanner"
-    # Ensure it's treated as scanner (no org file = defaults to scanner)
-    filtered = filter_opportunities_for_tier(opps, org_id)
-
-    high_count = sum(1 for o in filtered if o["priority"] == "high")
-    med_count = sum(1 for o in filtered if o["priority"] == "medium")
-    low_count = sum(1 for o in filtered if o["priority"] == "low")
-
-    check("Filtered high <= 2", high_count <= 2, f"Got {high_count}")
-    check("Filtered medium <= 2", med_count <= 2, f"Got {med_count}")
-    check("Filtered low <= 1", low_count <= 1, f"Got {low_count}")
-    check("Total filtered == 5", len(filtered) == 5, f"Got {len(filtered)}")
-
-    # --- Backfill: when a priority bucket is short, extras fill the gap ---
-    # Only 1 high available, 0 low — should still return 5 total
-    sparse_opps = [
-        {"id": "opp-h0", "priority": "high", "title": "High 0"},
-        {"id": "opp-m0", "priority": "medium", "title": "Med 0"},
-        {"id": "opp-m1", "priority": "medium", "title": "Med 1"},
-        {"id": "opp-m2", "priority": "medium", "title": "Med 2"},
-        {"id": "opp-m3", "priority": "medium", "title": "Med 3"},
-        {"id": "opp-m4", "priority": "medium", "title": "Med 4"},
-    ]
-    sparse_filtered = filter_opportunities_for_tier(sparse_opps, org_id)
-    check("Backfill: still returns 5 when buckets are short",
-          len(sparse_filtered) == 5, f"Got {len(sparse_filtered)}")
-    sparse_high = sum(1 for o in sparse_filtered if o["priority"] == "high")
-    sparse_med = sum(1 for o in sparse_filtered if o["priority"] == "medium")
-    check("Backfill: takes the 1 available high", sparse_high == 1, f"Got {sparse_high}")
-    check("Backfill: fills remaining slots with medium", sparse_med == 4, f"Got {sparse_med}")
-
-    # Fewer than 5 total available — returns all of them
-    tiny_opps = [
-        {"id": "opp-m0", "priority": "medium", "title": "Med 0"},
-        {"id": "opp-m1", "priority": "medium", "title": "Med 1"},
-    ]
-    tiny_filtered = filter_opportunities_for_tier(tiny_opps, org_id)
-    check("Undersupply: returns all when < 5 available",
-          len(tiny_filtered) == 2, f"Got {len(tiny_filtered)}")
+    # A fake org_id resolves to scanner (no org record = scanner)
+    filtered = filter_opportunities_for_tier(opps, "_test_tier_scanner")
+    check("Scanner gets all 10 opportunities", filtered == opps, f"Got {len(filtered)}")
 
 
 # ---------------------------------------------------------------------------
 # Case 2 — Scanner tier case limit
 # ---------------------------------------------------------------------------
 def case_2():
-    log("\n=== Case 2: Scanner tier case limit ===")
+    log("\n=== Case 2: Scanner tier opens more than 3 cases ===")
 
     if not TOKEN:
         check("Auth available", False, "No token")
@@ -161,9 +126,9 @@ def case_2():
 
     set_tier("scanner")
 
-    # Create three cases — all should succeed (scanner limit=3)
+    # Create five cases — all should succeed (the old scanner limit was 3)
     case_ids = []
-    for i in range(1, 4):
+    for i in range(1, 6):
         r = requests.post(f"{API}/api/cases",
                           json={"grant_id": f"test-grant-{i}", "grant_brief": {"title": f"Test brief {i}"}},
                           headers=json_headers(TOKEN))
@@ -171,13 +136,6 @@ def case_2():
               f"Got {r.status_code}: {r.text[:200]}")
         if r.status_code == 200:
             case_ids.append(r.json().get("case_id"))
-
-    # Create fourth case — should be blocked
-    r4 = requests.post(f"{API}/api/cases",
-                       json={"grant_id": "test-grant-4", "grant_brief": {"title": "Test brief 4"}},
-                       headers=json_headers(TOKEN))
-    check("Fourth case blocked (scanner limit=3)", r4.status_code in (403, 429),
-          f"Got {r4.status_code}: {r4.text[:200]}")
 
     # Clean up: delete the cases
     for case_id in case_ids:
@@ -189,11 +147,11 @@ def case_2():
 # Case 3 — Scanner tier chat limit
 # ---------------------------------------------------------------------------
 def case_3():
-    log("\n=== Case 3: Scanner tier chat message limit ===")
+    log("\n=== Case 3: Scanner tier has unlimited chat ===")
     from api.limits import _get_tiers
 
     scanner = _get_tiers()["scanner"]
-    check("Scanner chat limit is 5", scanner["chat_messages_per_case"] == 5)
+    check("Scanner chat is unlimited", scanner["chat_messages_per_case"] == -1)
 
     if not TOKEN:
         check("Auth available", False, "No token")
@@ -214,8 +172,8 @@ def case_3():
     # Verify the limit check function
     from api.limits import check_chat_limit
     result = check_chat_limit(ORG_ID, case_id)
-    check("Chat limit check returns allowed field", "allowed" in result)
-    check("Chat limit check returns limit field", result.get("limit") == 5,
+    check("Chat limit check allows", result.get("allowed") is True, f"Got {result}")
+    check("Chat limit check reports no limit", result.get("limit") == -1,
           f"Got limit={result.get('limit')}")
 
     # Clean up
@@ -297,19 +255,19 @@ def case_5():
 # Case 6 — Feature access gating
 # ---------------------------------------------------------------------------
 def case_6():
-    log("\n=== Case 6: Feature access gating ===")
+    log("\n=== Case 6: Feature access ===")
     from api.limits import check_feature_access
 
-    # Scanner should be blocked from officer features
+    # Scanner has every feature now
     # Use a non-existent org_id to default to scanner
     org_id = "_test_features"
 
     bots_result = check_feature_access(org_id, "bots_bcd")
-    check("Scanner blocked from bots_bcd", bots_result.get("allowed") is False,
+    check("Scanner allowed bots_bcd", bots_result.get("allowed") is True,
           f"Got: {bots_result}")
 
     docx_result = check_feature_access(org_id, "export_docx")
-    check("Scanner blocked from export_docx", docx_result.get("allowed") is False,
+    check("Scanner allowed export_docx", docx_result.get("allowed") is True,
           f"Got: {docx_result}")
 
     # Test with a live officer org if we have auth

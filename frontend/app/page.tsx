@@ -713,6 +713,8 @@ function LegacyDashboard() {
                       {session?.cycle_timer && (
                         <span className="text-base font-mono font-medium text-blue-600 tabular-nums">
                           {(() => {
+                            // The countdown is meant to reflect the moment of render
+                            // eslint-disable-next-line react-hooks/purity
                             const remaining = Math.max(0, Math.floor((new Date(session.cycle_timer.expires_at).getTime() - Date.now()) / 1000));
                             const d = Math.floor(remaining / 86400);
                             const h = Math.floor((remaining % 86400) / 3600);

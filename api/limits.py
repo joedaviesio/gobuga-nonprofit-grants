@@ -2,6 +2,12 @@
 
 Tier definitions are per-country, loaded from the country config JSON.
 NZ defaults are used when the JSON doesn't include a `tiers` field.
+
+Since the 27 Sep 2026 plan the free tier (scanner) is unlimited in every
+country, so the limit checks below pass for every account. They stay
+data-driven because the paid question will be reopened. The one workspace
+limit that applies today is the daily LLM budget (api/llm_budget.py), which
+is a cost guard and not a tier.
 """
 
 from api.auth import get_org, update_org
@@ -82,9 +88,10 @@ def toggle_tier(org_id: str) -> str:
 
 def filter_opportunities_for_tier(opportunities: list, org_id: str) -> list:
     """Filter opportunities based on tier limits.
-    Scanner: prefers 2 high, 2 medium, 1 low — but always returns up to 5
-    by backfilling from remaining opportunities if a priority bucket is short.
-    Officer: all opportunities.
+    A tier with `opportunities_per_cycle: null` (every tier today) gets all
+    of them. A tier with per-priority caps, e.g. {high: 2, medium: 2, low: 1},
+    gets up to the caps, backfilled from the remaining opportunities when a
+    priority bucket is short.
     """
     tier = get_tier(org_id)
     limits = tier["opportunities_per_cycle"]
@@ -160,33 +167,16 @@ def can_trigger_cycle(org_id: str) -> dict:
     }
 
 
-# --- Tailored Opportunities (paid tier feature) ---
+# --- Tailored Opportunities (the feed ranked against the organisation) ---
 
 def check_tailored_access(org_id: str) -> dict:
-    """Gate for the Tailored Opportunities button. Composes:
-      1. Tier check — must be Officer
-      2. Toggle check — org.tailored_enabled must be True
-      3. Cooldown check — 7-day timer from last trigger must be expired
+    """Gate for the Tailored Opportunities button. Open to every account.
+    The one check is the 7-day cooldown between runs, which is a cost guard:
+    each run spends web-search credits as well as LLM calls.
 
     Returns {allowed: bool, reason: str|None, message: str, timer: dict|None}.
-    Reasons (when not allowed): 'upgrade' | 'disabled' | 'cooldown'.
+    Reason (when not allowed): 'cooldown'.
     """
-    tier_key = get_tier_key(org_id)
-    if tier_key != "officer":
-        return {
-            "allowed": False,
-            "reason": "upgrade",
-            "message": "Tailored Opportunities is an Officer-tier feature.",
-            "timer": None,
-        }
-    org = get_org(org_id) or {}
-    if not org.get("tailored_enabled"):
-        return {
-            "allowed": False,
-            "reason": "disabled",
-            "message": "Tailored Opportunities is off — enable it in settings to start running weekly cycles.",
-            "timer": None,
-        }
     timer = get_cycle_timer(org_id)
     if timer and not timer["expired"]:
         return {
@@ -204,14 +194,13 @@ def check_tailored_access(org_id: str) -> dict:
 
 
 def set_tailored_enabled(org_id: str, enabled: bool) -> dict:
-    """Officer-only setter for `org.tailored_enabled`."""
-    tier_key = get_tier_key(org_id)
-    if tier_key != "officer":
-        raise PermissionError("Tailored Opportunities is Officer-tier only.")
+    """Setter for `org.tailored_enabled`. The flag no longer gates access
+    (see check_tailored_access). It stays on the record, and the billing
+    webhook still writes it, so nothing is lost if the paid question reopens."""
     update_org(org_id, {"tailored_enabled": bool(enabled)})
     return {
         "tailored_enabled": bool(enabled),
-        "tier": tier_key,
+        "tier": get_tier_key(org_id),
     }
 
 
@@ -231,7 +220,7 @@ def check_case_limit(org_id: str) -> dict:
         "allowed": allowed,
         "active": active,
         "limit": limit,
-        "message": f"Case limit reached ({active}/{limit}). Upgrade to Officer for unlimited cases." if not allowed else None,
+        "message": f"Case limit reached ({active}/{limit}). Close a case to open another." if not allowed else None,
     }
 
 
@@ -253,7 +242,7 @@ def check_chat_limit(org_id: str, case_id: str) -> dict:
         "allowed": allowed,
         "used": user_messages,
         "limit": limit,
-        "message": f"Chat limit reached ({user_messages}/{limit}). Upgrade to Officer for unlimited." if not allowed else None,
+        "message": f"Chat limit reached ({user_messages}/{limit}) for this case." if not allowed else None,
     }
 
 
@@ -271,7 +260,7 @@ def check_feature_access(org_id: str, feature: str) -> dict:
     return {
         "allowed": allowed,
         "tier": tier_key,
-        "message": f"This feature requires Grant Officer. You're on {tier['label']}." if not allowed else None,
+        "message": "This feature is not available on this account." if not allowed else None,
     }
 
 

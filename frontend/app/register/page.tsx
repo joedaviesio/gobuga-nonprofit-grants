@@ -31,32 +31,18 @@ function validateOrgName(v: string): MessageKey | "" {
   return "";
 }
 
-function validateUrl(v: string): MessageKey | "" {
-  if (!v.trim()) return "auth.url_required";
-  const withScheme = v.match(/^https?:\/\//) ? v : `https://${v}`;
-  try {
-    const url = new URL(withScheme);
-    if (!url.hostname.includes(".")) return "auth.url_invalid";
-  } catch {
-    return "auth.url_invalid";
-  }
-  return "";
-}
-
 export default function RegisterPage() {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [orgName, setOrgName] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const fieldErrors = {
     orgName: validateOrgName(orgName),
-    websiteUrl: validateUrl(websiteUrl),
     email: validateEmail(email),
     password: validatePassword(password),
     confirmPassword: validateConfirmPassword(password, confirmPassword),
@@ -69,13 +55,14 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ orgName: true, websiteUrl: true, email: true, password: true, confirmPassword: true });
+    setTouched({ orgName: true, email: true, password: true, confirmPassword: true });
     if (hasErrors) return;
     setError("");
     setLoading(true);
     try {
-      await registerAccount(email, password, orgName, websiteUrl);
-      window.location.href = "/setup";
+      // The website is asked for (optionally) on the next screen
+      await registerAccount(email, password, orgName);
+      window.location.href = "/seed";
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.registration_failed"));
     } finally {
@@ -116,21 +103,6 @@ export default function RegisterPage() {
             />
             {touched.orgName && fieldErrors.orgName && (
               <p className="text-sm text-red-600 mt-1">{t(fieldErrors.orgName)}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-base font-medium text-stone-700 mb-1">{t("auth.website_url")}</label>
-            <input
-              type="text"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              onBlur={() => markTouched("websiteUrl")}
-              className={`w-full px-3 py-2.5 text-base border rounded-md focus:outline-none text-stone-900 ${touched.websiteUrl && fieldErrors.websiteUrl ? "border-red-300 focus:border-red-400" : "border-stone-300 focus:border-blue-400"}`}
-              placeholder="yourorg.com"
-            />
-            {touched.websiteUrl && fieldErrors.websiteUrl && (
-              <p className="text-sm text-red-600 mt-1">{t(fieldErrors.websiteUrl)}</p>
             )}
           </div>
 

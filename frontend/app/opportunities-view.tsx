@@ -47,6 +47,8 @@ function DeadlineBadge({ deadline }: { deadline: string | null }) {
   // Try to render days-until
   const dt = new Date(deadline);
   if (!isNaN(dt.getTime())) {
+    // Days-until is meant to reflect the moment of render
+    // eslint-disable-next-line react-hooks/purity
     const days = Math.ceil((dt.getTime() - Date.now()) / 86400000);
     const tone = days < 7 ? "text-red-600" : days < 30 ? "text-amber-600" : "text-slate-600";
     return (
@@ -110,6 +112,8 @@ export default function OpportunitiesView() {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
+          // Mount-time hydration from localStorage, readable only on the client
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setActiveTags(parsed.filter((t): t is string => typeof t === "string"));
         }
       } catch {
@@ -136,6 +140,7 @@ export default function OpportunitiesView() {
 
   // Reset cursor when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCursor(0);
   }, [debouncedQ, activeTags, region, sort]);
 
@@ -154,6 +159,8 @@ export default function OpportunitiesView() {
   useEffect(() => {
     if (lastQueryRef.current === queryKey) return;
     lastQueryRef.current = queryKey;
+    // Loading flag for the fetch this effect starts
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     listOpportunities(query)
       .then((res) => {
@@ -172,10 +179,9 @@ export default function OpportunitiesView() {
     getTailoredAccess().then(setTailoredAccess).catch(() => setTailoredAccess(null));
   }, []);
 
-  // Show the tab for everyone EXCEPT Officer tier with toggle deliberately off
-  // (which is the only case where the user has explicitly opted out).
-  const showTailoredTab =
-    !!tailoredAccess && tailoredAccess.reason !== "disabled";
+  // Tailored Picks (the feed ranked against the organisation) is open to
+  // every account; hide the tab only if the access check itself failed.
+  const showTailoredTab = !!tailoredAccess;
 
   const toggleTag = (t: string) => {
     setActiveTags((curr) => curr.includes(t) ? curr.filter((x) => x !== t) : [...curr, t]);
@@ -185,7 +191,7 @@ export default function OpportunitiesView() {
     setOpening(row.id);
     try {
       const newCase = await openCaseFromPool(row.id);
-      window.location.href = `/case/${newCase.case_id}`;
+      window.location.assign(`/case/${newCase.case_id}`);
     } catch (err) {
       setErrorModal(err instanceof Error ? err.message : t("opps.open_failed"));
       setOpening(null);

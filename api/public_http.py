@@ -6,8 +6,9 @@
   with 304.
 - `atom_feed` builds an Atom 1.0 document with ElementTree, so every title
   and summary is escaped, and strips characters XML 1.0 cannot carry.
-- `PublicCORSMiddleware` makes `/api/v1/*` readable from any origin without
-  credentials, leaving the workspace's origin allow-list untouched.
+- `PublicCORSMiddleware` makes `/api/v1/*` readable, and `/mcp` callable,
+  from any origin without credentials, leaving the workspace's origin
+  allow-list untouched.
 """
 
 import hashlib
@@ -127,19 +128,34 @@ PUBLIC_CORS_PREFIX = "/api/v1"
 _CORS_ALLOW_HEADERS = "Accept, Accept-Language, Content-Type, If-None-Match, If-Modified-Since"
 _CORS_EXPOSE_HEADERS = "ETag, Last-Modified, Retry-After, X-Robots-Tag"
 
+# The MCP endpoint (api/mcp_server.py) takes POST with a JSON body, so a
+# browser preflights it. Mcp-Session-Id is allowed because clients may send
+# one (it is ignored); none is issued, so only Retry-After needs exposing.
+MCP_CORS_PATH = "/mcp"
+_MCP_ALLOW_METHODS = "POST, OPTIONS"
+_MCP_ALLOW_HEADERS = "Accept, Content-Type, MCP-Protocol-Version, Mcp-Session-Id"
+_MCP_EXPOSE_HEADERS = "Retry-After"
+
 
 def _is_public_cors_path(path: str) -> bool:
     return path == PUBLIC_CORS_PREFIX or path.startswith(PUBLIC_CORS_PREFIX + "/")
 
 
+def is_public_cors_path(path: str) -> bool:
+    """True for every path PublicCORSMiddleware opens to any origin."""
+    return path == MCP_CORS_PATH or _is_public_cors_path(path)
+
+
 class PublicCORSMiddleware:
-    """`Access-Control-Allow-Origin: *` for `/api/v1/*`, and nothing else.
+    """`Access-Control-Allow-Origin: *` for `/api/v1/*` and `/mcp`, and
+    nothing else.
 
     Must be added after (so it runs outside) the app's CORSMiddleware, whose
     origin allow-list would otherwise reject a third-party preflight with a
     400. Under `/api/v1` it answers preflights itself (GET and HEAD only, no
     credentials), rewrites the response's CORS headers to the wildcard, and
-    answers HEAD as a bodiless GET.
+    answers HEAD as a bodiless GET. On `/mcp` it does the same for POST, with
+    the MCP request headers allowed and no HEAD rewrite.
     Every other path goes straight through to the workspace's CORSMiddleware.
     """
 
@@ -147,32 +163,34 @@ class PublicCORSMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or not _is_public_cors_path(scope.get("path", "")):
+        if scope["type"] != "http" or not is_public_cors_path(scope.get("path", "")):
             await self.app(scope, receive, send)
             return
+        is_mcp = scope.get("path") == MCP_CORS_PATH
         names = {k.lower() for k, _ in scope.get("headers", ())}
         if (scope.get("method") == "OPTIONS" and b"origin" in names
                 and b"access-control-request-method" in names):
             await Response(status_code=204, headers={
                 "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-                "Access-Control-Allow-Headers": _CORS_ALLOW_HEADERS,
+                "Access-Control-Allow-Methods": _MCP_ALLOW_METHODS if is_mcp else "GET, HEAD, OPTIONS",
+                "Access-Control-Allow-Headers": _MCP_ALLOW_HEADERS if is_mcp else _CORS_ALLOW_HEADERS,
                 "Access-Control-Max-Age": "86400",
             })(scope, receive, send)
             return
 
-        # The routes are declared for GET. A HEAD is answered as the same GET
-        # with the body dropped, so crawlers can check validators cheaply.
-        is_head = scope.get("method") == "HEAD"
+        # The /api/v1 routes are declared for GET. A HEAD is answered as the
+        # same GET with the body dropped, so crawlers can check validators cheaply.
+        is_head = not is_mcp and scope.get("method") == "HEAD"
         if is_head:
             scope = {**scope, "method": "GET"}
+        expose = (_MCP_EXPOSE_HEADERS if is_mcp else _CORS_EXPOSE_HEADERS).encode()
 
         async def send_with_cors(message):
             if message["type"] == "http.response.start":
                 headers = [(k, v) for k, v in message.get("headers", [])
                            if not k.lower().startswith(b"access-control-")]
                 headers += [(b"access-control-allow-origin", b"*"),
-                            (b"access-control-expose-headers", _CORS_EXPOSE_HEADERS.encode())]
+                            (b"access-control-expose-headers", expose)]
                 message = {**message, "headers": headers}
             elif is_head and message["type"] == "http.response.body":
                 message = {**message, "body": b""}

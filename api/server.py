@@ -39,6 +39,7 @@ from api.bots import (
 from api.databank import get_entries, add_entry, delete_entry, format_databank_for_prompt
 from api.usage_log import read_usage, usage_summary
 from api.errors import INTERNAL_ERROR_BODY, register_error_handlers
+from api.request_log import HitLogMiddleware
 
 # The internal OpenAPI schema and its docs UIs are switched off: they described
 # every workspace route to anyone. A curated public schema is served at
@@ -65,6 +66,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Counts hits on /api/v1, /mcp and /out. Workspace routes pass straight through.
+app.add_middleware(HitLogMiddleware)
 
 # {"error": {code, message}} envelopes for the public routes.
 register_error_handlers(app)
@@ -1554,6 +1558,10 @@ async def api_billing_webhook(request: Request):
         return result
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+from api.internal_hit import router as internal_hit_router
+app.include_router(internal_hit_router)
 
 
 # --- Health (public) ---

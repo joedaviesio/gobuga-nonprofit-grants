@@ -40,6 +40,7 @@ from api.databank import get_entries, add_entry, delete_entry, format_databank_f
 from api.usage_log import read_usage, usage_summary
 from api.errors import INTERNAL_ERROR_BODY, register_error_handlers
 from api.request_log import HitLogMiddleware
+from api.public_http import is_public_cors_path
 
 # The internal OpenAPI schema and its docs UIs are switched off: they described
 # every workspace route to anyone. A curated public schema is served at
@@ -47,7 +48,7 @@ from api.request_log import HitLogMiddleware
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.32",
+    version="0.2.33",
     openapi_url=None,
     docs_url=None,
     redoc_url=None,
@@ -101,7 +102,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     print(f"[ERROR] {request.url}: {exc}\n{tb}")
     headers = {}
     origin = request.headers.get("origin")
-    if request.url.path == "/api/v1" or request.url.path.startswith("/api/v1/"):
+    if is_public_cors_path(request.url.path):
         headers = {"Access-Control-Allow-Origin": "*"}  # public: see PublicCORSMiddleware
     elif origin in _allowed_origins:
         headers = {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
@@ -1619,6 +1620,8 @@ from api.subscribe_routes import router as subscribe_router
 app.include_router(subscribe_router)
 from api.public_v1 import router as public_v1_router
 app.include_router(public_v1_router)
+from api.mcp_server import router as mcp_router
+app.include_router(mcp_router)
 # Added last so it runs outside CORSMiddleware: /api/v1 is readable from any
 # origin; every other path keeps the allow-list above.
 from api.public_http import PublicCORSMiddleware

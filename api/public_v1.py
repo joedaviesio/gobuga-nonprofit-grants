@@ -70,6 +70,8 @@ URL_SCHEME: tuple[dict, ...] = (
     {"page": "/stats/{month}", "public": "/stats/{month}.json",
      "backend": "/api/v1/stats/{month}", "format": "json"},
     {"page": None, "public": "/out/{id}", "backend": "/out/{id}", "format": "redirect"},
+    # Model Context Protocol over Streamable HTTP (POST only); see api/mcp_server.py.
+    {"page": None, "public": "/mcp", "backend": "/mcp", "format": "mcp"},
 )
 
 # OpenAPI response examples.
@@ -125,13 +127,21 @@ def list_opportunities(
     the parameter and listing the allowed values.
     """
     ctx = request_context()
-    params = search_params(ctx, q, tag, region, funder, amount, deadline, status, sort)
-    sort_key = params.pop("sort")
-    rows = sort_rows(filtered(ctx, **params), sort_key)
+    rows = search_rows(ctx, q=q, tag=tag, region=region, funder=funder, amount=amount,
+                       deadline=deadline, status=status, sort=sort)
     off, lim = page(offset, limit)
     body = list_body(rows, off, lim, ctx)
     body["data"] = [ctx.record(r) for r in body["data"]]
     return json_response(request, ctx, body)
+
+
+def search_rows(ctx: Ctx, **raw) -> list[dict]:
+    """Every row matching the raw search parameters (q, tag, region, funder,
+    amount, deadline, status, sort), in order. Shared with the MCP
+    `search_grants` tool; a bad value raises the 400 PublicError."""
+    params = search_params(ctx, **raw)
+    sort_key = params.pop("sort")
+    return sort_rows(filtered(ctx, **params), sort_key)
 
 
 def _published_row(ctx: Ctx, opp_id: str) -> dict | None:
@@ -151,16 +161,24 @@ def get_opportunity(request: Request, opp_id: str):
     response is marked `X-Robots-Tag: noindex`. Unknown IDs are a 404.
     """
     ctx = request_context()
+    record = grant_record(ctx, opp_id)
+    if record is None:
+        raise PublicError(404, "not_found", "No published grant with that ID")
+    headers = {"X-Robots-Tag": "noindex"} if record["status"] == "stale" else {}
+    return json_response(request, ctx, record, headers=headers)
+
+
+def grant_record(ctx: Ctx, opp_id: str) -> dict | None:
+    """One public record by ID, whatever its status, or None. A closed
+    record gains `related`; a stale one carries `notice` (from
+    `public_record`). Shared with the MCP `get_grant` tool."""
     row = _published_row(ctx, opp_id)
     if row is None:
-        raise PublicError(404, "not_found", "No published grant with that ID")
+        return None
     record = ctx.record(row)
-    headers = {}
     if row["status"] == "closed":
         record["related"] = related_live(row, ctx.rows("live"), ctx.base)
-    elif row["status"] == "stale":
-        headers["X-Robots-Tag"] = "noindex"
-    return json_response(request, ctx, record, headers=headers)
+    return record
 
 
 @router.get("/api/v1/ids", summary="Every listed grant ID, for sitemaps", tags=["grants"])
@@ -177,7 +195,7 @@ def list_ids(request: Request):
 # --- Fit -----------------------------------------------------------------------
 
 @dataclass(frozen=True)
-class _Fit:
+class FitResult:
     results: list[dict]
     query: str
     page_url: str
@@ -185,14 +203,16 @@ class _Fit:
     feed_url: str
 
 
-def _fit(ctx: Ctx, sector, region, status, size, need) -> _Fit:
+def fit_result(ctx: Ctx, sector, region, status, size, need) -> FitResult:
+    """Validate the five fit parameters and rank the live rows. Shared with
+    the MCP `fit_grants` tool; a bad value raises the 400 PublicError."""
     raw = {"sector": sector, "region": region, "status": status, "size": size, "need": need}
     try:
         profile = parse_fit_params({k: v for k, v in raw.items() if v is not None}, ctx.country)
     except FitParamError as exc:
         raise invalid(exc.param, exc.allowed) from None
     query = profile.canonical_query()
-    return _Fit(
+    return FitResult(
         results=score_fit(ctx.rows("live"), profile, today=ctx.today),
         query=query,
         page_url=with_query(f"{ctx.base}/fit", query),
@@ -232,15 +252,20 @@ def fit(
     every equivalent request (any case, order or label form of the same values).
     """
     ctx = request_context()
-    result = _fit(ctx, sector, region, status, size, need)
+    result = fit_result(ctx, sector, region, status, size, need)
     off, lim = page(offset, limit)
+    return json_response(request, ctx, fit_body(ctx, result, off, lim))
+
+
+def fit_body(ctx: Ctx, result: FitResult, offset: int, limit: int) -> dict:
+    """One page of a fit as `/api/v1/fit` returns it. Shared with the MCP
+    `fit_grants` tool."""
     items = [{**ctx.record(e["row"]), "score": e["score"], "why": e["why"]}
-             for e in result.results[off:off + lim]]
-    body = {"data": items, "total": len(result.results), "offset": off, "limit": lim,
+             for e in result.results[offset:offset + limit]]
+    return {"data": items, "total": len(result.results), "offset": offset, "limit": limit,
             "meta": ctx.list_meta, "canonical_query": result.query,
             "canonical_url": result.page_url, "json_url": result.json_url,
             "feed_url": result.feed_url}
-    return json_response(request, ctx, body)
 
 
 @router.get("/api/v1/fit/feed.xml", summary="Atom feed of a fit", tags=["fit"],
@@ -256,7 +281,7 @@ def fit_feed(
 ):
     """The same ranking as `/api/v1/fit`, best first, as Atom 1.0."""
     ctx = request_context()
-    result = _fit(ctx, sector, region, status, size, need)
+    result = fit_result(ctx, sector, region, status, size, need)
     _, lim = page(None, limit)
     entries = []
     for e in result.results[:lim]:
@@ -544,6 +569,14 @@ def index(request: Request):
         "path_parameters": [p.name for p in r.dependant.path_params],
         "query_parameters": [p.name for p in r.dependant.query_params],
     } for r in _routes()]
+    endpoints.append({
+        "path": "/mcp",
+        "method": "POST",
+        "summary": "Model Context Protocol endpoint (Streamable HTTP, keyless, read-only): "
+                   "tools search_grants, get_grant, fit_grants",
+        "path_parameters": [],
+        "query_parameters": [],
+    })
     body = {
         "name": "GoBuga",
         "description": ("A public, verified, machine-readable index of grant funding. "
@@ -554,6 +587,7 @@ def index(request: Request):
         "api_base_url": f"{ctx.base}/api/v1",
         "openapi_url": f"{ctx.base}/api/v1/openapi.json",
         "taxonomy_url": f"{ctx.base}/api/v1/taxonomy",
+        "mcp_url": f"{ctx.base}/mcp",
         "licence": {"id": LICENCE, "summary": LICENCE_SUMMARY},
         "endpoints": endpoints,
         "url_scheme": list(URL_SCHEME),

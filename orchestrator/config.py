@@ -13,6 +13,9 @@ MODEL_WATCHER_COUNTRY = "claude-haiku-4-5-20251001"
 MODEL_ANALYST_COUNTRY = "claude-haiku-4-5-20251001"
 MODEL_REPORTER_COUNTRY = "claude-haiku-4-5-20251001"
 
+# Verify pass: one short model call per candidate row, reading its source page.
+MODEL_VERIFY_COUNTRY = MODEL_WATCHER_COUNTRY
+
 WATCHER_ITERATIONS_COUNTRY = 16  # per sector worker; 11 sectors → ~176 total max
 ANALYST_ITERATIONS_COUNTRY = 8
 REPORTER_MAX_TOKENS_COUNTRY = 16384  # the pool can be large

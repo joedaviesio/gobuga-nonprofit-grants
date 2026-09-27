@@ -81,11 +81,11 @@ TOOL_DEFINITIONS = {
 
 # --- Tool handlers ---
 
-def handle_web_fetch(args: dict) -> str:
-    """Fetch a URL and return text content."""
+def handle_web_fetch(args: dict, timeout: float = 15, max_chars: int = 8000) -> str:
+    """Fetch a URL and return text content (at most `max_chars`)."""
     url = args["url"]
     try:
-        with httpx.Client(timeout=15, follow_redirects=True) as client:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
             resp = client.get(url, headers={"User-Agent": "GoBuga-GrantBot/0.1"})
             resp.raise_for_status()
             text = resp.text
@@ -94,7 +94,7 @@ def handle_web_fetch(args: dict) -> str:
             text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
             text = re.sub(r'<[^>]+>', ' ', text)
             text = re.sub(r'\s+', ' ', text).strip()
-            return text[:8000]
+            return text[:max_chars]
     except Exception as e:
         return f"Error fetching {url}: {e}"
 

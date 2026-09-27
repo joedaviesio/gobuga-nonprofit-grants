@@ -1,11 +1,16 @@
 """Sweep dispatch — shared logic for kicking a country sweep in the background.
 
+Full sweeps run every two months per country and are triggered by the
+director; there is no cron. A sweep costs real money, so nothing here starts
+one unless someone has asked for it.
+
 Two callers:
-- `maybe_seed_pool()` — FastAPI startup hook. Seeds the current-month pool on
-  boot if it's missing (Railway gitignores `platform/cycles/` so a fresh
-  container starts empty).
-- `trigger_sweep()` — backs `POST /api/admin/run-sweep`, which a Railway cron
-  hits monthly via curl. The endpoint is auth'd with `SWEEP_SECRET`.
+- `maybe_seed_pool()` — FastAPI startup hook. Off by default. With
+  `STARTUP_SWEEP_ENABLED=1` it seeds the current-month pool on boot if the
+  country has no recent pool (Railway gitignores `platform/cycles/` so a
+  fresh container starts empty). `STARTUP_SWEEP_DISABLED=1` always wins.
+- `trigger_sweep()` — backs `POST /api/admin/run-sweep`, which the director
+  calls. The endpoint is auth'd with `SWEEP_SECRET`.
 
 Both paths funnel through `_dispatch_sweep`, which is guarded by a module
 lock so two callers can't accidentally start the same (country, month) sweep
@@ -67,12 +72,15 @@ def _dispatch_sweep(country: str, month: str, force: bool = False) -> str:
 
 
 def maybe_seed_pool() -> None:
-    """Startup hook: dispatch a sweep only if the country has no recent pool
-    at all. Skipping a single month (deliberately or otherwise) is fine — the
-    monthly cron will catch up next cycle, and the API falls back to the most
-    recent available pool in the meantime."""
+    """Startup hook: off unless `STARTUP_SWEEP_ENABLED=1`. When enabled,
+    dispatch a sweep only if the country has no recent pool at all; the API
+    falls back to the most recent available pool between sweeps.
+    `STARTUP_SWEEP_DISABLED=1` overrides the enable flag."""
     if os.environ.get("STARTUP_SWEEP_DISABLED") == "1":
         print("[startup_sweep] Disabled via STARTUP_SWEEP_DISABLED=1")
+        return
+    if os.environ.get("STARTUP_SWEEP_ENABLED") != "1":
+        print("[startup_sweep] Off (set STARTUP_SWEEP_ENABLED=1 to seed an empty pool on boot)")
         return
     month = current_month()
     for country in SEED_COUNTRIES:

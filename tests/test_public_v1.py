@@ -753,7 +753,8 @@ def test_index_describes_the_api(client):
     assert {"/api/v1/opportunities", "/api/v1/opportunities/{opp_id}", "/api/v1/fit",
             "/api/v1/fit/feed.xml", "/api/v1/funders", "/api/v1/funders/{slug}", "/api/v1/ids",
             "/api/v1/taxonomy", "/api/v1/changes", "/api/v1/changes/feed.xml", "/api/v1/stats",
-            "/api/v1/stats/{month}", "/out/{opp_id}", "/api/v1/openapi.json", "/api/v1"} == paths
+            "/api/v1/stats/{month}", "/out/{opp_id}", "/api/v1/openapi.json", "/api/v1",
+            "/mcp"} == paths
     search = next(e for e in body["endpoints"] if e["path"] == "/api/v1/opportunities")
     assert search["query_parameters"] == ["q", "tag", "region", "funder", "amount", "deadline",
                                           "status", "sort", "offset", "limit"]

@@ -5,7 +5,11 @@ Tests:
   1. Webhook with valid signature processes checkout.session.completed
   2. Webhook with valid signature processes subscription.deleted (downgrade)
   3. Webhook with invalid signature returns 400
-  4. Checkout session creation returns a URL
+  4. Checkout is frozen (410) unless BILLING_CHECKOUT_ENABLED=1
+  5. Billing portal is still reachable (not frozen)
+
+Case 4 assumes this process and the backend share BILLING_CHECKOUT_ENABLED.
+In-process equivalents with Stripe faked live in tests/test_open_workspace.py.
 
 Usage:
     python3 tests/test_billing_webhook.py
@@ -209,14 +213,23 @@ def case_4():
         check("Auth token available", False, "No token — skipping")
         return
 
+    # Without auth → 401/403
+    r = requests.post(f"{API}/api/billing/checkout", json={"plan": "professional"})
+    check("Checkout requires auth", r.status_code in (401, 403, 422),
+          f"Got {r.status_code}")
+
+    if os.environ.get("BILLING_CHECKOUT_ENABLED") != "1":
+        # Frozen: no new subscription can start, Stripe or not
+        r = requests.post(f"{API}/api/billing/checkout",
+                          json={"plan": "professional"},
+                          headers=auth_headers(TOKEN))
+        check("Checkout is frozen (410)", r.status_code == 410,
+              f"Got {r.status_code}: {r.text[:200]}")
+        return
+
     stripe_key = os.environ.get("STRIPE_SECRET_KEY", "")
     if not stripe_key:
-        log("  (No STRIPE_SECRET_KEY — testing endpoint exists and auth required)")
-
-        # Without auth → 401/403
-        r = requests.post(f"{API}/api/billing/checkout", json={"plan": "professional"})
-        check("Checkout requires auth", r.status_code in (401, 403, 422),
-              f"Got {r.status_code}")
+        log("  (No STRIPE_SECRET_KEY — testing the endpoint fails cleanly)")
 
         # With auth but no Stripe key → should get an error, not crash
         r = requests.post(f"{API}/api/billing/checkout",
@@ -239,11 +252,28 @@ def case_4():
 
 
 # ---------------------------------------------------------------------------
+# Case 5 — Billing portal is not frozen
+# ---------------------------------------------------------------------------
+def case_5():
+    log("\n=== Case 5: Billing portal still reachable ===")
+
+    if not TOKEN:
+        check("Auth token available", False, "No token — skipping")
+        return
+
+    # A fresh org has no Stripe customer: 400 when Stripe is configured,
+    # 503 when it is not. Never 404 or 410 — existing payers must reach it.
+    r = requests.get(f"{API}/api/billing/portal", headers=auth_headers(TOKEN))
+    check("Portal answers as before (400 or 503)", r.status_code in (400, 503),
+          f"Got {r.status_code}: {r.text[:200]}")
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     setup_auth()
 
-    cases = {1: case_1, 2: case_2, 3: case_3, 4: case_4}
+    cases = {1: case_1, 2: case_2, 3: case_3, 4: case_4, 5: case_5}
 
     selected = None
     if "--case" in sys.argv:

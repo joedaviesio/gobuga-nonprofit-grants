@@ -9,6 +9,7 @@ Alias data now lives in the per-country config (api/country_config.py).
 """
 
 import re
+import unicodedata
 from functools import lru_cache
 
 from api.country_config import get_country, get_country_config
@@ -56,9 +57,30 @@ def canonicalise_funder(raw_name: str, country: str | None = None) -> str:
     return stripped or raw
 
 
+# Cyrillic to Latin, for slugs only. Russian and the Moldovan Cyrillic
+# alphabet; anything else is folded by NFKD or dropped.
+_CYRILLIC = str.maketrans({
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e", "ж": "zh",
+    "з": "z", "и": "i", "й": "i", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o",
+    "п": "p", "р": "r", "с": "s", "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts",
+    "ч": "ch", "ш": "sh", "щ": "shch", "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu",
+    "я": "ya", "ӂ": "dzh",
+})
+
+
+def _to_ascii(text: str) -> str:
+    """Lowercase Latin letters and digits for a slug: diacritics folded
+    ("Fundația" -> "fundatia", "Kōkiri" -> "kokiri"), Cyrillic transliterated.
+    Without this a non-ASCII name lost letters and a Cyrillic one slugged to
+    nothing, so every Cyrillic funder looked like the same funder."""
+    text = text.lower().translate(_CYRILLIC)
+    text = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in text if not unicodedata.combining(c))
+
+
 def slugify_funder(name: str, country: str | None = None) -> str:
-    """Lowercase, hyphenate, drop punctuation — for dedupe keys."""
+    """Lowercase, hyphenate, drop punctuation — for dedupe keys and URLs."""
     canonical = canonicalise_funder(name, country=country)
-    s = canonical.lower()
+    s = _to_ascii(canonical)
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-")

@@ -463,7 +463,8 @@ def _safe_destination(url) -> str | None:
 @router.get("/out/{opp_id}", summary="Click out to the funder's page", tags=["grants"],
             response_class=RedirectResponse, status_code=302)
 def click_out(request: Request, opp_id: str):
-    """302 to the grant's stored source URL, after counting the click.
+    """302 to the grant's stored source URL, after counting the click if a
+    person made it.
 
     Only ever redirects to a stored http(s) `source_url`; nothing in the
     request can choose the destination. Works for closed grants. Not cached
@@ -474,8 +475,12 @@ def click_out(request: Request, opp_id: str):
     destination = _safe_destination(row.get("source_url")) if row else None
     if destination is None:
         raise PublicError(404, "not_found", "No published grant with that ID")
-    metrics.record_clickout(row["id"], row.get("funder"), request.headers.get("referer"),
-                            request.headers.get("user-agent", ""), country=ctx.country)
+    # A click-out is a person going to a funder. Crawlers follow the link too;
+    # the hit-log middleware counts them as hits on the `out` surface.
+    agent = request.headers.get("user-agent", "")
+    if metrics.classify_agent(agent) == "human":
+        metrics.record_clickout(row["id"], row.get("funder"), request.headers.get("referer"),
+                                agent, country=ctx.country)
     return RedirectResponse(destination, status_code=302, headers={
         "Cache-Control": "no-store",
         "X-Robots-Tag": "noindex, nofollow",

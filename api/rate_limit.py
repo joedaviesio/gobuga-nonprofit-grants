@@ -93,8 +93,10 @@ class RateLimiter:
         self._buckets: OrderedDict[str, deque] = OrderedDict()
         self._lock = Lock()
 
-    def hit(self, key: str) -> float | None:
-        """Count one request. Returns None if allowed, else seconds to wait."""
+    def hit(self, key: str, limit: int | None = None) -> float | None:
+        """Count one request. Returns None if allowed, else seconds to wait.
+        `limit` overrides the limiter's own for this call."""
+        limit = self.limit if limit is None else limit
         now = self.clock()
         cutoff = now - self.window
         with self._lock:
@@ -107,7 +109,7 @@ class RateLimiter:
                 self._buckets.move_to_end(key)
             while bucket and bucket[0] <= cutoff:
                 bucket.popleft()
-            if len(bucket) >= self.limit:
+            if len(bucket) >= limit:
                 return max(bucket[0] + self.window - now, 0.0)
             bucket.append(now)
             return None
@@ -118,6 +120,14 @@ class RateLimiter:
 
     def __len__(self) -> int:
         return len(self._buckets)
+
+
+def public_limit_override() -> int | None:
+    """`PUBLIC_RATE_LIMIT_PER_MIN` if set to a positive integer, else None.
+    Read per request, so a deployment can raise the limit without a code
+    change (for instance while TRUSTED_PROXY_HOPS is being settled)."""
+    raw = os.environ.get("PUBLIC_RATE_LIMIT_PER_MIN", "").strip()
+    return int(raw) if raw.isdigit() and int(raw) > 0 else None
 
 
 public_limiter = RateLimiter(PUBLIC_LIMIT_PER_MIN)
@@ -132,7 +142,7 @@ def check_public_rate_limit(request: Request) -> None:
     """
     if is_internal(request):
         return
-    wait = public_limiter.hit(client_address(request))
+    wait = public_limiter.hit(client_address(request), limit=public_limit_override())
     if wait is not None:
         raise HTTPException(
             429,

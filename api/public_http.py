@@ -138,7 +138,8 @@ class PublicCORSMiddleware:
     Must be added after (so it runs outside) the app's CORSMiddleware, whose
     origin allow-list would otherwise reject a third-party preflight with a
     400. Under `/api/v1` it answers preflights itself (GET and HEAD only, no
-    credentials) and rewrites the response's CORS headers to the wildcard.
+    credentials), rewrites the response's CORS headers to the wildcard, and
+    answers HEAD as a bodiless GET.
     Every other path goes straight through to the workspace's CORSMiddleware.
     """
 
@@ -160,6 +161,12 @@ class PublicCORSMiddleware:
             })(scope, receive, send)
             return
 
+        # The routes are declared for GET. A HEAD is answered as the same GET
+        # with the body dropped, so crawlers can check validators cheaply.
+        is_head = scope.get("method") == "HEAD"
+        if is_head:
+            scope = {**scope, "method": "GET"}
+
         async def send_with_cors(message):
             if message["type"] == "http.response.start":
                 headers = [(k, v) for k, v in message.get("headers", [])
@@ -167,6 +174,8 @@ class PublicCORSMiddleware:
                 headers += [(b"access-control-allow-origin", b"*"),
                             (b"access-control-expose-headers", _CORS_EXPOSE_HEADERS.encode())]
                 message = {**message, "headers": headers}
+            elif is_head and message["type"] == "http.response.body":
+                message = {**message, "body": b""}
             await send(message)
 
         await self.app(scope, receive, send_with_cors)

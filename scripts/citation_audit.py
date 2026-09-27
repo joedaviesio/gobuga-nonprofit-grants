@@ -114,7 +114,7 @@ class AnthropicProvider(Provider):
     MAX_CONTINUATIONS = 3  # pause_turn resumptions for long searches
 
     def __init__(self, api_key: str, client=None):
-        self.model = os.environ.get("CITATION_AUDIT_ANTHROPIC_MODEL", "claude-opus-5")
+        self.model = os.environ.get("CITATION_AUDIT_ANTHROPIC_MODEL", "claude-sonnet-5")
         if client is None:
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)

@@ -18,11 +18,6 @@ export async function loadStats(month: string | null): Promise<StatsBody | null>
   return res.body;
 }
 
-const AGENT_NAMES: Record<string, string> = {
-  gptbot: "GPTBot", claudebot: "ClaudeBot", perplexitybot: "PerplexityBot",
-  "google-extended": "Google-Extended", ccbot: "CCBot", googlebot: "Googlebot", bingbot: "Bingbot",
-};
-
 function CountTable({ site, caption, column, rows, total }: {
   site: Site;
   caption: string;
@@ -70,7 +65,6 @@ export function StatsView({ site, stats, path, month }: { site: Site; stats: Sta
       <LanguageLinks site={site} path={path} />
       <h1 className="text-3xl font-bold mb-2">{month ? t("stats_title_month", { month: monthText }) : t("stats_title")}</h1>
       <p className="mb-2">{t("stats_intro")}</p>
-      <p className="mb-2">{t("stats_privacy")}</p>
       <p className="text-sm text-slate-700">
         <Tx site={site} k="stats_counted_at" values={{ date: <InstantDate site={site} iso={stats.generated_at} /> }} />
       </p>
@@ -106,9 +100,11 @@ export function StatsView({ site, stats, path, month }: { site: Site; stats: Sta
             })}
             total={u.clickouts.total} />
         </Block>
-        <Block id="fit" title={t("stats_fit")} note={t("stats_fit_note")}>
-          <dl className="facts"><dt>{t("stats_total")}</dt><dd>{nf.format(u.fit_urls_built)}</dd></dl>
-        </Block>
+        {u.fit_urls_built !== undefined && (
+          <Block id="fit" title={t("stats_fit")} note={t("stats_fit_note")}>
+            <dl className="facts"><dt>{t("stats_total")}</dt><dd>{nf.format(u.fit_urls_built)}</dd></dl>
+          </Block>
+        )}
         <Block id="api" title={t("stats_api")} note={t("stats_api_note")}>
           <CountTable site={site} caption={t("stats_api")} column={t("stats_col_endpoint")}
             rows={Object.entries(u.api_calls.by_endpoint)} total={u.api_calls.total} />
@@ -116,11 +112,6 @@ export function StatsView({ site, stats, path, month }: { site: Site; stats: Sta
         <Block id="mcp" title={t("stats_mcp")} note={t("stats_mcp_note")}>
           <CountTable site={site} caption={t("stats_mcp")} column={t("stats_col_tool")}
             rows={Object.entries(u.mcp_calls.by_tool)} total={u.mcp_calls.total} />
-        </Block>
-        <Block id="crawlers" title={t("stats_crawlers")} note={t("stats_crawlers_note")}>
-          <CountTable site={site} caption={t("stats_crawlers")} column={t("stats_col_agent")}
-            rows={Object.entries(u.crawler_hits.by_agent).map(([k, n]) => [AGENT_NAMES[k] ?? t("agent_other"), n])}
-            total={u.crawler_hits.total} />
         </Block>
       </section>
 

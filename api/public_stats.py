@@ -20,6 +20,10 @@ from api import metrics
 COUNTERS_TTL_SECONDS = 300
 MCP_TOOLS = ("search_grants", "get_grant", "fit_grants")
 _CACHE_MAX = 64
+# The confirmed count is published only once it reaches this many.
+SUBSCRIBERS_PUBLISH_MIN = 100
+# A month's fit count is published only once it reaches this many.
+FIT_PUBLISH_MIN = 100
 
 # (country, month) -> (expires at, monotonic; counters; computed at).
 _cache: dict[tuple[str, str], tuple[float, dict, datetime]] = {}
@@ -66,12 +70,13 @@ def usage(value: dict, endpoints: list[str]) -> dict:
     api = value.get("api_calls_by_prefix", {})
     mcp = value.get("mcp_calls_by_tool", {})
     bots = [c for c in metrics.AGENT_CLASSES if c != "human"]
+    # Includes the fit Atom feed and the pages' server-side renders.
+    fit = api.get("/api/v1/fit", 0)
     return {
         "month": value["month"],
         "clickouts": {"total": value.get("clickouts_total", 0),
                       "by_referrer": {c: by_ref.get(c, 0) for c in metrics.REFERRER_CLASSES}},
-        # Includes the fit Atom feed and the pages' server-side renders.
-        "fit_urls_built": api.get("/api/v1/fit", 0),
+        **({"fit_urls_built": fit} if fit >= FIT_PUBLISH_MIN else {}),
         "api_calls": {"total": by_surface.get("api", 0),
                       "by_endpoint": {k: api.get(k, 0) for k in endpoints}},
         # Tool calls: one `mcp:<tool>` line each. The `mcp` surface count also
@@ -86,13 +91,15 @@ def usage(value: dict, endpoints: list[str]) -> dict:
 
 
 def confirmed_subscribers(country: str) -> int | None:
-    """Phase 6's confirmed count, or None when that module is absent or fails."""
+    """Phase 6's confirmed count, or None when it is below
+    SUBSCRIBERS_PUBLISH_MIN or that module is absent or fails."""
     try:
         from api.subscribers import subscriber_counts
     except ImportError:
         return None
     try:
-        return int(subscriber_counts(country).get("confirmed", 0))
+        confirmed = int(subscriber_counts(country).get("confirmed", 0))
+        return confirmed if confirmed >= SUBSCRIBERS_PUBLISH_MIN else None
     except Exception as exc:  # noqa: BLE001 — stats must not fail on a counter
         print(f"[public_stats] subscriber_counts failed: {type(exc).__name__}")
         return None

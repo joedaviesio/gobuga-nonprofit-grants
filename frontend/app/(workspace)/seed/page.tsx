@@ -7,11 +7,10 @@
 // same with nothing filled in, and lands on a working, unranked feed.
 //
 // What each field feeds (so it is worth asking for):
-//   sectors     → pre-selects the feed's tag filter; Tailored Picks ranking
-//   regions     → Tailored Picks ranking (api/org_fit.py)
-//   status, income, need → Tailored Picks ranking
-//   website     → scraped into the org's data for Tailored Picks and the bots
-//   documents   → the org's data for Tailored Picks and the bots
+//   sectors, regions, status, income, need
+//               → rank the grant list ("Best fit", api/org_fit.py)
+//   website     → scraped into the org's data for the bots
+//   documents   → the org's data for the bots
 
 import { useState, useEffect, useRef } from "react";
 import FitFields, { EMPTY_FIT, useFitTaxonomy, type FitValues } from "@/app/fit-fields";

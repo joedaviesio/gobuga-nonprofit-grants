@@ -24,7 +24,7 @@ function SettingsContent() {
   const [uploadDocType, setUploadDocType] = useState("general");
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
-  // Tailored Picks: the fit parameters besides sectors and regions
+  // "Best fit": the fit parameters besides sectors and regions
   const fitTaxonomy = useFitTaxonomy();
   const [fit, setFit] = useState<FitValues>(EMPTY_FIT);
   const [fitSaving, setFitSaving] = useState(false);
@@ -517,11 +517,11 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* Tailored Picks */}
+      {/* How grants are ranked */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-lg font-bold text-stone-700">{t("settings.tailored_title")}</h2>
+        <h2 className="text-lg font-bold text-stone-700">{t("settings.fit_title")}</h2>
         <p className="text-sm text-stone-700 mt-1 mb-3">
-          {t("settings.tailored_desc")}
+          {t("settings.fit_desc")}
         </p>
         <FitFields
           values={fit}

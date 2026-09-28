@@ -360,7 +360,7 @@ class OrgSetupRequest(BaseModel):
     org_status: str = ""
     sectors: list[str] = []
     geographies: list[str] = []
-    # The three fit parameters Tailored Picks ranks on besides sector and
+    # The three fit parameters the "Best fit" order ranks on besides sector and
     # region (api/org_fit.py). "" clears one.
     fit_status: str | None = None
     fit_size: str | None = None
@@ -955,19 +955,25 @@ def api_list_opportunities(
     min_amount: int | None = Query(None, ge=0),
     max_amount: int | None = Query(None, ge=0),
     funder: str | None = Query(None),
-    sort: str = Query("recency", pattern="^(recency|deadline|amount_desc|random)$"),
+    sort: str = Query("fit", pattern="^(fit|recency|deadline|amount_desc|random)$"),
     cursor: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=500),
 ):
     """Browse the live rows of the published dataset, the same rows the
     public site lists, so a grant has one ID in both. Defaults to the org's
-    country."""
+    country.
+
+    The default sort, `fit`, ranks the matching rows against the org's
+    profile with the public /fit scorer (api/org_fit.py): rows that fit come
+    first with their reasons in `why`, then the rest. `fit_params` are the
+    parameters read from the profile; empty means nothing to rank on."""
+    from api.org_fit import order_for_org, org_fit_params
     from api.published import load_published
     org = get_org(org_id) or {}
     country = country_slug(country or org.get("country"))
     pool = load_published(country, include=("live",))
     tag_list = [t for t in tags.split(",") if t.strip()]
-    return filter_pool(
+    result = filter_pool(
         pool,
         q=q,
         tags=tag_list,
@@ -979,7 +985,9 @@ def api_list_opportunities(
         sort=sort,
         cursor=cursor,
         limit=limit,
+        rank=lambda rows: order_for_org(rows, org, country),
     )
+    return {**result, "fit_params": org_fit_params(org, country)}
 
 
 class OpenCaseFromOpportunityRequest(BaseModel):
@@ -1172,24 +1180,6 @@ def api_tailored_toggle(req: ToggleTailoredRequest, org_id: str = Depends(get_cu
     from api.limits import set_tailored_enabled, get_cycle_timer
     result = set_tailored_enabled(org_id, req.enabled)
     return {**result, "cycle_timer": get_cycle_timer(org_id)}
-
-
-@app.get("/api/tailored")
-def api_tailored(org_id: str = Depends(get_current_org)):
-    """Tailored Picks: the live published grants ranked against the org's
-    profile by the public /fit scorer (api/org_fit.py). Instant and free.
-    `params` are the fit parameters read from the profile; empty means the
-    profile gives nothing to rank on, and every live grant scores the same."""
-    from api.org_fit import rank_for_org
-    from api.published import load_published
-    org = get_org(org_id) or {}
-    country = country_slug(org.get("country"))
-    ranked = rank_for_org(load_published(country, include=("live",)), org, country)
-    return {
-        "params": ranked["params"],
-        "total": len(ranked["results"]),
-        "results": ranked["results"],
-    }
 
 
 @app.get("/api/tailored/access")

@@ -1,15 +1,17 @@
 "use client";
 
-// The three fit parameters Tailored Picks ranks on besides sector and region
-// (api/org_fit.py): legal status, annual income and what the money is for.
+// The three fit parameters the grant list's "Best fit" order ranks on besides
+// sector and region (api/org_fit.py): legal status, annual income and what
+// the money is for.
 // Asked on the sign-up screen and in settings. The allowed values come from
 // the public taxonomy and the labels from the public pages' text, so the
 // workspace and the public /fit form always offer the same choices.
 
 import { useEffect, useState } from "react";
-import { getFitTaxonomy, type FitTaxonomy } from "@/lib/api";
+import { getFitTaxonomy, type FitParams, type FitTaxonomy } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { regionLabel } from "@/lib/labels";
 import { t as publicT, type PublicKey } from "@/lib/public-i18n";
 
 export interface FitValues {
@@ -81,5 +83,27 @@ export default function FitFields({ values, onChange, taxonomy, selectClassName 
         </label>
       ))}
     </div>
+  );
+}
+
+/** The profile the list is ranked on, as chips. */
+export function FitSummary({ params }: { params: FitParams }) {
+  const { lang } = useI18n();
+  const taxonomy = useFitTaxonomy();
+  const parts = [
+    ...(params.sector ?? []),
+    ...(params.region ?? []).map(regionLabel),
+    ...(params.status ? [fitLabel(lang, "status", params.status, taxonomy)] : []),
+    ...(params.size ? [fitLabel(lang, "size", params.size, taxonomy)] : []),
+    ...(params.need ? [fitLabel(lang, "need", params.need, taxonomy)] : []),
+  ];
+  return (
+    <span className="inline-flex flex-wrap gap-1.5">
+      {parts.map((p) => (
+        <span key={p} className="text-sm px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+          {p}
+        </span>
+      ))}
+    </span>
   );
 }

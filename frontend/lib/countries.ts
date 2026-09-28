@@ -207,18 +207,3 @@ export const SECTOR_LABEL_TO_TAG: Record<string, string> = NZ_SECTOR_LABEL_TO_TA
 export function getSectorLabelToTag(): Record<string, string> {
   return _cached.sectorLabelToTag;
 }
-
-export function orgSectorsToTags(labels: string[] | null | undefined): string[] {
-  if (!labels) return [];
-  const labelMap = _cached.sectorLabelToTag;
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const label of labels) {
-    const slug = labelMap[label];
-    if (slug && !seen.has(slug)) {
-      seen.add(slug);
-      out.push(slug);
-    }
-  }
-  return out;
-}

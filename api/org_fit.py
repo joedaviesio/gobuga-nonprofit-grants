@@ -1,6 +1,7 @@
-"""Tailored Picks: the published grants ranked against one organisation.
+"""The workspace's "Best fit" order: the published grants ranked against one
+organisation.
 
-The workspace's Tailored tab uses the same deterministic scorer as the public
+The workspace's grant list (sort=fit, its default) uses the same deterministic scorer as the public
 /fit surface (`api.fit.score_fit`), over the same live published rows. The
 only difference is where the five fit parameters come from: here they are
 read from the org record the sign-up screen and settings write.
@@ -141,3 +142,17 @@ def rank_for_org(rows: list[dict], org: dict, country: str, *, today=None) -> di
         return (-entry["score"], ts is None, -(ts or 0.0), str(entry["row"].get("id") or ""))
 
     return {"params": params, "results": sorted(best.values(), key=order)}
+
+
+def order_for_org(rows: list[dict], org: dict, country: str, *, today=None) -> list[dict]:
+    """The workspace's "Best fit" order: the rows that fit the org, best
+    first, each with `why` and `fit_score`; then the rows the scorer leaves
+    out (not open to this org, or only for other regions), soonest deadline
+    first, with an empty `why` and no score. Nothing is hidden, so a search
+    still finds every grant."""
+    results = rank_for_org(rows, org, country, today=today)["results"]
+    fitted = [{**e["row"], "why": e["why"], "fit_score": e["score"]} for e in results]
+    seen = {r.get("id") for r in fitted}
+    rest = [{**r, "why": [], "fit_score": None} for r in rows if r.get("id") not in seen]
+    rest.sort(key=lambda r: (str(r.get("deadline") or "9999"), str(r.get("id") or "")))
+    return fitted + rest

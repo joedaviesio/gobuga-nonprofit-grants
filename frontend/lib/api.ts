@@ -448,6 +448,9 @@ export interface OpportunityRow {
   dedupe_key: string;
   amount_note?: string;
   notes?: string;
+  /** With sort "fit": why the grant fits the org; empty when it does not. */
+  why?: string[];
+  fit_score?: number | null;
 }
 
 export interface OpportunitiesResponse {
@@ -456,6 +459,8 @@ export interface OpportunitiesResponse {
   cursor: number;
   limit: number;
   has_more: boolean;
+  /** The fit parameters read from the org's profile; empty means unranked. */
+  fit_params: FitParams;
 }
 
 export interface OpportunitiesQuery {
@@ -467,7 +472,7 @@ export interface OpportunitiesQuery {
   min_amount?: number;
   max_amount?: number;
   funder?: string;
-  sort?: "recency" | "deadline" | "amount_desc" | "random";
+  sort?: "fit" | "recency" | "deadline" | "amount_desc" | "random";
   cursor?: number;
   limit?: number;
 }
@@ -497,25 +502,16 @@ export const openCaseFromPool = (opportunityId: string, country?: string) =>
 
 // --- Tailored Opportunities (every account; wraps the legacy per-org cycle) ---
 
-// Tailored Picks: the live published grants ranked against the org's
-// profile by the public /fit scorer (GET /api/tailored, api/org_fit.py).
+// The org's fit parameters, as GET /api/opportunities reads them from the
+// profile to rank grants (api/org_fit.py).
 
-export interface TailoredParams {
+export interface FitParams {
   sector?: string[];
   region?: string[];
   status?: string;
   size?: string;
   need?: string;
 }
-
-export interface TailoredResult {
-  row: OpportunityRow;
-  score: number;
-  why: string[];
-}
-
-export const getTailored = () =>
-  request<{ params: TailoredParams; total: number; results: TailoredResult[] }>("/tailored");
 
 /** The vocabularies of the fit parameters, from the public taxonomy. */
 export interface FitTaxonomy {

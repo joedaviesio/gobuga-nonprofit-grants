@@ -635,9 +635,13 @@ def filter_pool(
     sort: str = "recency",
     cursor: int = 0,
     limit: int = 50,
+    rank=None,
 ) -> dict:
     """Apply filters + sort + pagination to a pool. Returns
-    {opportunities, total, cursor, limit, has_more}."""
+    {opportunities, total, cursor, limit, has_more}.
+
+    `sort="fit"` orders the matching rows with `rank(rows) -> rows`, which the
+    workspace passes to rank them for the org (api/org_fit.py)."""
     tags_list = [t.strip().lower() for t in (tags or []) if t.strip()]
     matched = [
         row for row in pool
@@ -648,22 +652,14 @@ def filter_pool(
         and _matches_amount(row, min_amount, max_amount)
         and _matches_funder(row, funder)
     ]
+    if sort == "fit":
+        return _page(rank(matched) if rank else matched, cursor, limit)
     if sort == "random":
         import random
         random.shuffle(matched)
         # Region priority still applies — regional matches first, random within bucket.
         matched.sort(key=lambda r: _region_priority(r, region))
-        total = len(matched)
-        cursor = max(0, int(cursor or 0))
-        limit = max(1, min(int(limit or 50), 500))
-        page = matched[cursor:cursor + limit]
-        return {
-            "opportunities": page,
-            "total": total,
-            "cursor": cursor,
-            "limit": limit,
-            "has_more": cursor + limit < total,
-        }
+        return _page(matched, cursor, limit)
     reverse = sort == "recency"
     # When a specific region is picked, regional matches always rank above
     # national-only matches. Within each partition, the primary sort applies.
@@ -672,12 +668,15 @@ def filter_pool(
     primary = lambda r: _primary_sort_key(r, sort)
     matched.sort(key=primary, reverse=reverse)
     matched.sort(key=lambda r: _region_priority(r, region))
+    return _page(matched, cursor, limit)
+
+
+def _page(matched: list[dict], cursor, limit) -> dict:
     total = len(matched)
     cursor = max(0, int(cursor or 0))
     limit = max(1, min(int(limit or 50), 500))
-    page = matched[cursor:cursor + limit]
     return {
-        "opportunities": page,
+        "opportunities": matched[cursor:cursor + limit],
         "total": total,
         "cursor": cursor,
         "limit": limit,

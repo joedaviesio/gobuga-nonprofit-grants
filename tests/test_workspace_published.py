@@ -157,11 +157,14 @@ def test_open_case_ignores_a_row_only_in_the_old_pool(client, dataset):
     assert r.status_code == 404
 
 
-# --- Tailored Picks -------------------------------------------------------------
+# --- Best fit (the default sort) -------------------------------------------------
 
 OPEN = "Charitable trusts and incorporated societies."
 
-def test_tailored_ranks_the_live_published_rows_for_the_org(client):
+
+@pytest.fixture
+def ranked(client):
+    """A charitable trust in Canterbury working on sport, and five rows."""
     published.publish_pool("nz", "2026-09", [
         row(1, tags=["arts"], eligibility=OPEN), row(2, tags=["sport"], eligibility=OPEN),
         row(3, region=["otago"], eligibility=OPEN), row(4, deadline="2020-01-31", eligibility=OPEN),
@@ -172,21 +175,46 @@ def test_tailored_ranks_the_live_published_rows_for_the_org(client):
         "sectors": ["Sport & recreation"], "geographies": ["New Zealand > Canterbury"],
         "fit_status": "charitable-trust"})
     assert r.status_code == 200, r.text
-    body = client.get("/api/tailored", headers=headers).json()
-    assert body["params"] == {"sector": ["sport"], "region": ["canterbury"], "status": "charitable-trust"}
-    ids = [e["row"]["id"] for e in body["results"]]
-    assert ids[0] == "OPP-NZ-2026-09-0002"          # sector match first
-    assert "OPP-NZ-2026-09-0003" not in ids         # Otago only
-    assert "OPP-NZ-2026-09-0004" not in ids         # closed
-    assert "OPP-NZ-2026-09-0005" not in ids         # not open to a charitable trust
-    assert body["total"] == len(ids)
-    assert all(isinstance(e["why"], list) for e in body["results"])
+    return headers
 
 
-def test_tailored_with_an_empty_profile_lists_every_live_row(client, dataset):
+def test_the_list_is_ranked_for_the_org_by_default(client, ranked):
+    body = client.get("/api/opportunities", headers=ranked).json()
+    assert body["fit_params"] == {"sector": ["sport"], "region": ["canterbury"], "status": "charitable-trust"}
+    rows = body["opportunities"]
+    ids = [r["id"] for r in rows]
+    assert ids[0] == "OPP-NZ-2026-09-0002"           # sector match first
+    assert rows[0]["why"] and rows[0]["fit_score"] > 0
+    assert "OPP-NZ-2026-09-0004" not in ids          # closed: not live at all
+
+
+def test_grants_that_do_not_fit_come_last_without_reasons(client, ranked):
+    rows = client.get("/api/opportunities", headers=ranked).json()["opportunities"]
+    ids = [r["id"] for r in rows]
+    assert ids[-2:] == ["OPP-NZ-2026-09-0003", "OPP-NZ-2026-09-0005"]  # Otago only; societies only
+    assert all(r["why"] == [] and r["fit_score"] is None for r in rows[-2:])
+    assert len(ids) == 4
+
+
+def test_best_fit_applies_after_the_filters(client, ranked):
+    body = client.get("/api/opportunities", headers=ranked, params={"tags": "sport"}).json()
+    assert [r["id"] for r in body["opportunities"]] == ["OPP-NZ-2026-09-0002", "OPP-NZ-2026-09-0005"]
+
+
+def test_best_fit_paginates(client, ranked):
+    body = client.get("/api/opportunities", headers=ranked, params={"limit": 1, "cursor": 1}).json()
+    assert body["total"] == 4 and body["has_more"] is True and len(body["opportunities"]) == 1
+
+
+def test_other_sorts_still_work(client, ranked):
+    body = client.get("/api/opportunities", headers=ranked, params={"sort": "deadline"}).json()
+    assert body["total"] == 4
+
+
+def test_an_empty_profile_has_no_fit_params(client, dataset):
     headers = _register(client)
-    body = client.get("/api/tailored", headers=headers).json()
-    assert body["params"] == {}
+    body = client.get("/api/opportunities", headers=headers).json()
+    assert body["fit_params"] == {}
     assert body["total"] == 2
 
 

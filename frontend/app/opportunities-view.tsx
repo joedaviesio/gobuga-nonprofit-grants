@@ -2,28 +2,28 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  getOrgProfile,
   listCases,
   listOpportunities,
   openCaseFromPool,
   type CaseSummary,
   type OpportunitiesQuery,
   type OpportunityRow,
+  type FitParams,
 } from "@/lib/api";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import CasesView, { isNewOpenCase } from "@/app/cases-view";
-import TailoredView from "@/app/tailored-view";
-import { orgSectorsToTags, getDeploymentConfig } from "@/lib/countries";
+import { FitSummary } from "@/app/fit-fields";
+import { getDeploymentConfig } from "@/lib/countries";
 import { useI18n } from "@/lib/i18n";
 
-// Persists active sector chips across reloads. Seeded once from the org's
-// saved sectors (mapped label → tag slug); subsequent toggles overwrite.
-// Presence of the key — even with an empty array — counts as "user-chosen",
-// so explicit deselect-all is preserved instead of re-seeded.
-const FILTER_TAGS_STORAGE_KEY = "gobuga_opp_filter_tags";
+// Persists active sector chips across reloads. They start empty: the org's
+// sectors rank the list ("Best fit") rather than filter it, since the chips
+// are ANDed and would hide grants. v2: the old key held chips seeded from
+// the profile.
+const FILTER_TAGS_STORAGE_KEY = "gobuga_opp_filter_tags_v2";
 
-type SortKey = "recency" | "deadline" | "amount_desc" | "random";
+type SortKey = "fit" | "recency" | "deadline" | "amount_desc" | "random";
 
 function formatAmount(row: OpportunityRow): string | null {
   const lo = row.amount_min;
@@ -170,7 +170,8 @@ export default function OpportunitiesView() {
   const [cases, setCases] = useState<CaseSummary[]>([]);
 
   // top-level tab
-  const [tab, setTab] = useState<"opportunities" | "tailored" | "cases">("opportunities");
+  const [tab, setTab] = useState<"opportunities" | "cases">("opportunities");
+  const [fitParams, setFitParams] = useState<FitParams>({});
 
   // filter state
   const [q, setQ] = useState("");
@@ -178,7 +179,7 @@ export default function OpportunitiesView() {
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [tagsHydrated, setTagsHydrated] = useState(false);
   const [region, setRegion] = useState<string>("");
-  const [sort, setSort] = useState<SortKey>("recency");
+  const [sort, setSort] = useState<SortKey>("fit");
   const [cursor, setCursor] = useState(0);
 
   // Debounce free-text input → debouncedQ
@@ -187,9 +188,7 @@ export default function OpportunitiesView() {
     return () => clearTimeout(t);
   }, [q]);
 
-  // Seed activeTags on first mount: localStorage wins; otherwise derive
-  // from the org's saved sectors. Only runs once — after this the user's
-  // toggles are the source of truth.
+  // Restore activeTags on first mount from localStorage.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem(FILTER_TAGS_STORAGE_KEY);
@@ -202,18 +201,10 @@ export default function OpportunitiesView() {
           setActiveTags(parsed.filter((t): t is string => typeof t === "string"));
         }
       } catch {
-        // bad JSON — ignore, fall through to org seed
+        // bad JSON — ignore
       }
-      setTagsHydrated(true);
-      return;
     }
-    getOrgProfile()
-      .then((org) => {
-        const seeded = orgSectorsToTags(org?.sectors ?? []);
-        if (seeded.length > 0) setActiveTags(seeded);
-      })
-      .catch(() => { /* no profile available — leave empty */ })
-      .finally(() => setTagsHydrated(true));
+    setTagsHydrated(true);
   }, []);
 
   // Persist activeTags whenever they change (after hydration, so we don't
@@ -252,6 +243,7 @@ export default function OpportunitiesView() {
         setPool(res.opportunities);
         setTotal(res.total);
         setHasMore(res.has_more);
+        setFitParams(res.fit_params ?? {});
       })
       .catch((err: unknown) => {
         setErrorModal(err instanceof Error ? err.message : t("opps.load_failed"));
@@ -304,16 +296,6 @@ export default function OpportunitiesView() {
             {t("opps.tab_opportunities")}
           </button>
           <button
-            onClick={() => setTab("tailored")}
-            className={`text-base font-medium pb-1 transition-colors ${
-              tab === "tailored"
-                ? "text-slate-900 border-b-2 border-slate-900"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            {t("opps.tab_tailored")}
-          </button>
-          <button
             onClick={() => setTab("cases")}
             className={`text-base font-medium pb-1 transition-colors ${
               tab === "cases"
@@ -334,21 +316,6 @@ export default function OpportunitiesView() {
         </div>
 
         {tab === "cases" && <CasesView cases={cases} />}
-
-        {tab === "tailored" && (
-          <TailoredView
-            renderCard={(row, why) => (
-              <OpportunityCard
-                key={row.id}
-                row={row}
-                why={why}
-                existing={findExistingCase(row)}
-                opening={opening === row.id}
-                onOpen={() => handleOpen(row)}
-              />
-            )}
-          />
-        )}
 
         {tab === "opportunities" && (
         <>
@@ -410,6 +377,7 @@ export default function OpportunitiesView() {
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="text-sm border border-slate-200 rounded px-2 py-1 bg-white"
             >
+              <option value="fit">{t("opps.sort_fit")}</option>
               <option value="recency">{t("opps.sort_recency")}</option>
               <option value="deadline">{t("opps.sort_deadline")}</option>
               <option value="amount_desc">{t("opps.sort_amount")}</option>
@@ -420,6 +388,24 @@ export default function OpportunitiesView() {
             {loading ? t("opps.loading") : t("opps.n_matching", { n: total })}
           </span>
         </div>
+
+        {/* What "Best fit" ranks on */}
+        {sort === "fit" && !loading && (
+          Object.keys(fitParams).length > 0 ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-sm text-slate-600">{t("opps.fit_ranked_on")}</span>
+              <FitSummary params={fitParams} />
+              <a href="/settings" className="text-sm text-blue-600 underline hover:text-blue-800">
+                {t("opps.fit_edit_profile")}
+              </a>
+            </div>
+          ) : (
+            <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              {t("opps.fit_no_profile")}{" "}
+              <a href="/settings" className="underline">{t("opps.fit_edit_profile")}</a>
+            </p>
+          )
+        )}
 
         {/* List */}
         {loading && pool.length === 0 ? (
@@ -445,6 +431,7 @@ export default function OpportunitiesView() {
                 <OpportunityCard
                   key={row.id}
                   row={row}
+                  why={sort === "fit" ? row.why : undefined}
                   existing={findExistingCase(row)}
                   opening={opening === row.id}
                   onOpen={() => handleOpen(row)}

@@ -48,7 +48,7 @@ from api.public_http import is_public_cors_path
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.37",
+    version="0.2.38",
     openapi_url=None,
     docs_url=None,
     redoc_url=None,

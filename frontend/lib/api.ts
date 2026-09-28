@@ -448,6 +448,9 @@ export interface OpportunityRow {
   dedupe_key: string;
   amount_note?: string;
   notes?: string;
+  deadline_state?: string;
+  verified_at?: string;
+  provenance?: { deadline?: { verified_at?: string } };
   /** With sort "fit": why the grant fits the org; empty when it does not. */
   why?: string[];
   fit_score?: number | null;
@@ -516,6 +519,7 @@ export interface FitParams {
 /** The vocabularies of the fit parameters, from the public taxonomy. */
 export interface FitTaxonomy {
   currency: string;
+  tags: { slug: string; label: string | null }[];
   entity_vocab: string[];
   size_bands: { slug: string; revenue_min: number | null; revenue_max: number | null }[];
   needs: string[];

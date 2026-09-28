@@ -193,7 +193,14 @@ def fetch_page(url: str) -> dict:
         parser = _Links()
         parser.feed(html)
         links = [(urldefrag(urljoin(current, h))[0], t) for h, t in parser.links if h]
-        return {"url": current, "text": html_to_text(html)[:MAX_PAGE_CHARS], "links": links}
+        text = html_to_text(html)
+        if len(text) < MIN_PAGE_CHARS:
+            # Built in the browser by script: the plain fetch sees an empty shell.
+            rendered = fetch_blocked(current, "page has no text without scripts")
+            if not rendered.get("error"):
+                rendered["links"] = rendered["links"] or links
+                return rendered
+        return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links}
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (401, 403, 406, 429, 503):
             return fetch_blocked(url, f"HTTP {exc.response.status_code}")
@@ -257,7 +264,17 @@ def crawl_funder(funder: dict, fetch=fetch_page) -> dict:
     """Pages worth reading for one funder, breadth first from its funding page."""
     seen, pages, errors = {funder["url"].rstrip("/")}, [], []
     frontier = [(funder["url"], 0)]
-    while frontier and len(pages) < MAX_PAGES_PER_FUNDER:
+    # Funding pages move. If the registered one is gone, or is a file or a
+    # bot check rather than a page with links, start again from the home page.
+    home = "{0.scheme}://{0.netloc}/".format(urlsplit(funder["url"]))
+    tried_home = home.rstrip("/") in seen
+    while (frontier or not tried_home) and len(pages) < MAX_PAGES_PER_FUNDER:
+        if not frontier:
+            if pages:
+                break
+            tried_home = True
+            seen.add(home.rstrip("/"))
+            frontier.append((home, 0))
         url, depth = frontier.pop(0)
         page = fetch(url)
         if page.get("error"):
@@ -348,7 +365,7 @@ def anthropic_ask(system: str, user: str) -> tuple[str, int, int]:
     if _client is None:
         import anthropic
         _client = anthropic.Anthropic(max_retries=4)
-    resp = _client.messages.create(model=MODEL, max_tokens=4000, system=system,
+    resp = _client.messages.create(model=MODEL, max_tokens=12000, system=system,
                                    messages=[{"role": "user", "content": user}])
     text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
     return text, resp.usage.input_tokens, resp.usage.output_tokens
@@ -625,19 +642,68 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
     return report
 
 
+def merge_runs(country: str, first: str, second: str) -> dict:
+    """Write a third run directory holding both runs' rows, deduped and
+    renumbered, with coverage counted against the whole register."""
+    rows = []
+    for d in (first, second):
+        with open(os.path.join(d, "verified.json"), encoding="utf-8") as f:
+            rows += json.load(f)["opportunities"]
+    rows = dedupe_rows(rows)
+    with open(os.path.join(first, "register_report.json"), encoding="utf-8") as f:
+        base = json.load(f)
+    with open(os.path.join(second, "register_report.json"), encoding="utf-8") as f:
+        extra = json.load(f)
+    month = base["month"]
+    for n, row in enumerate(sorted(rows, key=lambda r: (r["funder"], r["title"])), 1):
+        row["id"] = f"OPP-{country.upper()}-{month}-{n:04d}"
+    present = {r["funder"] for r in rows}
+    funders = load_register(country)
+    tiers = {}
+    for t in sorted({f["tier"] for f in funders}):
+        names = [f["name"] for f in funders if f["tier"] == t]
+        tiers[str(t)] = {"funders": len(names), "present": sum(1 for n in names if n in present),
+                         "missing": sorted(n for n in names if n not in present)}
+    states: dict[str, int] = {}
+    for row in rows:
+        states[row["deadline_state"]] = states.get(row["deadline_state"], 0) + 1
+    run_ts = extra["run_ts"] + "M"
+    out = tenant.platform_run_dir(country, month, run_ts)
+    os.makedirs(out, exist_ok=True)
+    report = {"country": country, "month": month, "run_ts": run_ts, "model": MODEL,
+              "merged_from": [first, second], "rows": len(rows), "rows_by_deadline_state": states,
+              "rows_with_amount": sum(1 for r in rows if r["amount_min"] or r["amount_max"]),
+              "coverage_by_tier": tiers,
+              "spent_usd": round(base["budget"]["spent_usd"] + extra["budget"]["spent_usd"], 4)}
+    with open(os.path.join(out, "verified.json"), "w", encoding="utf-8") as f:
+        json.dump({"opportunities": rows}, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(out, "register_report.json"), "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False)
+    return {**report, "run_dir": out}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Register sweep: visit every funder on the register.")
     ap.add_argument("country")
     ap.add_argument("--tier", type=int, choices=(1, 2))
     ap.add_argument("--limit", type=int)
     ap.add_argument("--only", action="append", help="a funder name; may be repeated")
+    ap.add_argument("--missing-from", help="a run directory: visit only the funders it has no row for")
+    ap.add_argument("--merge-into", help="a run directory: add this run's rows to its rows")
     ap.add_argument("--budget", type=float, default=5.0, help="hard cap in USD (default 5)")
     ap.add_argument("--publish", action="store_true", help="publish the verified rows")
     ap.add_argument("--force", action="store_true", help="publish even if a tier 1 funder is missing")
     ap.add_argument("--by", help="who forced the publish")
     args = ap.parse_args(argv)
-    report = run(args.country, tier=args.tier, limit=args.limit, only=args.only,
+    only = args.only
+    if args.missing_from:
+        with open(os.path.join(args.missing_from, "verified.json"), encoding="utf-8") as f:
+            have = {r["funder"] for r in json.load(f)["opportunities"]}
+        only = [f["name"] for f in load_register(args.country) if f["name"] not in have]
+    report = run(args.country, tier=args.tier, limit=args.limit, only=only,
                  budget_usd=args.budget, publish=args.publish, force=args.force, forced_by=args.by)
+    if args.merge_into:
+        report["merged"] = merge_runs(args.country, args.merge_into, report["run_dir"])
     brief = {k: v for k, v in report.items() if k not in ("page_errors", "fetch_errors")}
     brief["page_errors"], brief["fetch_errors"] = len(report["page_errors"]), len(report["fetch_errors"])
     print(json.dumps(brief, indent=2, ensure_ascii=False))

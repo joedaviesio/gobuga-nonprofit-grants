@@ -259,3 +259,26 @@ def test_rolling_needs_words_that_say_so():
              deadline_excerpt="Applications are welcome at any time of the year."),
         {"url": PAGE["url"], "text": text}, FUNDER, cfg, TODAY, NOW.isoformat())
     assert row["deadline_state"] == "rolling-confirmed"
+
+
+def test_a_dead_funding_page_falls_back_to_the_home_page():
+    def fetch(url):
+        if url == "https://trust.example/funding":
+            return {"url": url, "error": "HTTP 404"}
+        if url == "https://trust.example/":
+            return {"url": url, "text": "Welcome. " * 50,
+                    "links": [("https://trust.example/apply-for-funding", "Apply for funding")]}
+        return {"url": url, "text": PAGE_TEXT, "links": []}
+    out = rs.crawl_funder(FUNDER, fetch)
+    assert [p["url"] for p in out["pages"]] == ["https://trust.example/apply-for-funding"]
+    assert out["errors"] == [{"url": "https://trust.example/funding", "error": "HTTP 404"}]
+
+
+def test_a_working_funding_page_does_not_visit_the_home_page():
+    seen = []
+
+    def fetch(url):
+        seen.append(url)
+        return {"url": url, "text": PAGE_TEXT, "links": []}
+    rs.crawl_funder(FUNDER, fetch)
+    assert seen == ["https://trust.example/funding"]

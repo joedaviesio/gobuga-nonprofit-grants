@@ -141,12 +141,6 @@ export function GrantPage({ site, grant, taxonomy, fit }: {
         <dd className="prose-text">{grant.eligibility || t("not_stated")}</dd>
         <dt>{t("f_id")}</dt>
         <dd><code>{grant.id}</code></dd>
-        {grant.first_seen && (
-          <>
-            <dt>{t("f_first_seen")}</dt>
-            <dd><InstantDate site={site} iso={grant.first_seen} /></dd>
-          </>
-        )}
         {grant.last_seen && (
           <>
             <dt>{t("f_last_seen")}</dt>
@@ -185,7 +179,6 @@ export function GrantPage({ site, grant, taxonomy, fit }: {
             </div>
           );
         })}
-        {grant.verified_by && <p className="text-sm text-slate-700">{t("verified_by", { agent: grant.verified_by })}</p>}
       </section>
 
       {grant.status === "closed" && grant.related && grant.related.length > 0 && (

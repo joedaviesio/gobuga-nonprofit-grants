@@ -679,7 +679,7 @@ def test_stats_publishes_classes_and_counts_only(client, dataset, seeded_metrics
     assert usage["month"] == "2026-10"
     assert usage["clickouts"] == {"total": 2, "by_referrer": {
         "assistant": 1, "search": 0, "email": 0, "direct": 1, "other": 0}}
-    assert usage["fit_urls_built"] == 2
+    assert "fit_urls_built" not in usage  # 2 built: below the minimum
     assert usage["api_calls"]["total"] == 4
     assert usage["api_calls"]["by_endpoint"]["/api/v1/opportunities"] == 1
     assert usage["mcp_calls"] == {"total": 2, "by_tool": {
@@ -691,7 +691,7 @@ def test_stats_publishes_classes_and_counts_only(client, dataset, seeded_metrics
     assert (ds["live_count"], ds["closed_count"], ds["funder_count"]) == (6, 2, 4)
     assert ds["last_sweep"] == "2026-10" and ds["next_sweep_due"] == "2026-12"
     assert ds["published_at"] == SECOND_PUBLISH.isoformat()
-    assert body["subscribers"] == {"confirmed": 0}  # the real module, empty list
+    assert "subscribers" not in body  # the real module, empty list: below the minimum
     text = r.text
     for leak in ("Mozilla", "GPTBot/1.1", "SecretBrowser", "ClaudeBot/1.0", "chatgpt.com",
                  "google.co.nz", "zzz-attacker", "evil_tool", "OPP-NZ", "Foundation North"):
@@ -725,13 +725,29 @@ def test_stats_counters_are_cached(client, monkeypatch):
     assert calls == ["2026-10"]
 
 
+@pytest.mark.parametrize("built,published", [(99, False), (100, True)])
+def test_stats_publishes_fit_count_from_the_minimum(built, published):
+    usage = public_stats.usage({"month": "2026-10", "api_calls_by_prefix": {"/api/v1/fit": built}}, [])
+    assert ("fit_urls_built" in usage) is published
+    if published:
+        assert usage["fit_urls_built"] == built
+
+
 def test_stats_publishes_only_confirmed_subscribers(client, monkeypatch):
     fake = types.ModuleType("api.subscribers")
-    fake.subscriber_counts = lambda country: {"confirmed": 3, "pending": 7, "unsubscribed": 1}
+    fake.subscriber_counts = lambda country: {"confirmed": 100, "pending": 7, "unsubscribed": 1}
     monkeypatch.setitem(sys.modules, "api.subscribers", fake)
     body = client.get("/api/v1/stats").json()
-    assert body["subscribers"] == {"confirmed": 3}
+    assert body["subscribers"] == {"confirmed": 100}
     assert "pending" not in json.dumps(body)
+
+
+def test_stats_omits_subscribers_below_the_minimum(client, monkeypatch):
+    fake = types.ModuleType("api.subscribers")
+    fake.subscriber_counts = lambda country: {"confirmed": 99, "pending": 7, "unsubscribed": 1}
+    monkeypatch.setitem(sys.modules, "api.subscribers", fake)
+    r = client.get("/api/v1/stats")
+    assert r.status_code == 200 and "subscribers" not in r.json()
 
 
 def test_stats_omits_subscribers_when_the_counter_fails(client, monkeypatch):

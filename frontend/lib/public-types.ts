@@ -117,7 +117,7 @@ export interface StatsBody {
   usage: {
     month: string;
     clickouts: { total: number; by_referrer: Record<string, number> };
-    fit_urls_built: number;
+    fit_urls_built?: number;
     api_calls: { total: number; by_endpoint: Record<string, number> };
     mcp_calls: { total: number; by_tool: Record<string, number> };
     crawler_hits: { total: number; by_agent: Record<string, number> };

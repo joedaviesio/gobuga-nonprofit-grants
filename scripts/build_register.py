@@ -21,6 +21,7 @@ import tirith  # noqa: F401  — must come before anthropic
 import argparse
 import json
 import os
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlsplit
@@ -63,12 +64,12 @@ CATEGORIES = {
 
 PROMPT = """List funders in New Zealand of this kind: {what}.
 
-Only funders you are confident exist and that give grants an organisation or person can \
-apply for. Do not invent names or web addresses; leave out any you are unsure of. Aim to be \
-complete for this kind.
+Be complete: list every funder of this kind that you are confident exists and gives grants \
+an organisation or person can apply for. The name is what matters. Never invent a web \
+address: give null for any address you are not sure of, and it will be looked up.
 
 Answer with one JSON object and nothing else:
-{{"funders": [{{"name": "official name", "website": "https://...", "funding_url": \
+{{"funders": [{{"name": "official name", "website": "https://... or null", "funding_url": \
 "https://... the page about applying for funding, or null if unsure", "regions": ["slugs"], \
 "tier": 1 or 2}}]}}
 
@@ -82,7 +83,9 @@ def list_candidates(country: str, categories: list[str], budget: rs.Budget) -> l
     client = anthropic.Anthropic(max_retries=4)
     cfg = get_country_config(country)
     out = []
-    for cat in categories:
+    # The model's list differs a little each time it is asked, so each
+    # category is asked twice and the answers joined.
+    for cat in [c for c in categories for _ in range(2)]:
         if budget.exhausted:
             print(f"[register] budget reached before {cat}")
             break
@@ -99,14 +102,50 @@ def list_candidates(country: str, categories: list[str], budget: rs.Budget) -> l
         text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
         found = (rs.parse_json(text) or {}).get("funders") or []
         for f in found:
-            if isinstance(f, dict) and f.get("name") and f.get("website"):
+            if isinstance(f, dict) and f.get("name"):
                 out.append({"name": str(f["name"]).strip(), "category": cat,
-                            "website": str(f["website"]).strip(),
+                            "website": str(f.get("website") or "").strip(),
                             "funding_url": f.get("funding_url"),
                             "regions": [r for r in (f.get("regions") or []) if r in cfg.regions],
                             "tier": 1 if f.get("tier") == 1 else 2})
         print(f"[register] {cat}: {len(found)} listed, ${budget.spent:.2f} spent")
     return out
+
+
+def known_funders(country: str) -> list[dict]:
+    """Funders whose funding page is already known to be real: the manifest's
+    seed sources, and the source pages of the last swept pool."""
+    from api.opportunities import latest_available_month, load_pool
+    from api.sources import load_manifest
+    cfg = get_country_config(country)
+    manifest = load_manifest(country)
+    tier_one = {f["name"].lower() for f in manifest.get("must_appear_funders", [])}
+    out = {}
+    for s in manifest.get("seed_sources", []) + manifest.get("must_appear_funders", []):
+        if s.get("category") == "aggregator" or not s.get("url"):
+            continue
+        regions = [r for r in (s.get("regions") or []) if r in cfg.regions]
+        if s.get("scope") == "national" and not regions:
+            regions = ["national"]
+        out.setdefault(s["name"].lower(), {
+            "name": s["name"], "category": s.get("category") or "other", "website": s["url"],
+            "url": s["url"], "regions": regions, "resolved_by": "known",
+            "tier": 1 if s["name"].lower() in tier_one else 2})
+    month = latest_available_month(country)
+    pages: dict[str, dict] = {}
+    for row in (load_pool(country, month) if month else []):
+        name, url = (row.get("funder") or "").strip(), row.get("source_url") or ""
+        if not name or not url.startswith("http"):
+            continue
+        entry = pages.setdefault(name.lower(), {"name": name, "urls": {}, "regions": set()})
+        entry["urls"][url] = entry["urls"].get(url, 0) + 1
+        entry["regions"].update(r for r in (row.get("region") or []) if r in cfg.regions)
+    for key, entry in pages.items():
+        best = max(entry["urls"], key=entry["urls"].get)
+        out.setdefault(key, {"name": entry["name"], "category": "other", "website": best,
+                             "url": best, "regions": sorted(entry["regions"]),
+                             "resolved_by": "known", "tier": 1 if key in tier_one else 2})
+    return list(out.values())
 
 
 def tavily_find(name: str, site: str) -> str | None:
@@ -120,9 +159,75 @@ def tavily_find(name: str, site: str) -> str | None:
     return None
 
 
+def _name_words(name: str) -> list[str]:
+    stop = {"trust", "the", "limited", "foundation", "community", "council", "zealand",
+            "charitable", "fund", "society", "incorporated"}
+    return [w for w in re.findall(r"[^\W\d_]{4,}", name.lower()) if w not in stop]
+
+
+PICK_PROMPT = """Which of these search results is the official website of the New Zealand \
+funder "{name}"? Its own site only: not a news story, a directory, a grant-writing service, \
+a council page about other funders, or a different organisation with a similar name.
+
+{results}
+
+Answer with one JSON object and nothing else: {{"index": number or null}}"""
+
+
+def tavily_site(name: str, budget: rs.Budget | None = None) -> str | None:
+    """The funder's own site, when the guessed address does not answer.
+
+    A cheap model picks among the search results; the caller then checks that
+    the page it picked names the funder, so a wrong pick is dropped."""
+    from tavily import TavilyClient
+    client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+    res = client.search(query=f'"{name}" New Zealand', max_results=8)
+    results = [r for r in res.get("results", []) if r.get("url")]
+    if not results:
+        return None
+    listing = "\n".join(f"{i}. {r['url']} | {(r.get('title') or '')[:90]} | "
+                        f"{(r.get('content') or '')[:160]}" for i, r in enumerate(results))
+    raw, tin, tout = rs.anthropic_ask("You answer with JSON only.",
+                                      PICK_PROMPT.format(name=name, results=listing))
+    if budget is not None:
+        budget.add(tin, tout)
+    index = (rs.parse_json(raw) or {}).get("index")
+    if isinstance(index, int) and not isinstance(index, bool) and 0 <= index < len(results):
+        return results[index]["url"]
+    return None
+
+
+def names_funder(page: dict, name: str) -> bool:
+    """The page carries every distinctive word of the funder's name."""
+    text = rs._norm(page.get("text", ""))
+    core = re.sub(r"\([^)]*\)", " ", name)
+    words = _name_words(core) or re.findall(r"[^\W\d_]{3,}", core.lower())
+    return bool(words) and all(w in text for w in words)
+
+
+BUDGET: rs.Budget | None = None
+
+
 def resolve(funder: dict, use_search: bool) -> dict:
     """Fill `url` (the funding page) and `resolved_by`, or `error`."""
-    home = rs.fetch_page(funder["website"])
+    home = (rs.fetch_page(funder["website"]) if funder["website"].startswith("http")
+            else {"error": "no address given"})
+    if home.get("error") and use_search:
+        try:
+            found = tavily_site(funder["name"], BUDGET)
+        except Exception as exc:  # noqa: BLE001
+            found = None
+            print(f"[register] site search failed for {funder['name']}: {type(exc).__name__}")
+        funder = {**funder, "searched": True}
+        if found:
+            root = "{0.scheme}://{0.netloc}/".format(urlsplit(found))
+            for candidate in (found, root):
+                page = rs.fetch_page(candidate)
+                if not page.get("error") and names_funder(page, funder["name"]):
+                    home = page
+                    break
+            else:
+                return {**funder, "error": "search found no site that names the funder"}
     if home.get("error"):
         return {**funder, "error": home["error"]}
     site = rs._site(urlsplit(home["url"]).hostname)
@@ -163,7 +268,8 @@ def main(argv=None) -> int:
               f"website, and write {path}. Budget ${args.budget:.2f}. Re-run with --confirm.")
         return 1
 
-    budget = rs.Budget(args.budget)
+    global BUDGET
+    budget = BUDGET = rs.Budget(args.budget)
     candidates_path = path.replace("-register.json", "-register-candidates.json")
     if os.path.exists(candidates_path) and not args.only_category:
         candidates = json.load(open(candidates_path, encoding="utf-8"))
@@ -172,8 +278,9 @@ def main(argv=None) -> int:
         candidates = list_candidates(args.country, categories, budget)
         seen, unique = set(), []
         for c in candidates:
-            key = c["name"].lower()
-            if key not in seen:
+            key = rs.slugify_funder(re.sub(r"\([^)]*\)|\b(limited|ltd|the)\b", " ", c["name"],
+                                           flags=re.I), args.country)
+            if key and key not in seen:
                 seen.add(key)
                 unique.append(c)
         candidates = unique
@@ -183,8 +290,25 @@ def main(argv=None) -> int:
     if args.limit:
         candidates = candidates[:args.limit]
 
+    # A funder already known keeps its known page; the model's entry only
+    # supplies the category and tier.
+    known = {k["name"].lower(): k for k in known_funders(args.country)}
+    slugs = {rs.slugify_funder(n, args.country): n for n in known}
+    todo = []
+    for c in candidates:
+        match = known.get(c["name"].lower()) or known.get(
+            slugs.get(rs.slugify_funder(c["name"], args.country), ""))
+        if match:
+            match["category"], match["tier"] = c["category"], min(match["tier"], c["tier"])
+            match["regions"] = match["regions"] or c["regions"]
+        else:
+            todo.append(c)
+    print(f"[register] {len(known)} funders already known, {len(todo)} to resolve")
+
     with ThreadPoolExecutor(max_workers=rs.CRAWL_CONCURRENCY) as pool:
-        resolved = list(pool.map(lambda c: resolve(c, not args.no_search), candidates))
+        resolved = list(pool.map(lambda c: resolve(c, not args.no_search), todo))
+    if not args.only_category:
+        resolved = list(known.values()) + resolved
     searches = sum(1 for r in resolved if r.get("searched"))
     funders = [{k: r[k] for k in ("name", "category", "tier", "regions", "url", "resolved_by")}
                for r in resolved if r.get("url")]
@@ -202,7 +326,7 @@ def main(argv=None) -> int:
     print(json.dumps({
         "candidates": len(candidates), "resolved": len(funders), "unresolved": len(unresolved),
         "resolved_by": {k: sum(1 for f in funders if f["resolved_by"] == k)
-                        for k in ("model", "link", "search", "home")},
+                        for k in ("known", "model", "link", "search", "site-search", "home")},
         "tier_1": sum(1 for f in funders if f["tier"] == 1),
         "by_category_tier1_tier2": by,
         "model_usd": round(budget.spent, 3), "tavily_searches": searches,

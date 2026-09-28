@@ -7,7 +7,10 @@ client, held in process memory and reset on restart. Two differences from
 that limiter:
 
 - The client address is read from `X-Forwarded-For`, counting from the right
-  by `TRUSTED_PROXY_HOPS` (default 1). The backend sits behind Railway's edge,
+  by `TRUSTED_PROXY_HOPS` (default 1). On Railway the header arrives as
+  "<visitor>, <Railway edge>" on both the direct path and the path through
+  the Next.js rewrite, so both deployments set TRUSTED_PROXY_HOPS=2 (checked
+  against live requests on 28 Sep 2026). The backend sits behind Railway's edge,
   and JSON twins also pass through the Next.js server, so `request.client.host`
   is a proxy. Each trusted proxy appends the address it saw, so the entry
   `hops` places from the right was written by our own outermost proxy and

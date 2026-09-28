@@ -169,39 +169,3 @@ def test_get_is_not_allowed(client):
     r = client.get(URL, headers=_auth())
     assert r.status_code == 405
     assert r.json()["error"]["code"] == "method_not_allowed"
-
-
-# --- GET /api/internal/forwarded (temporary diagnostic) -----------------------
-
-FORWARDED = "/api/internal/forwarded"
-
-
-def test_forwarded_shows_the_callers_own_chain(client, data_dir):
-    r = client.get(FORWARDED, headers={**_auth(), "X-Forwarded-For": "203.0.113.7, 100.64.0.9",
-                                        "X-Real-IP": "203.0.113.7"})
-    assert r.status_code == 200
-    body = r.json()
-    assert body["forwarded_for"] == ["203.0.113.7", "100.64.0.9"]
-    assert body["headers"]["x-real-ip"] == ["203.0.113.7"]
-    assert body["trusted_proxy_hops"] == 1
-    assert body["limiter_key"] == "100.64.0.9"
-    assert r.headers["cache-control"] == "no-store"
-    # Nothing is stored.
-    assert not (data_dir / "platform" / "metrics").exists()
-
-
-def test_forwarded_follows_the_hop_setting(client, monkeypatch):
-    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "2")
-    body = client.get(FORWARDED, headers={**_auth(), "X-Forwarded-For": "203.0.113.7, 100.64.0.9"}).json()
-    assert body["trusted_proxy_hops"] == 2 and body["limiter_key"] == "203.0.113.7"
-
-
-def test_forwarded_needs_the_secret(client):
-    assert client.get(FORWARDED).status_code == 401
-    assert client.get(FORWARDED, headers=_auth("wrong")).status_code == 401
-    assert "forwarded_for" not in client.get(FORWARDED).text
-
-
-def test_forwarded_is_404_when_no_secret_is_configured(client, monkeypatch):
-    monkeypatch.delenv("INTERNAL_HIT_SECRET")
-    assert client.get(FORWARDED, headers=_auth()).status_code == 404

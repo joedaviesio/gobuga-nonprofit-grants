@@ -11,6 +11,9 @@ User-Agent and the Referer headers. The hit is written after the response has
 been sent, so the client never waits on the append.
 """
 
+import hmac
+import os
+
 from fastapi.concurrency import run_in_threadpool
 
 from api import metrics
@@ -38,6 +41,16 @@ def _header(scope, name: bytes) -> str:
     return ""
 
 
+def _is_internal(scope) -> bool:
+    """True when the request carries the valid INTERNAL_HIT_SECRET bearer."""
+    secret = os.environ.get("INTERNAL_HIT_SECRET", "")
+    if not secret:
+        return False
+    auth = _header(scope, b"authorization")
+    token = auth[len("Bearer "):] if auth.startswith("Bearer ") else ""
+    return hmac.compare_digest(token.encode("utf-8"), secret.encode("utf-8"))
+
+
 class HitLogMiddleware:
     def __init__(self, app):
         self.app = app
@@ -49,6 +62,12 @@ class HitLogMiddleware:
         path = scope.get("path", "")
         surface = surface_for(path)
         if surface is None:
+            await self.app(scope, receive, send)
+            return
+        # The frontend's own server-side renders and existence checks carry
+        # the internal bearer. They are not visits; the page hit they serve is
+        # reported separately through /api/internal/hit.
+        if _is_internal(scope):
             await self.app(scope, receive, send)
             return
         try:

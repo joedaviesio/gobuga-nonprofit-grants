@@ -2,10 +2,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono, DM_Sans, Inter } from "next/font/google";
-import "./globals.css";
-import AuthGate from "./auth-gate";
-import { HeaderLogout } from "./header-logout";
-import { LanguageSwitcher } from "./language-switcher";
+import "../globals.css";
+import AuthGate from "@/app/auth-gate";
+import { HeaderLogout } from "@/app/header-logout";
+import { LanguageSwitcher } from "@/app/language-switcher";
 import { I18nProvider } from "@/lib/i18n";
 
 const geistSans = Geist({
@@ -33,7 +33,10 @@ export const metadata: Metadata = {
   description: "Helps with nonprofit grants",
 };
 
-export default function RootLayout({
+// Root layout of the signed-in workspace, and of the privacy and terms pages,
+// which use the workspace's client-side i18n. The public pages have their
+// own server-rendered root layout in app/(public)/[ui]/layout.tsx.
+export default function WorkspaceLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -47,7 +50,7 @@ export default function RootLayout({
         <I18nProvider>
           <AuthGate>
             <header className="border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-2">
+              <Link href="/workspace" className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/gobuga-wordmark.svg" alt="gobuga.org" className="h-9 w-auto" />
               </Link>

@@ -46,7 +46,7 @@ from starlette.exceptions import HTTPException
 
 from api import metrics
 from api.errors import PublicError
-from api.fit import ENTITY_VOCAB, NEEDS, PARAM_ORDER, SIZE_BAND_REVENUE, SIZE_BANDS
+from api.fit import NEEDS, PARAM_ORDER, SIZE_BAND_REVENUE, SIZE_BANDS, entity_vocab_for
 from api.public_context import (
     JSON, MAX_OFFSET, MAX_Q_CHARS, Ctx, integer, list_body, request_context,
 )
@@ -204,7 +204,7 @@ def _fit_schema(ctx: Ctx) -> dict:
             "region": {"type": "string", **_enum(cfg.regions),
                        "description": "Region the organisation works in. National grants "
                                       "count for every region."},
-            "status": {"type": "string", **_enum(ENTITY_VOCAB),
+            "status": {"type": "string", **_enum(entity_vocab_for(ctx.country)),
                        "description": "The organisation's legal form or kind."},
             "size": {"type": "string", **_enum(SIZE_BANDS),
                      "description": f"Annual revenue band, in {cfg.currency}. {sizes}."},

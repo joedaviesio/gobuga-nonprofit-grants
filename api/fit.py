@@ -43,6 +43,21 @@ ENTITY_VOCAB: tuple[str, ...] = (
     "incorporated-society", "charitable-trust", "marae", "school", "club",
     "informal", "company", "individual", "local-authority", "iwi-hapu",
 )
+# Kinds of body that exist in one country only. Everywhere else they are left
+# out of the form, the taxonomy and the allowed values.
+COUNTRY_ONLY_ENTITIES: dict[str, tuple[str, ...]] = {
+    "marae": ("nz",),
+    "iwi-hapu": ("nz",),
+}
+
+
+def entity_vocab_for(country: str | None = None) -> tuple[str, ...]:
+    """ENTITY_VOCAB for one country, in vocabulary order."""
+    country = (country or get_country()).lower()
+    return tuple(slug for slug in ENTITY_VOCAB
+                 if country in COUNTRY_ONLY_ENTITIES.get(slug, (country,)))
+
+
 SIZE_BANDS: tuple[str, ...] = ("under-50k", "50k-250k", "250k-1m", "over-1m")
 NEEDS: tuple[str, ...] = ("operating", "capital", "project", "event", "equipment")
 
@@ -593,7 +608,7 @@ def parse_fit_params(params: Mapping[str, str] | None,
         region = _pick("region", raw, lookup, cfg.regions)
 
     picked_simple = {}
-    for key, vocab in (("status", ENTITY_VOCAB), ("size", SIZE_BANDS), ("need", NEEDS)):
+    for key, vocab in (("status", entity_vocab_for(cfg.slug)), ("size", SIZE_BANDS), ("need", NEEDS)):
         raw = _raw_param(params, key)
         picked_simple[key] = (
             _pick(key, raw, {v: v for v in vocab}, vocab) if raw else None

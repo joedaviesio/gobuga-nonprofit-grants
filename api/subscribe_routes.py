@@ -157,9 +157,14 @@ def _form_fields(body: bytes) -> dict[str, str]:
 
 # --- POST /api/subscribe ---------------------------------------------------------
 
-def _form_redirect(state: str) -> RedirectResponse:
-    return RedirectResponse(f"{subscribers.app_url()}/subscribe?state={state}",
-                            status_code=303, headers=NO_STORE_HEADERS)
+def _form_redirect(state: str, lang=None) -> RedirectResponse:
+    """Back to the /subscribe page. `lang` is carried only when it is one of
+    the country's UI languages and not the default, as the page's own links do."""
+    config = get_country_config(get_country())
+    url = f"{subscribers.app_url()}/subscribe?state={state}"
+    if isinstance(lang, str) and lang in config.ui_languages and lang != config.content_language:
+        url += f"&lang={lang}"
+    return RedirectResponse(url, status_code=303, headers=NO_STORE_HEADERS)
 
 
 def _send_confirmation(email: str, token: str, lang: str) -> None:
@@ -180,6 +185,7 @@ async def post_subscribe(request: Request, background: BackgroundTasks):
 
     if not client_subscribe_limiter.allow(client_address(request)):
         if is_form:
+            # The body has not been read yet, so the language is not known.
             return _form_redirect("limited")
         raise PublicError(429, "rate_limited", "Too many requests. Please try again later.")
 
@@ -197,12 +203,12 @@ async def post_subscribe(request: Request, background: BackgroundTasks):
         email = subscribers.normalise_email(fields.get("email"))
     except subscribers.InvalidEmail:
         if is_form:
-            return _form_redirect("invalid")
+            return _form_redirect("invalid", fields.get("lang"))
         raise PublicError(400, "invalid_email", "Enter a valid email address")
 
     if not target_subscribe_limiter.allow(_target_key(email)):
         if is_form:
-            return _form_redirect("limited")
+            return _form_redirect("limited", fields.get("lang"))
         raise PublicError(429, "rate_limited", "Too many requests. Please try again later.")
 
     lang = subscribers.normalise_lang(fields.get("lang"))
@@ -213,7 +219,7 @@ async def post_subscribe(request: Request, background: BackgroundTasks):
     # FastAPI attaches `background` to the returned response, so the email
     # is sent only after the client has its answer.
     if is_form:
-        return _form_redirect("sent")
+        return _form_redirect("sent", lang)
     return JSONResponse({"ok": True}, headers=NO_STORE_HEADERS)
 
 

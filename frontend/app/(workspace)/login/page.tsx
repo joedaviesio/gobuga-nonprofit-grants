@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
       // The auth gate sends an account that has not finished sign-up to /seed
-      window.location.href = "/";
+      window.location.href = "/workspace";
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.login_failed"));
     } finally {

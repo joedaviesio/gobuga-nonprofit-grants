@@ -1,9 +1,10 @@
 # Copyright © 2026 GoBuga Limited (formerly Proxy Matches Limited). All rights reserved.
 """In-memory, per-client rate limiting for the public machine surface.
 
-A generalisation of `_check_public_rate_limit` in `api/server.py`: a sliding
-one-minute window per client, held in process memory and reset on restart.
-Two differences from that limiter:
+A generalisation of the hand-rolled limiter that guarded the old redacted
+feed in `api/server.py` (now removed): a sliding one-minute window per
+client, held in process memory and reset on restart. Two differences from
+that limiter:
 
 - The client address is read from `X-Forwarded-For`, counting from the right
   by `TRUSTED_PROXY_HOPS` (default 1). The backend sits behind Railway's edge,

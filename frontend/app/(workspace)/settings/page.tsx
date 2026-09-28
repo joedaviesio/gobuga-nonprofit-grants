@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrgProfile, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, getTailoredAccess, type OrgProfile, type TailoredAccess } from "@/lib/api";
+import { getOrgProfile, getBillingPortal, updateOrgProfile, listOrgUploads, uploadOrgDocument, deleteOrgUpload, type OrgProfile } from "@/lib/api";
+import FitFields, { EMPTY_FIT, useFitTaxonomy, type FitValues } from "@/app/fit-fields";
 import { getEnabledCountries, findCountry } from "@/lib/countries";
 import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
@@ -23,8 +24,11 @@ function SettingsContent() {
   const [uploadDocType, setUploadDocType] = useState("general");
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
-  // Tailored Opportunities state
-  const [tailored, setTailored] = useState<TailoredAccess | null>(null);
+  // "Best fit": the fit parameters besides sectors and regions
+  const fitTaxonomy = useFitTaxonomy();
+  const [fit, setFit] = useState<FitValues>(EMPTY_FIT);
+  const [fitSaving, setFitSaving] = useState(false);
+  const [fitSaved, setFitSaved] = useState(false);
 
   // Editing state
   const [editing, setEditing] = useState<string | null>(null); // "name" | "country" | "website" | "sectors" | "geographies"
@@ -37,22 +41,25 @@ function SettingsContent() {
     Promise.all([
       getOrgProfile().catch(() => null),
       listOrgUploads().catch(() => []),
-      getTailoredAccess().catch(() => null),
-    ]).then(([o, files, t]) => {
+    ]).then(([o, files]) => {
       setOrg(o);
       setUploads(files);
-      setTailored(t);
+      if (o) setFit({ fit_status: o.fit_status ?? "", fit_size: o.fit_size ?? "", fit_need: o.fit_need ?? "" });
       setLoading(false);
     });
   }, []);
 
-  const formatRemaining = (seconds: number): string => {
-    if (seconds <= 0) return t("tailored.ready_now");
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    if (days > 0) return `${days}d ${hours}h`;
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  const saveFit = async () => {
+    setFitSaving(true);
+    setFitSaved(false);
+    try {
+      await updateOrgProfile(fit);
+      setFitSaved(true);
+    } catch (err) {
+      setErrorModal(err instanceof Error ? err.message : t("errors.save"));
+    } finally {
+      setFitSaving(false);
+    }
   };
 
   const startEdit = (field: string) => {
@@ -510,20 +517,27 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* Tailored Opportunities */}
+      {/* How grants are ranked */}
       <div className="card-gradient border border-stone-200 p-5">
-        <h2 className="text-lg font-bold text-stone-700">{t("settings.tailored_title")}</h2>
+        <h2 className="text-lg font-bold text-stone-700">{t("settings.fit_title")}</h2>
         <p className="text-sm text-stone-700 mt-1 mb-3">
-          {t("settings.tailored_desc")}
+          {t("settings.fit_desc")}
         </p>
-        <div className="text-sm text-stone-700">
-          {tailored?.timer && !tailored.timer.expired ? (
-            <span>
-              ● {t("settings.tailored_cooldown")} <strong>{formatRemaining(tailored.timer.remaining_seconds)}</strong>.
-            </span>
-          ) : (
-            <span>● {t("settings.tailored_ready")}</span>
-          )}
+        <FitFields
+          values={fit}
+          onChange={(v) => { setFit(v); setFitSaved(false); }}
+          taxonomy={fitTaxonomy}
+          selectClassName="w-full px-3 py-2 text-base border border-stone-300 rounded-md bg-white text-stone-900"
+        />
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={saveFit}
+            disabled={fitSaving}
+            className="px-4 py-2 text-base font-medium btn-gradient rounded-md disabled:opacity-50"
+          >
+            {fitSaving ? t("common.saving") : t("common.save")}
+          </button>
+          {fitSaved && <span className="text-sm text-emerald-700">{t("settings.saved")}</span>}
         </div>
       </div>
 

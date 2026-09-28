@@ -58,6 +58,10 @@ def setup_org(org_id: str, wizard_data: dict, fetch=None) -> dict:
     org_status = _value("org_status")
     sectors = _value("sectors", default=[])
     geographies = _value("geographies", default=[])
+    # The other fit parameters for the "Best fit" order (api/org_fit.py); only written
+    # when sent, so a profile edit that leaves them out keeps them.
+    fit_fields = {k: (wizard_data[k] or "").strip()
+                  for k in ("fit_status", "fit_size", "fit_need") if k in wizard_data}
 
     # 1. Generate org-profile.md
     profile = _generate_org_profile(
@@ -119,6 +123,7 @@ def setup_org(org_id: str, wizard_data: dict, fetch=None) -> dict:
         "mission": mission,
         "sectors": sectors,
         "geographies": geographies,
+        **fit_fields,
         "setup_complete": True,
     }
     if website:

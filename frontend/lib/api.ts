@@ -174,6 +174,9 @@ export interface OrgSetupData {
   mission?: string;
   sectors?: string[];
   geographies?: string[];
+  fit_status?: string;
+  fit_size?: string;
+  fit_need?: string;
 }
 
 export const setupOrg = (data: OrgSetupData) =>
@@ -193,6 +196,9 @@ export interface OrgProfile {
   mission?: string;
   sectors?: string[];
   geographies?: string[];
+  fit_status?: string;
+  fit_size?: string;
+  fit_need?: string;
   profile_text: string;
 }
 
@@ -204,6 +210,9 @@ export const updateOrgProfile = (updates: {
   website?: string;
   sectors?: string[];
   geographies?: string[];
+  fit_status?: string;
+  fit_size?: string;
+  fit_need?: string;
 }) =>
   request<OrgProfile>("/org/profile", {
     method: "PATCH",
@@ -439,6 +448,12 @@ export interface OpportunityRow {
   dedupe_key: string;
   amount_note?: string;
   notes?: string;
+  deadline_state?: string;
+  verified_at?: string;
+  provenance?: { deadline?: { verified_at?: string } };
+  /** With sort "fit": why the grant fits the org; empty when it does not. */
+  why?: string[];
+  fit_score?: number | null;
 }
 
 export interface OpportunitiesResponse {
@@ -447,11 +462,12 @@ export interface OpportunitiesResponse {
   cursor: number;
   limit: number;
   has_more: boolean;
+  /** The fit parameters read from the org's profile; empty means unranked. */
+  fit_params: FitParams;
 }
 
 export interface OpportunitiesQuery {
   country?: string;
-  month?: string;
   q?: string;
   tags?: string[];
   region?: string;
@@ -459,7 +475,7 @@ export interface OpportunitiesQuery {
   min_amount?: number;
   max_amount?: number;
   funder?: string;
-  sort?: "recency" | "deadline" | "amount_desc" | "random";
+  sort?: "fit" | "recency" | "deadline" | "amount_desc" | "random";
   cursor?: number;
   limit?: number;
 }
@@ -467,7 +483,6 @@ export interface OpportunitiesQuery {
 export const listOpportunities = (query: OpportunitiesQuery = {}) => {
   const params = new URLSearchParams();
   if (query.country) params.set("country", query.country);
-  if (query.month) params.set("month", query.month);
   if (query.q) params.set("q", query.q);
   if (query.tags?.length) params.set("tags", query.tags.join(","));
   if (query.region) params.set("region", query.region);
@@ -482,13 +497,35 @@ export const listOpportunities = (query: OpportunitiesQuery = {}) => {
   return request<OpportunitiesResponse>(`/opportunities${qs ? `?${qs}` : ""}`);
 };
 
-export const openCaseFromPool = (opportunityId: string, country?: string, month?: string) =>
+export const openCaseFromPool = (opportunityId: string, country?: string) =>
   request<CaseFull>("/opportunities/open-case", {
     method: "POST",
-    body: JSON.stringify({ opportunity_id: opportunityId, country, month }),
+    body: JSON.stringify({ opportunity_id: opportunityId, country }),
   });
 
 // --- Tailored Opportunities (every account; wraps the legacy per-org cycle) ---
+
+// The org's fit parameters, as GET /api/opportunities reads them from the
+// profile to rank grants (api/org_fit.py).
+
+export interface FitParams {
+  sector?: string[];
+  region?: string[];
+  status?: string;
+  size?: string;
+  need?: string;
+}
+
+/** The vocabularies of the fit parameters, from the public taxonomy. */
+export interface FitTaxonomy {
+  currency: string;
+  tags: { slug: string; label: string | null }[];
+  entity_vocab: string[];
+  size_bands: { slug: string; revenue_min: number | null; revenue_max: number | null }[];
+  needs: string[];
+}
+
+export const getFitTaxonomy = () => request<FitTaxonomy>("/v1/taxonomy");
 
 export interface TailoredAccess {
   tailored_enabled: boolean;

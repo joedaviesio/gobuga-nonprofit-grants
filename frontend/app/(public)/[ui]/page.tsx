@@ -19,12 +19,6 @@ export const revalidate = 600;
 
 type Props = { params: Promise<{ ui: string }> };
 
-// A browser holding a workspace session token goes on to its workspace.
-// Decoration only: the page is complete without it, and it reads nothing but
-// the token's presence in this browser's own storage.
-const WORKSPACE_REDIRECT =
-  'try{if(localStorage.getItem("gobuga_token"))location.replace("/workspace")}catch(e){}';
-
 const CLOSING_SOON = 6;
 
 /** Only the language segments proxy.ts writes reach a page; anything else is a 404. */
@@ -60,7 +54,6 @@ export default async function Home({ params }: Props) {
 
   return (
     <div>
-      <script dangerouslySetInnerHTML={{ __html: WORKSPACE_REDIRECT }} />
       <LanguageLinks site={site} path="/" />
       <h1 className="text-3xl font-bold mb-2">{t("home_title", { country: site.countryLabel })}</h1>
       <p className="text-lg mb-6">{t("home_lead", { country: site.countryLabel })}</p>

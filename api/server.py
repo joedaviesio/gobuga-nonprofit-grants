@@ -48,7 +48,7 @@ from api.public_http import is_public_cors_path
 app = FastAPI(
     title="GoBuga Grants API",
     description="Multi-tenant grant scanning and submission platform",
-    version="0.2.38",
+    version="0.2.39",
     openapi_url=None,
     docs_url=None,
     redoc_url=None,
@@ -360,6 +360,21 @@ class OrgSetupRequest(BaseModel):
     org_status: str = ""
     sectors: list[str] = []
     geographies: list[str] = []
+    # The three fit parameters the "Best fit" order ranks on besides sector and
+    # region (api/org_fit.py). "" clears one.
+    fit_status: str | None = None
+    fit_size: str | None = None
+    fit_need: str | None = None
+
+
+def _check_fit_fields(values: dict, org_id: str) -> None:
+    """400 on a fit_status / fit_size / fit_need outside the vocabulary."""
+    from api.fit import FitParamError
+    from api.org_fit import validate_fit_fields
+    try:
+        validate_fit_fields(values, country_slug((get_org(org_id) or {}).get("country")))
+    except FitParamError as e:
+        raise HTTPException(400, str(e))
 
 
 @app.post("/api/org/setup")
@@ -367,8 +382,10 @@ def api_org_setup(req: OrgSetupRequest, org_id: str = Depends(get_current_org)):
     """Save org profile from the sign-up screen and generate configs.
     Accepts an empty or partial body."""
     from api.org_setup import setup_org
+    data = req.model_dump(exclude_unset=True)
+    _check_fit_fields(data, org_id)
     try:
-        result = setup_org(org_id, req.model_dump(exclude_unset=True))
+        result = setup_org(org_id, data)
         return result
     except Exception as e:
         print(f"[Setup error] {e}\n{traceback.format_exc()}")
@@ -381,6 +398,9 @@ class OrgUpdateRequest(BaseModel):
     website: str | None = None
     sectors: list[str] | None = None
     geographies: list[str] | None = None
+    fit_status: str | None = None
+    fit_size: str | None = None
+    fit_need: str | None = None
 
 
 @app.patch("/api/org/profile")
@@ -393,6 +413,7 @@ def api_org_update(req: OrgUpdateRequest, org_id: str = Depends(get_current_org)
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(400, "No fields to update")
+    _check_fit_fields(updates, org_id)
 
     # Merge with existing org data for regeneration
     merged = {**org, **updates}
@@ -889,9 +910,6 @@ from api.opportunities import (
     country_slug,
     current_month,
     filter_pool,
-    latest_available_month,
-    live_only,
-    load_pool,
     opportunity_to_grant_brief,
 )
 
@@ -930,7 +948,6 @@ def api_public_country_config(request: Request, response: Response):
 def api_list_opportunities(
     org_id: str = Depends(get_current_org),
     country: str | None = Query(None),
-    month: str | None = Query(None, description="YYYY-MM; defaults to current month"),
     q: str = Query(""),
     tags: str = Query("", description="csv of tag slugs; AND across"),
     region: str | None = Query(None),
@@ -938,19 +955,25 @@ def api_list_opportunities(
     min_amount: int | None = Query(None, ge=0),
     max_amount: int | None = Query(None, ge=0),
     funder: str | None = Query(None),
-    sort: str = Query("recency", pattern="^(recency|deadline|amount_desc|random)$"),
+    sort: str = Query("fit", pattern="^(fit|recency|deadline|amount_desc|random)$"),
     cursor: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=500),
 ):
-    """Browse the country-sweep opportunity pool. Defaults to the org's
-    country and the current month. Auto-filters past-deadline rows."""
+    """Browse the live rows of the published dataset, the same rows the
+    public site lists, so a grant has one ID in both. Defaults to the org's
+    country.
+
+    The default sort, `fit`, ranks the matching rows against the org's
+    profile with the public /fit scorer (api/org_fit.py): rows that fit come
+    first with their reasons in `why`, then the rest. `fit_params` are the
+    parameters read from the profile; empty means nothing to rank on."""
+    from api.org_fit import order_for_org, org_fit_params
+    from api.published import load_published
     org = get_org(org_id) or {}
     country = country_slug(country or org.get("country"))
-    month = month or latest_available_month(country) or current_month()
-    pool = load_pool(country, month)
-    pool = live_only(pool)
+    pool = load_published(country, include=("live",))
     tag_list = [t for t in tags.split(",") if t.strip()]
-    return filter_pool(
+    result = filter_pool(
         pool,
         q=q,
         tags=tag_list,
@@ -962,13 +985,14 @@ def api_list_opportunities(
         sort=sort,
         cursor=cursor,
         limit=limit,
+        rank=lambda rows: order_for_org(rows, org, country),
     )
+    return {**result, "fit_params": org_fit_params(org, country)}
 
 
 class OpenCaseFromOpportunityRequest(BaseModel):
     opportunity_id: str
     country: str | None = None
-    month: str | None = None
 
 
 @app.post("/api/opportunities/open-case")
@@ -976,8 +1000,10 @@ def api_open_case_from_pool(
     req: OpenCaseFromOpportunityRequest,
     org_id: str = Depends(get_current_org),
 ):
-    """Create a case from a row in the country-sweep pool. Adapts the row to
-    the legacy `grant_brief` shape and hands off to the existing case pipeline."""
+    """Create a case from a live row of the published dataset, by the ID the
+    public site shows. Adapts the row to the legacy `grant_brief` shape and
+    hands off to the existing case pipeline."""
+    from api.published import get_published_row
     from api.limits import check_case_limit
     limit_check = check_case_limit(org_id)
     if not limit_check["allowed"]:
@@ -986,14 +1012,13 @@ def api_open_case_from_pool(
 
     org = get_org(org_id) or {}
     country = country_slug(req.country or org.get("country"))
-    month = req.month or latest_available_month(country) or current_month()
-    pool = load_pool(country, month)
-    if not pool:
-        raise HTTPException(404, f"No opportunity pool for {country}/{month}")
-
-    opp = next((o for o in pool if o.get("id") == req.opportunity_id), None)
+    opp = get_published_row(req.opportunity_id, country)
     if opp is None:
-        raise HTTPException(404, f"Opportunity {req.opportunity_id} not found in {country}/{month}")
+        raise HTTPException(404, f"Opportunity {req.opportunity_id} not found")
+    if opp["status"] != "live":
+        raise HTTPException(409, f"Opportunity {req.opportunity_id} is no longer open")
+    # The sweep month the row was last seen in, for the case's source_cycle.
+    month = str(opp.get("last_seen") or "")[:7] or current_month()
 
     grant_brief = opportunity_to_grant_brief(opp, country, month)
     grant_id_raw = (opp.get("title") or "unknown").lower()

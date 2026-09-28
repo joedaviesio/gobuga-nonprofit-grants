@@ -239,3 +239,23 @@ def test_lists_of_past_recipients_are_not_followed():
                       ("https://trust.example/files/ApprovedGrantsFY2023.pdf", "Approved grants"),
                       ("https://trust.example/grants-policy", "Grants policy")]}
     assert rs.pick_links(page, "https://trust.example/", set()) == ["https://trust.example/grants-policy"]
+
+
+def test_rolling_needs_words_that_say_so():
+    text = PAGE_TEXT.replace("Applications close 30 November 2026 at 5pm.",
+                             "The cut-off for each round is midnight on the 10th of every month.")
+    page = {"url": PAGE["url"], "text": text}
+    cfg = get_country_config("nz")
+    row, _ = rs.check_programme(
+        item(deadline_state="rolling", deadline=None,
+             deadline_excerpt="The cut-off for each round is midnight on the 10th of every month."),
+        page, FUNDER, cfg, TODAY, NOW.isoformat())
+    assert row["deadline_state"] == "not-stated"
+    assert row["source_excerpt"].startswith("The cut-off for each round")
+    text = PAGE_TEXT.replace("Applications close 30 November 2026 at 5pm.",
+                             "Applications are welcome at any time of the year.")
+    row, _ = rs.check_programme(
+        item(deadline_state="rolling", deadline=None,
+             deadline_excerpt="Applications are welcome at any time of the year."),
+        {"url": PAGE["url"], "text": text}, FUNDER, cfg, TODAY, NOW.isoformat())
+    assert row["deadline_state"] == "rolling-confirmed"

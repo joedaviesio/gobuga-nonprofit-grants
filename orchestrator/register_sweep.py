@@ -383,6 +383,11 @@ def _figures_in(excerpt: str, *amounts) -> bool:
     return True
 
 
+ROLLING_WORDS = re.compile(
+    r"any ?time|year[- ]round|all year|throughout the year|ongoing|rolling|continuous|"
+    r"no (closing|set|fixed) (date|deadline)|no deadline|always open|open all", re.IGNORECASE)
+
+
 def title_on_page(title: str, page_norm: str) -> bool:
     """The title as written, or nearly every word of it, occurs on the page.
     Pages split a name across a heading and a line, or use a different dash."""
@@ -424,6 +429,12 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
                    or _verbatim(item.get("amount_excerpt"), page_norm))
         if excerpt is None:
             return None, "nothing on the page supports the programme"
+
+    if state == "rolling" and not ROLLING_WORDS.search(excerpt):
+        # "Closes on the 10th of every month" is a repeating date, not an open
+        # door. Without the words, no deadline is claimed; the sentence stays
+        # on the row as its evidence.
+        state = "unknown"
 
     deadline = None
     if state == "dated" or (state == "closed" and item.get("deadline")):

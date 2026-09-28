@@ -666,6 +666,7 @@ def publish_pool(
     forced_by: str | None = None,
     run_ts: str | None = None,
     notifier=None,
+    dry_run: bool = False,
 ) -> dict:
     """Publish a sweep's candidate rows into the cumulative public dataset.
 
@@ -743,6 +744,9 @@ def publish_pool(
         }
         held_path = _path(country, "held.json")
 
+        if dry_run:
+            return report
+
         if blocked:
             _write_files_atomically({held_path: _dumps(report)})
             try:
@@ -772,6 +776,12 @@ def publish_pool(
             print(f"[published] FORCED publish {country} {month} by {forced_by or 'unknown'} "
                   f"despite missing: {', '.join(must_appear['missing'])}")
         return report
+
+
+def dry_run_publish(country, month, candidates, **kwargs) -> dict:
+    """The report a publish would produce. Writes nothing, notifies no one,
+    and never raises PublishBlocked: `published` is False when it would block."""
+    return publish_pool(country, month, candidates, dry_run=True, **kwargs)
 
 
 # --- CLI ---------------------------------------------------------------------

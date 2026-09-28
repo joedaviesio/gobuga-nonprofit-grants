@@ -21,6 +21,7 @@ import os
 
 from fastapi import APIRouter, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
 from api import metrics
@@ -91,3 +92,41 @@ async def internal_hit(request: Request):
         metrics.record_hit, hit.path, hit.user_agent, hit.referrer, surface="page"
     )
     return {"ok": True}
+
+
+# --- Temporary diagnostic ---------------------------------------------------
+#
+# The public rate limiter keys on the client address, read from
+# X-Forwarded-For counting from the right by TRUSTED_PROXY_HOPS. The right
+# count depends on how many proxies sit in front of the backend, which
+# differs between a direct call and one that comes through the Next.js
+# rewrite, and can only be found by looking at a real request.
+#
+# This shows the caller, and only the caller, the forwarding headers of their
+# own request. It needs the internal secret, stores nothing and logs nothing.
+# Remove it once TRUSTED_PROXY_HOPS is settled.
+
+_FORWARDING_HEADERS: tuple[str, ...] = (
+    "x-forwarded-for", "x-real-ip", "forwarded", "x-forwarded-host",
+    "x-forwarded-proto", "x-envoy-external-address", "x-railway-edge", "via",
+)
+
+
+@router.get("/api/internal/forwarded")
+def internal_forwarded(request: Request):
+    _check_secret(request)
+    from api.rate_limit import client_address, trusted_proxy_hops
+    chain = [entry.strip()
+             for header in request.headers.getlist("x-forwarded-for")
+             for entry in header.split(",") if entry.strip()]
+    return JSONResponse(
+        {
+            "forwarded_for": chain,
+            "peer": request.client.host if request.client else None,
+            "headers": {name: request.headers.getlist(name)
+                        for name in _FORWARDING_HEADERS if name in request.headers},
+            "trusted_proxy_hops": trusted_proxy_hops(),
+            "limiter_key": client_address(request),
+        },
+        headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"},
+    )

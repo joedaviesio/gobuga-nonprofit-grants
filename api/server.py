@@ -889,9 +889,6 @@ from api.opportunities import (
     country_slug,
     current_month,
     filter_pool,
-    latest_available_month,
-    live_only,
-    load_pool,
     opportunity_to_grant_brief,
 )
 
@@ -930,7 +927,6 @@ def api_public_country_config(request: Request, response: Response):
 def api_list_opportunities(
     org_id: str = Depends(get_current_org),
     country: str | None = Query(None),
-    month: str | None = Query(None, description="YYYY-MM; defaults to current month"),
     q: str = Query(""),
     tags: str = Query("", description="csv of tag slugs; AND across"),
     region: str | None = Query(None),
@@ -942,13 +938,13 @@ def api_list_opportunities(
     cursor: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=500),
 ):
-    """Browse the country-sweep opportunity pool. Defaults to the org's
-    country and the current month. Auto-filters past-deadline rows."""
+    """Browse the live rows of the published dataset, the same rows the
+    public site lists, so a grant has one ID in both. Defaults to the org's
+    country."""
+    from api.published import load_published
     org = get_org(org_id) or {}
     country = country_slug(country or org.get("country"))
-    month = month or latest_available_month(country) or current_month()
-    pool = load_pool(country, month)
-    pool = live_only(pool)
+    pool = load_published(country, include=("live",))
     tag_list = [t for t in tags.split(",") if t.strip()]
     return filter_pool(
         pool,
@@ -968,7 +964,6 @@ def api_list_opportunities(
 class OpenCaseFromOpportunityRequest(BaseModel):
     opportunity_id: str
     country: str | None = None
-    month: str | None = None
 
 
 @app.post("/api/opportunities/open-case")
@@ -976,8 +971,10 @@ def api_open_case_from_pool(
     req: OpenCaseFromOpportunityRequest,
     org_id: str = Depends(get_current_org),
 ):
-    """Create a case from a row in the country-sweep pool. Adapts the row to
-    the legacy `grant_brief` shape and hands off to the existing case pipeline."""
+    """Create a case from a live row of the published dataset, by the ID the
+    public site shows. Adapts the row to the legacy `grant_brief` shape and
+    hands off to the existing case pipeline."""
+    from api.published import get_published_row
     from api.limits import check_case_limit
     limit_check = check_case_limit(org_id)
     if not limit_check["allowed"]:
@@ -986,14 +983,13 @@ def api_open_case_from_pool(
 
     org = get_org(org_id) or {}
     country = country_slug(req.country or org.get("country"))
-    month = req.month or latest_available_month(country) or current_month()
-    pool = load_pool(country, month)
-    if not pool:
-        raise HTTPException(404, f"No opportunity pool for {country}/{month}")
-
-    opp = next((o for o in pool if o.get("id") == req.opportunity_id), None)
+    opp = get_published_row(req.opportunity_id, country)
     if opp is None:
-        raise HTTPException(404, f"Opportunity {req.opportunity_id} not found in {country}/{month}")
+        raise HTTPException(404, f"Opportunity {req.opportunity_id} not found")
+    if opp["status"] != "live":
+        raise HTTPException(409, f"Opportunity {req.opportunity_id} is no longer open")
+    # The sweep month the row was last seen in, for the case's source_cycle.
+    month = str(opp.get("last_seen") or "")[:7] or current_month()
 
     grant_brief = opportunity_to_grant_brief(opp, country, month)
     grant_id_raw = (opp.get("title") or "unknown").lower()

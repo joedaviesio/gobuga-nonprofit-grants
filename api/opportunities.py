@@ -1,7 +1,9 @@
 """Opportunity pool — read, merge across months, and adapt to legacy grant_brief.
 
-Backs `GET /api/opportunities` and `POST /api/opportunities/open-case`.
-The pool itself is produced by `orchestrator.sweep:run_country_sweep`.
+The monthly pool is produced by `orchestrator.sweep:run_country_sweep`. The
+workspace routes (`GET /api/opportunities`, `POST /api/opportunities/open-case`)
+read the published dataset (`api.published`) and use the filters and the
+grant_brief adapter here.
 """
 
 import json

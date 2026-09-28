@@ -451,7 +451,6 @@ export interface OpportunitiesResponse {
 
 export interface OpportunitiesQuery {
   country?: string;
-  month?: string;
   q?: string;
   tags?: string[];
   region?: string;
@@ -467,7 +466,6 @@ export interface OpportunitiesQuery {
 export const listOpportunities = (query: OpportunitiesQuery = {}) => {
   const params = new URLSearchParams();
   if (query.country) params.set("country", query.country);
-  if (query.month) params.set("month", query.month);
   if (query.q) params.set("q", query.q);
   if (query.tags?.length) params.set("tags", query.tags.join(","));
   if (query.region) params.set("region", query.region);
@@ -482,10 +480,10 @@ export const listOpportunities = (query: OpportunitiesQuery = {}) => {
   return request<OpportunitiesResponse>(`/opportunities${qs ? `?${qs}` : ""}`);
 };
 
-export const openCaseFromPool = (opportunityId: string, country?: string, month?: string) =>
+export const openCaseFromPool = (opportunityId: string, country?: string) =>
   request<CaseFull>("/opportunities/open-case", {
     method: "POST",
-    body: JSON.stringify({ opportunity_id: opportunityId, country, month }),
+    body: JSON.stringify({ opportunity_id: opportunityId, country }),
   });
 
 // --- Tailored Opportunities (every account; wraps the legacy per-org cycle) ---

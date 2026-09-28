@@ -214,3 +214,28 @@ def test_must_appear_falls_back_to_the_manifest_without_a_register(isolated):
     assert "Sport NZ" in sources.must_appear_names("nz")
     write_register(isolated, [FUNDER, {**FUNDER, "name": "Small Trust", "tier": 2}])
     assert sources.must_appear_names("nz") == ["Example Trust"]
+
+
+def test_a_funders_unnamed_scheme_is_kept_under_the_funders_name():
+    row, _ = check(title="GENERAL")
+    assert row["title"] == "Example Trust grants"
+    row, why = check(title="GENERAL", eligibility_excerpt="Anyone at all may apply, honest.")
+    assert row is None and "nothing on the page supports" in why
+
+
+def test_main_content_drops_the_menus():
+    html = ("<html><body><nav><a href='/a'>Heritage Fund</a> <a href='/b'>Bursary</a></nav>"
+            "<main><h1>Community Grants</h1><p>" + "Support for local groups. " * 40 + "</p></main>"
+            "<footer>Contact us about funding</footer></body></html>")
+    text = rs.html_to_text(html)
+    assert "Community Grants" in text and "Heritage Fund" not in text and "Contact us" not in text
+    # A page with no <main> keeps its body and still loses the menus.
+    text = rs.html_to_text("<body><nav>Menu Fund</nav><div>Apply for a grant here.</div></body>")
+    assert "Apply for a grant" in text and "Menu Fund" not in text
+
+
+def test_lists_of_past_recipients_are_not_followed():
+    page = {"links": [("https://trust.example/grant-recipient-listings", "Grant recipients"),
+                      ("https://trust.example/files/ApprovedGrantsFY2023.pdf", "Approved grants"),
+                      ("https://trust.example/grants-policy", "Grants policy")]}
+    assert rs.pick_links(page, "https://trust.example/", set()) == ["https://trust.example/grants-policy"]

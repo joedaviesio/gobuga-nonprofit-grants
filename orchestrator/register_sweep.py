@@ -67,6 +67,7 @@ GRANT_WORDS = re.compile(
     re.IGNORECASE)
 SKIP_LINK = re.compile(
     r"login|sign-?in|news|media-release|annual-report|careers|vacanc|privacy|terms|contact|"
+    r"recipient|approved|declined|successful|past-grant|grants-made|who-we.?ve-funded|"
     r"facebook|twitter|linkedin|instagram|youtube|mailto:|tel:|\.(jpg|jpeg|png|gif|zip|docx?|xlsx?)$",
     re.IGNORECASE)
 
@@ -123,8 +124,22 @@ class _Links(HTMLParser):
             self._href = None
 
 
-def html_to_text(html: str) -> str:
+def main_content(html: str) -> str:
+    """The page without its furniture: the <main> or <article> element when
+    there is one, else the page with navigation, header, footer and asides
+    removed. Menus listing every fund otherwise crowd out the page's own text."""
     html = re.sub(r"<(script|style|noscript|svg)[^>]*>.*?</\1>", " ", html, flags=re.S | re.I)
+    for tag in ("main", "article"):
+        found = re.findall(rf"<{tag}\b[^>]*>(.*?)</{tag}>", html, flags=re.S | re.I)
+        body = " ".join(found)
+        if len(re.sub(r"<[^>]+>", " ", body).split()) >= 60:
+            html = body
+            break
+    return re.sub(r"<(nav|header|footer|aside|form)\b[^>]*>.*?</\1>", " ", html, flags=re.S | re.I)
+
+
+def html_to_text(html: str) -> str:
+    html = main_content(html)
     html = re.sub(r"<(br|/p|/div|/li|/h[1-6]|/tr)[^>]*>", "\n", html, flags=re.I)
     text = re.sub(r"<[^>]+>", " ", html)
     import html as _html
@@ -282,6 +297,9 @@ programmes that page describes. Today is {today}. Answer with one JSON object an
 Rules:
 - List a programme only if this page describes it: what it funds or who can apply. A bare \
 link or a name in a menu is not a programme. A page with none returns {{"programmes": []}}.
+- Many funders run one grants scheme with no name of its own ("apply for a grant"). If \
+this page describes how to apply to the funder and names no programmes, list that one \
+scheme with the title GENERAL and give its eligibility_excerpt.
 - Only funding an organisation or person can apply for. Not tenders, loans, jobs or awards \
 already given.
 - dated: the page states the next closing date. rolling: the page says applications are \
@@ -383,7 +401,14 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         return None, "not an object"
     title = " ".join(str(item.get("title") or "").split())
     page_norm = _norm(page["text"])
-    if len(title) < 4 or not title_on_page(title, page_norm):
+    general = title.upper() == "GENERAL"
+    if general:
+        # The funder's one unnamed scheme. It has no title to find, so it
+        # must be supported by who can apply.
+        title = f"{funder['name']} grants"
+        if _verbatim(item.get("eligibility_excerpt"), page_norm) is None:
+            return None, "nothing on the page supports the programme"
+    elif len(title) < 4 or not title_on_page(title, page_norm):
         return None, "title not found on page"
     state = item.get("deadline_state")
     if state not in ("dated", "rolling", "closed"):

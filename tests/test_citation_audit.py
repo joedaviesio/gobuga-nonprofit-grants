@@ -262,5 +262,6 @@ def test_battery_languages():
 def test_every_country_config_has_a_battery():
     sources = os.path.join(tenant.PLATFORM_CONFIG_DIR, "sources")
     for name in os.listdir(sources):
-        if name.endswith(".json"):
+        # `<country>-register*.json` are funder registers, not country configs.
+        if name.endswith(".json") and "-register" not in name:
             assert os.path.exists(os.path.join(ca.BATTERY_DIR, name))

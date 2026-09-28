@@ -90,7 +90,11 @@ function verifiedIso(site: Site, grant: GrantRecord): string | null {
 export function Verified({ site, grant }: { site: Site; grant: GrantRecord }) {
   const iso = verifiedIso(site, grant);
   if (!iso) return null;
-  return <Tx site={site} k="verified_line" values={{ date: <InstantDate site={site} iso={iso} /> }} />;
+  // With no closing date on the page there is no deadline to have verified;
+  // the listing itself was checked.
+  const key = grant.deadline.state === "dated" || grant.deadline.state === "rolling-confirmed"
+    || grant.status === "closed" ? "verified_line" : "prov_checked";
+  return <Tx site={site} k={key} values={{ date: <InstantDate site={site} iso={iso} /> }} />;
 }
 
 export function statusLabel(site: Site, status: string): string {

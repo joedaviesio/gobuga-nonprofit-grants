@@ -179,8 +179,35 @@ def fetch_page(url: str) -> dict:
         parser.feed(html)
         links = [(urldefrag(urljoin(current, h))[0], t) for h, t in parser.links if h]
         return {"url": current, "text": html_to_text(html)[:MAX_PAGE_CHARS], "links": links}
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (401, 403, 406, 429, 503):
+            return fetch_blocked(url, f"HTTP {exc.response.status_code}")
+        return {"url": url, "error": f"HTTP {exc.response.status_code}"}
     except Exception as exc:  # noqa: BLE001 — one bad site must not stop the crawl
         return {"url": url, "error": f"{type(exc).__name__}: {exc}"[:200]}
+
+
+SEARCH_CREDITS = {"extract": 0}
+MARKDOWN_LINK = re.compile(r"\[([^\]]{1,200})\]\((https?://[^)\s]+)\)")
+
+
+def fetch_blocked(url: str, why: str) -> dict:
+    """A page that refuses a plain fetch, read through Tavily's extract
+    (one credit per five pages). Without a key, the refusal stands."""
+    if not os.getenv("TAVILY_API_KEY"):
+        return {"url": url, "error": why}
+    try:
+        from tavily import TavilyClient
+        res = TavilyClient(api_key=os.environ["TAVILY_API_KEY"]).extract(urls=[url])
+        raw = (res.get("results") or [{}])[0].get("raw_content") or ""
+    except Exception as exc:  # noqa: BLE001
+        return {"url": url, "error": f"{why}; extract failed: {type(exc).__name__}"}
+    SEARCH_CREDITS["extract"] += 1
+    if not raw.strip():
+        return {"url": url, "error": f"{why}; extract returned nothing"}
+    links = [(urldefrag(urljoin(url, h))[0], t) for t, h in MARKDOWN_LINK.findall(raw)]
+    text = re.sub(r"[ \t]+", " ", MARKDOWN_LINK.sub(r"\1", raw))
+    return {"url": url, "text": text[:MAX_PAGE_CHARS], "links": links, "via": "tavily"}
 
 
 def _site(host: str) -> str:
@@ -259,7 +286,9 @@ link or a name in a menu is not a programme. A page with none returns {{"program
 already given.
 - dated: the page states the next closing date. rolling: the page says applications are \
 taken at any time. closed: the page says the round is closed, or its only dates are past. \
-unknown: anything else. Never guess or infer a date.
+unknown: the page gives no closing date; this is common and fine. Never guess or infer a date.
+- Give eligibility_excerpt whenever the page says who can apply or what is funded; it is \
+the evidence that the programme is real.
 - Every excerpt is copied character for character from the page: one or two sentences, no \
 paraphrase, no ellipsis. deadline_excerpt must contain the date, or the words that make it \
 rolling or closed. amount_excerpt must contain the figures.
@@ -358,10 +387,18 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         return None, "title not found on page"
     state = item.get("deadline_state")
     if state not in ("dated", "rolling", "closed"):
-        return None, "page gives no deadline"
+        state = "unknown"
     excerpt = _verbatim(item.get("deadline_excerpt"), page_norm)
     if excerpt is None:
-        return None, "deadline excerpt not found on page"
+        if state == "closed":
+            return None, "deadline excerpt not found on page"
+        # No date the page supports. The programme is still kept if the page
+        # supports the programme itself: who can apply, or what it pays.
+        state = "unknown"
+        excerpt = (_verbatim(item.get("eligibility_excerpt"), page_norm)
+                   or _verbatim(item.get("amount_excerpt"), page_norm))
+        if excerpt is None:
+            return None, "nothing on the page supports the programme"
 
     deadline = None
     if state == "dated" or (state == "closed" and item.get("deadline")):
@@ -377,7 +414,8 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
     deadline_text = deadline.isoformat() if deadline else ("rolling" if state == "rolling" else "TBC")
 
     url = page["url"]
-    provenance = {"deadline": {"source_url": url, "verified_at": now_iso, "excerpt": excerpt}}
+    provenance = ({} if state == "unknown" else
+                  {"deadline": {"source_url": url, "verified_at": now_iso, "excerpt": excerpt}})
     lo, hi = _number(item.get("amount_min")), _number(item.get("amount_max"))
     amount_excerpt = _verbatim(item.get("amount_excerpt"), page_norm)
     if lo is not None and hi is not None and lo > hi:
@@ -398,7 +436,8 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
     return {
         "country": cfg.slug, "title": title, "funder": funder["name"],
         "deadline": deadline_text,
-        "deadline_state": {"dated": "dated", "rolling": "rolling-confirmed", "closed": "closed"}[state],
+        "deadline_state": {"dated": "dated", "rolling": "rolling-confirmed", "closed": "closed",
+                           "unknown": "not-stated"}[state],
         "amount_min": lo, "amount_max": hi, "currency": cfg.currency,
         "region": regions, "tags": tags,
         "eligibility": (item.get("eligibility") or "").strip()[:600],
@@ -444,7 +483,7 @@ def dedupe_rows(rows: list[dict]) -> list[dict]:
     """One row per funder and title; a dated row beats a rolling one, then the
     row with more provenance."""
     best: dict[tuple, dict] = {}
-    rank = {"dated": 3, "rolling-confirmed": 2, "closed": 1}
+    rank = {"dated": 4, "rolling-confirmed": 3, "closed": 2, "not-stated": 1}
     for row in rows:
         key = (row["funder"].lower(), re.sub(r"[^a-z0-9]+", " ", row["title"].lower()).strip())
         score = (rank[row["deadline_state"]], len(row["provenance"]))
@@ -523,6 +562,7 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
         "rows_with_amount": sum(1 for r in rows if r["amount_min"] or r["amount_max"]),
         "proposed_and_rejected": sum(reasons.values()), "rejected_reasons": reasons,
         "coverage_by_tier": by_tier, "budget": budget.summary(),
+        "pages_fetched_through_tavily": SEARCH_CREDITS["extract"],
         "seconds": {"crawl": round(crawl_s), "extract": round(extract_s)},
         "cost_per_row_usd": round(budget.spent / len(rows), 4) if rows else None,
     }

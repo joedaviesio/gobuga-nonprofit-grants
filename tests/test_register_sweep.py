@@ -69,10 +69,12 @@ def test_a_supported_programme_becomes_a_verified_row():
 
 @pytest.mark.parametrize("change, reason", [
     ({"title": "Rangatahi Innovation Prize"}, "title not found"),
-    ({"deadline_excerpt": "Applications close 30 November 2026, we promise."}, "excerpt not found"),
     ({"deadline": "2026-11-15"}, "does not state the deadline date"),
     ({"deadline": "2027-11-30"}, "different year"),
-    ({"deadline_state": "unknown"}, "no deadline"),
+    ({"deadline_state": "closed", "deadline": None, "deadline_excerpt": "This round is closed."},
+     "excerpt not found"),
+    ({"deadline_state": "unknown", "deadline_excerpt": None, "eligibility_excerpt": "Made up.",
+      "amount_excerpt": None}, "nothing on the page supports"),
 ])
 def test_what_the_page_does_not_support_is_rejected(change, reason):
     row, why = check(**change)
@@ -98,9 +100,32 @@ def test_a_past_date_is_closed_and_rolling_needs_its_words():
         item(deadline="2026-06-30", deadline_excerpt="Applications close 30 June 2026 at 5pm."),
         page, FUNDER, cfg, TODAY, NOW.isoformat())
     assert row["deadline_state"] == "closed"
-    row, why = check(deadline_state="rolling", deadline=None,
-                     deadline_excerpt="Applications are accepted at any time.")
-    assert row is None and "excerpt not found" in why
+    # "Rolling" with words the page does not carry is not rolling: no date is claimed.
+    row, _ = check(deadline_state="rolling", deadline=None,
+                   deadline_excerpt="Applications are accepted at any time.")
+    assert row["deadline_state"] == "not-stated" and row["deadline"] == "TBC"
+
+
+def test_a_programme_with_no_date_is_kept_as_not_stated():
+    row, reason = check(deadline_state="unknown", deadline=None, deadline_excerpt=None)
+    assert reason == "" and row["deadline_state"] == "not-stated"
+    assert "deadline" not in row["provenance"] and "eligibility" in row["provenance"]
+    assert row["source_excerpt"].startswith("Open to incorporated societies")
+    # An invented date is dropped, not published.
+    row, _ = check(deadline="2026-12-25", deadline_excerpt="Applications close 25 December 2026.")
+    assert row["deadline_state"] == "not-stated" and row["deadline"] == "TBC"
+
+
+def test_not_stated_rows_publish_and_go_stale(isolated):
+    from datetime import timedelta
+    from api import published as pub
+    row, _ = check(deadline_state="unknown", deadline=None, deadline_excerpt=None)
+    row["id"] = "OPP-NZ-2026-09-0001"
+    pub.publish_pool("nz", "2026-09", [row], now=NOW, force=True, notifier=lambda *a: None)
+    assert [r["status"] for r in pub.load_published("nz", today=NOW)] == ["live"]
+    later = NOW + timedelta(days=80)
+    assert pub.load_published("nz", today=later) == []
+    assert pub.get_published_row(row["id"], "nz", today=later)["status"] == "stale"
 
 
 def test_title_words_may_be_split_across_the_page():

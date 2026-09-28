@@ -43,7 +43,10 @@ SWEEP_INTERVAL_MONTHS = 2
 # next sweep can re-check it, and no longer.
 ROLLING_EXPIRY_DAYS = 75
 
-PUBLISHABLE_STATES = ("dated", "rolling-confirmed", "closed")
+# `not-stated`: the programme was read on the funder's page and that page
+# gives no closing date. A true, checked statement, so it publishes; it goes
+# stale like a rolling row if it is not re-checked.
+PUBLISHABLE_STATES = ("dated", "rolling-confirmed", "not-stated", "closed")
 
 # Public fact fields: a difference in any of these is a "change" in the
 # changelog. `last_seen` and `verified_at` are deliberately absent.
@@ -207,7 +210,7 @@ def effective_status(row: dict, today: date, tz: ZoneInfo) -> str:
         if deadline is None:
             return "stale"
         return "closed" if deadline < today else "live"
-    if state == "rolling-confirmed":
+    if state in ("rolling-confirmed", "not-stated"):
         verified = _parse_ts(row.get("verified_at"))
         if verified is None:
             return "stale"

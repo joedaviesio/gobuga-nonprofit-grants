@@ -282,3 +282,9 @@ def test_a_working_funding_page_does_not_visit_the_home_page():
         return {"url": url, "text": PAGE_TEXT, "links": []}
     rs.crawl_funder(FUNDER, fetch)
     assert seen == ["https://trust.example/funding"]
+
+
+@pytest.mark.parametrize("title", ["Community Loans", "Tender for services", "Procurement panel"])
+def test_loans_and_tenders_are_not_grants(title):
+    row, why = check(title=title)
+    assert row is None and why == "not a grant"

@@ -400,6 +400,10 @@ def _figures_in(excerpt: str, *amounts) -> bool:
     return True
 
 
+# Asked not to list these, the model sometimes does. They are not grants.
+NOT_A_GRANT = re.compile(r"\b(loans?|tenders?|procurement|vacanc(y|ies)|sponsorship of us)\b",
+                         re.IGNORECASE)
+
 ROLLING_WORDS = re.compile(
     r"any ?time|year[- ]round|all year|throughout the year|ongoing|rolling|continuous|"
     r"no (closing|set|fixed) (date|deadline)|no deadline|always open|open all", re.IGNORECASE)
@@ -423,6 +427,8 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         return None, "not an object"
     title = " ".join(str(item.get("title") or "").split())
     page_norm = _norm(page["text"])
+    if NOT_A_GRANT.search(title):
+        return None, "not a grant"
     general = title.upper() == "GENERAL"
     if general:
         # The funder's one unnamed scheme. It has no title to find, so it

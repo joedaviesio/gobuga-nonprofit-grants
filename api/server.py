@@ -265,6 +265,62 @@ def api_run_sweep(
     return trigger_sweep(country=country, month=month, force=force)
 
 
+MAX_PUBLISH_BYTES = 8 * 1024 * 1024
+
+
+@app.post("/api/admin/publish")
+async def api_admin_publish(request: Request):
+    """Publish rows swept elsewhere into this deployment's public dataset.
+
+    A sweep can run on the director's own machine; the dataset lives on this
+    server's volume. The rows go through the same gate as any publish
+    (`api.published.publish_pool`): unverified rows are held, duplicates are
+    merged, and a missing tier 1 funder blocks the publish unless `force`.
+
+    Auth via the SWEEP_SECRET bearer. Body:
+    `{"month": "YYYY-MM", "rows": [...], "force": false, "forced_by": null, "run_ts": null}`.
+    `dry_run: true` reports what would happen and writes nothing.
+    """
+    import json as _json
+    import re as _re
+    from fastapi.concurrency import run_in_threadpool
+    from api.country_config import get_country
+    from api.startup_sweep import verify_sweep_secret
+    from api.published import PublishBlocked, publish_pool, dry_run_publish
+    if not verify_sweep_secret(_extract_token(request)):
+        raise HTTPException(401, "Invalid or missing sweep secret")
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_PUBLISH_BYTES:
+            raise HTTPException(413, f"Body exceeds {MAX_PUBLISH_BYTES} bytes")
+    try:
+        data = _json.loads(body)
+    except ValueError:
+        raise HTTPException(400, "Body must be JSON")
+    rows, month = data.get("rows") if isinstance(data, dict) else None, (data or {}).get("month")
+    if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+        raise HTTPException(400, "'rows' must be a list of objects")
+    if not isinstance(month, str) or not _re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise HTTPException(400, "'month' must be YYYY-MM")
+    country = get_country()
+    if any(r.get("country") not in (None, country) for r in rows):
+        raise HTTPException(400, f"Every row must be for this deployment's country ({country})")
+    kwargs = {"force": bool(data.get("force")), "forced_by": data.get("forced_by"),
+              "run_ts": data.get("run_ts")}
+    try:
+        if data.get("dry_run"):
+            report = await run_in_threadpool(dry_run_publish, country, month, rows, **kwargs)
+        else:
+            report = await run_in_threadpool(publish_pool, country, month, rows, **kwargs)
+    except PublishBlocked as exc:
+        return JSONResponse(status_code=409, content={
+            "published": False, "missing_tier_one": exc.missing, "counts": exc.report["counts"]})
+    return {"published": report["published"], "dry_run": bool(data.get("dry_run")),
+            "forced": report["forced"], "counts": report["counts"],
+            "must_appear": report["must_appear"], "held": report["held"][:50]}
+
+
 # --- Test helper (requires ALLOW_TEST_ENDPOINTS=1) ---
 
 @app.get("/api/test/latest-reset-token")

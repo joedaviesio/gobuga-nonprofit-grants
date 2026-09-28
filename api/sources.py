@@ -44,7 +44,23 @@ def must_appear_funders(country: str) -> list[dict]:
     return load_manifest(country)["must_appear_funders"]
 
 
+def register_path(country: str) -> str:
+    """The funder register the register sweep visits (orchestrator/register_sweep.py)."""
+    return os.path.join(os.path.dirname(platform_sources_path(country)), f"{country}-register.json")
+
+
 def must_appear_names(country: str) -> list[str]:
+    """The funders a publish must include: tier 1 of the funder register when
+    the country has one, else the manifest's short list."""
+    try:
+        with open(register_path(country), encoding="utf-8") as f:
+            data = json.load(f)
+        funders = data["funders"] if isinstance(data, dict) else data
+        tier_one = [f["name"] for f in funders if int(f.get("tier") or 2) == 1 and f.get("name")]
+        if tier_one:
+            return tier_one
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
     return [f["name"] for f in must_appear_funders(country)]
 
 

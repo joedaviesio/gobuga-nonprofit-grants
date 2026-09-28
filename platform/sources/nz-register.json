@@ -1,0 +1,3147 @@
+{
+  "country": "nz",
+  "funders": [
+    {
+      "name": "Acorn Foundation",
+      "category": "community-foundation",
+      "tier": 1,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://acornfoundation.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Auckland Foundation",
+      "category": "community-foundation",
+      "tier": 1,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.aucklandfoundation.org.nz/apply-for-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Momentum Waikato",
+      "category": "community-foundation",
+      "tier": 1,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://momentumwaikato.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Nikau Foundation",
+      "category": "community-foundation",
+      "tier": 1,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://nikaufoundation.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "BayTrust",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.baytrust.org.nz/grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Central Lakes Trust",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.centrallakes.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Community Trust South",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://www.communitytrustsouth.nz/our-impact/our-grant-and-scholarship-recipients/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Eastern & Central Community Trust",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "hawkes-bay",
+        "manawatu-whanganui"
+      ],
+      "url": "https://ecct.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Foundation North",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "auckland",
+        "northland"
+      ],
+      "url": "https://www.foundationnorth.org.nz/grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Otago Community Trust",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.oct.org.nz/grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Rotorua Trust",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://rotoruatrust.org.nz/grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Rātā Foundation",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "canterbury",
+        "marlborough",
+        "tasman",
+        "nelson",
+        "west-coast"
+      ],
+      "url": "https://www.ratafoundation.org.nz/grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Toi Foundation",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://toifoundation.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Trust Tairawhiti",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "gisborne"
+      ],
+      "url": "https://trusttairawhiti.nz/apply-for-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Trust Waikato",
+      "category": "community-trust",
+      "tier": 1,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://trustwaikato.co.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "SKYCITY Auckland Community Trust",
+      "category": "corporate",
+      "tier": 1,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://validate.perfdrive.com/ee2042d59ec0f0993db86a715f423f6b/?ssa=be43fa20-5476-45d7-8306-c9d9a764eed1&ssb=40580256374&ssc=https%3A%2F%2Fskycityauckland.co.nz%2Fabout-us%2Fcommunity-trust%2F&ssi=35ad816c-c5vz-4246-8640-ee61131a445e&ssk=botmanager_support@radware.com&ssm=75958677726555335133264841646847&ssn=a7b04b24b6be28038c03031f51621332ad3d8e32527d-3ab3-4218-b82616&sso=8bf98be5-198b1263be1dae4fe8b9e5730092bf22c012a34a19fece3b&ssp=89993538631790593075179052284330456&ssq=88991376046242524655260461309653393270225&ssr=MTQ5LjE5LjE5LjEwOA==&sst=GoBuga-GrantBot/0.2 (+https://gobuga.org/llms.txt)&ssu=&ssv=&ssw=&ssx=eyJ1em14IjoiN2ZjMDAwYmQ4MGNlMTAtZjBkOS00ZDUzLTk5MTctZDA1ZTAyMDhmOTc4MS0xNzkwNTYwNDYxODMwOTA4LTAwNzczMWEwMmYwMTkyOGY0ZmQxMyIsIl9fdXptZiI6IjdmOTAwMDhlMzI1MjdkLTNhYjMtNDIxOC1iYmU1LTE5OGIxMjYzYmUxZDEtMTc5MDU2MDQ2MTgzMDkwOC0wMDVkMzQwZDkzNDdlY2NjN2FmMTMiLCJyZCI6InNreWNpdHlhdWNrbGFuZC5jby5ueiJ9",
+      "resolved_by": "home"
+    },
+    {
+      "name": "Spark Foundation",
+      "category": "corporate",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.spark.co.nz/content/dam/spark/documents/pdfs/accelerate-aotearoa/accelerating-businesses-one-tech-gen-report.pdf",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Auckland Council community grants",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.aucklandcouncil.govt.nz/grants-community-support-housing/grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Christchurch City Council funding",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://ccc.govt.nz/culture-and-community/funding-and-grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Environment Canterbury",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.ecan.govt.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Environment Southland",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://www.es.govt.nz/about-us/funding-and-support",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Greater Wellington Regional Council",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://www.gw.govt.nz/your-region/grants-funding-and-rebates/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Hamilton City Council",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://hamilton.govt.nz/community-support-and-funding/community-funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Tauranga City Council",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.tauranga.govt.nz/community/grants-and-funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Waikato Regional Council",
+      "category": "council",
+      "tier": 1,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.waikatoregion.govt.nz/community/funding-and-scholarships",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Entrust (Auckland Energy Consumer Trust)",
+      "category": "energy-trust",
+      "tier": 1,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.entrustnz.co.nz/entrust-dividend/entrust-district",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Tauranga Energy Consumer Trust (TECT)",
+      "category": "energy-trust",
+      "tier": 1,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.manawatrust.nz/funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "WEL Energy Trust",
+      "category": "energy-trust",
+      "tier": 1,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://welenergytrust.co.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Grassroots Trust Limited",
+      "category": "gaming",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://grassroots.org.nz/",
+      "resolved_by": "home"
+    },
+    {
+      "name": "Pub Charity Limited",
+      "category": "gaming",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://pubcharitylimited.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "The Lion Foundation",
+      "category": "gaming",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://lionfoundation.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Trillian Trust",
+      "category": "gaming",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.trillian.co.nz/grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Creative New Zealand",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.creativenz.govt.nz/find-funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Department of Conservation",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.doc.govt.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Department of Internal Affairs",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.communitymatters.govt.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "MSD — Community Investment",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.msd.govt.nz/what-we-can-do/providers/community-investment/index.html",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Ministry for Culture and Heritage",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://mch.govt.nz/funding-nz-culture",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Ministry for Primary Industries",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.mpi.govt.nz/funding-rural-support/wood-processing-growth-fund",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Ministry for the Environment",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://environment.govt.nz/funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Ministry of Business Innovation and Employment",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.mbie.govt.nz/about/who-we-are/our-funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Ministry of Education",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.education.govt.nz/education-professionals/schools-year-0-13/property/furniture-and-equipment-funding-integrated-schools",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Ministry of Health",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.health.govt.nz/about-us/contracts-procurement-and-funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "NZ On Air",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.nzonair.govt.nz/funding/",
+      "resolved_by": "model"
+    },
+    {
+      "name": "New Zealand Lottery Grants Board",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.dia.govt.nz/fire-and-emergency-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport NZ",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://sportnz.org.nz/funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Te Puni Kōkiri",
+      "category": "government",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.tpk.govt.nz/en/whakamahia/funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Invercargill Licensing Trust (ILT Foundation)",
+      "category": "licensing-trust",
+      "tier": 1,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://ilt.co.nz/ilt-foundation-board-welcomes-new-trustees/",
+      "resolved_by": "model"
+    },
+    {
+      "name": "Trust House Limited",
+      "category": "licensing-trust",
+      "tier": 1,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://trusthouse.co.nz/wp-content/uploads/2020/05/TH004-Application-For-Employment-Website.pdf",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Te Rūnanga o Ngāi Tahu",
+      "category": "maori",
+      "tier": 1,
+      "regions": [
+        "canterbury",
+        "otago",
+        "southland",
+        "west-coast",
+        "tasman",
+        "marlborough",
+        "nelson"
+      ],
+      "url": "https://ngaitahu.iwi.nz/opportunities-and-resources/for-business/business-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Porou",
+      "category": "maori",
+      "tier": 1,
+      "regions": [
+        "gisborne"
+      ],
+      "url": "https://www.ngatiporou.com",
+      "resolved_by": "home"
+    },
+    {
+      "name": "Waikato-Tainui (Te Whakakitenga o Waikato)",
+      "category": "maori",
+      "tier": 1,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://waikatotainui.com/grant/ranea-te-toi-scholarship/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Wakatū Incorporation",
+      "category": "maori",
+      "tier": 1,
+      "regions": [
+        "nelson",
+        "tasman",
+        "marlborough"
+      ],
+      "url": "https://www.wakatu.org/",
+      "resolved_by": "home"
+    },
+    {
+      "name": "NZ Community Trust",
+      "category": "philanthropic",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://nzct.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Aktive",
+      "category": "regional-sport",
+      "tier": 1,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://aktive.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "BayTrust / Sport BOP",
+      "category": "regional-sport",
+      "tier": 1,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://sportbop.co.nz/funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "High Performance Sport New Zealand",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://hpsnz.org.nz//funding-and-investment/prime-ministers-scholarships/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Lottery Grants Board",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.communitymatters.govt.nz/lottery-grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Sport Auckland",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.sportauckland.org.nz/funding/funding-map",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport Canterbury",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "canterbury",
+        "marlborough",
+        "nelson",
+        "tasman",
+        "west-coast"
+      ],
+      "url": "https://www.sportcanterbury.org.nz/about-us/funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Sport Hawke's Bay",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.sporthb.net.nz/Funding-2/shb-eit-scholarship",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport Manawatu",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.sportmanawatu.org.nz/funding-sponsors/funding-sponsors",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport Northland",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "northland"
+      ],
+      "url": "https://www.sportnorthland.co.nz/putea-mo-nga-hapori-community-funding/pop-up-play-fund-1",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport Otago",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://sportotago.co.nz/funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Sport Taranaki",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://www.sporttaranaki.org.nz/organisation-support-taupua-toputanga/find-funding-sources-and-resources-1",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport Tasman",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "tasman",
+        "nelson",
+        "marlborough"
+      ],
+      "url": "https://www.sporttasman.org.nz/funding-1/funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sport Waikato",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.sportwaikato.org.nz/funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Sport Whanganui",
+      "category": "sports-trust",
+      "tier": 1,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://sportwhanganui.co.nz/funding/ftj_sportsupportfund/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Hawke's Bay Foundation",
+      "category": "community-foundation",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://hawkesbayfoundation.org.nz/grant/how-to-apply-for-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kura Tāwhiti",
+      "category": "community-foundation",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.christchurchfoundation.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Marlborough Foundation",
+      "category": "community-foundation",
+      "tier": 2,
+      "regions": [
+        "marlborough"
+      ],
+      "url": "https://marlborough-foundation.org",
+      "resolved_by": "home"
+    },
+    {
+      "name": "Taranaki Foundation",
+      "category": "community-foundation",
+      "tier": 2,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://taranakifoundation.org.nz/apply-for-funding/apply-for-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waikato Community Foundation",
+      "category": "community-foundation",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://nz.linkedin.com/company/fundsorter",
+      "resolved_by": "search"
+    },
+    {
+      "name": "The Trusts Community Foundation (formerly Trust Waitakere)",
+      "category": "community-trust",
+      "tier": 2,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://thetrusts.co.nz/our-funds/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Whanganui Community Foundation",
+      "category": "community-trust",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://whanganuicommunityfoundation.org.nz/media-item/2-million-fund-launched-for-bold-community-ideas-across-whanganui-rangitikei-and-waimarino/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "ANZ Staff Foundation",
+      "category": "corporate",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.anz.co.nz/content/dam/anzconz/documents/about-us/staff-foundation-grants-aug24.pdf",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Auckland Airport Community Trust",
+      "category": "corporate",
+      "tier": 2,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.aucklandairportcommunitytrust.org.nz/apply-for-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Mercury Community Fund",
+      "category": "corporate",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.mercury.co.nz/media/Tauranga%20Community%20Fund%20%20-%20Application%20Form.pdf",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Meridian Energy Community Fund",
+      "category": "corporate",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.meridianenergy.co.nz/community-decarbonisation-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "One NZ Foundation (formerly Vodafone NZ Foundation)",
+      "category": "corporate",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://one.nz/why-choose-us/te-rourou/",
+      "resolved_by": "home"
+    },
+    {
+      "name": "Buller District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "west-coast"
+      ],
+      "url": "https://bullerdc.govt.nz/your-council/community-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Carterton District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://cdc.govt.nz/funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Central Hawke's Bay District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.chbdc.govt.nz/our-district/community-development/grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Central Otago District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.codc.govt.nz/services/funding-grants",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Chatham Islands Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.cic.govt.nz/assets/CIC/Documents/Public-AGENDA-Council-Meeting-31-Jul-2025_compressed.pdf",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Clutha District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.cluthadc.govt.nz/community/grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Dunedin City Council grants",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.dunedin.govt.nz/services/grants-and-funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Gore District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://www.goredc.govt.nz/council/grants-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Grey District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "west-coast"
+      ],
+      "url": "https://www.greydc.govt.nz/03your-community/grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Hastings District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.hastingsdc.govt.nz/hastings/grants/community-grants-fund/contestable-grants-recipients/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Hauraki District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.hauraki-dc.govt.nz/community/grants-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Hawke's Bay Regional Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.hbrc.govt.nz/our-council/about-council/partnerships/funders-forum/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Horizons Regional Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.horizons.govt.nz/get-involved/grants-and-sponsorship/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Horowhenua District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.horowhenua.govt.nz/CommunityPlaces/Grants-Community-Funding/Grants-and-Funding-Guide",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Hurunui District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.hurunui.govt.nz/apply-or-pay",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Hutt City Council grants",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://www.huttcity.govt.nz/community-and-support/grants-and-funding",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Invercargill City Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://www.icc.govt.nz/community/community-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kaikoura District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.kaikoura.govt.nz/community/community-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kaipara District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "northland"
+      ],
+      "url": "https://www.kaipara.govt.nz/funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kapiti Coast District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://www.kapiticoast.govt.nz/services/grants-and-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kawerau District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.kaweraudc.govt.nz/about-council/community-grants/event-marketing-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Marlborough District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "marlborough"
+      ],
+      "url": "https://www.marlborough.govt.nz/our-community/grants-and-awards",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Masterton District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://www.mstn.govt.nz/community/community-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Napier City Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.napier.govt.nz/napier/grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Nelson City Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "nelson"
+      ],
+      "url": "https://www.nelson.govt.nz/5community/3funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "New Plymouth District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://www.npdc.govt.nz/community/community-development/funding-and-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Northland Regional Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "northland"
+      ],
+      "url": "https://www.nrc.govt.nz/education/awards-and-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Opotiki District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.odc.govt.nz/our-district/community-grants/ccs",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Otago Regional Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.orc.govt.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Otorohanga District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.otodc.govt.nz/our-district/funding-and-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Palmerston North City Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.pncc.govt.nz/Community/Community-funding/Sponsorship-Fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Porirua City Council grants",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://poriruacity.govt.nz/your-community/community-funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Queenstown-Lakes District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.qldc.govt.nz/community/community-funding/events-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Rangitikei District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.rangitikei.govt.nz/council/grants-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Rotorua Lakes Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.rotorualakescouncil.nz/community/grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Ruapehu District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.ruapehudc.govt.nz/our-district/funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "South Taranaki District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://www.southtaranaki.com/our-community/funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "South Wairarapa District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://swdc.govt.nz/community/grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Southland District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://www.southlanddc.govt.nz/council/funding-and-grants/funding-and-grants-2/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Stratford District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://www.stratford.govt.nz/our-district/funding-and-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Taranaki Regional Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "taranaki"
+      ],
+      "url": "https://www.trc.govt.nz/environment/resource-consents/apply-for-a-consent",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Tasman District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "tasman"
+      ],
+      "url": "https://www.tasman.govt.nz/my-community/grants-and-funding/available-grants-and-funding/sport-nz-rural-travel-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Taupo District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.taupodc.govt.nz/community/community-grants-and-awards",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Te Waka — Waikato economic development",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://tewaka.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Thames-Coromandel District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.tcdc.govt.nz/Our-Community/Funding-Sponsorship-and-Grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Tātaki Auckland Unlimited",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.aucklandunlimited.com/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Upper Hutt City Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://www.upperhutt.govt.nz/community/Grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waikato District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.waikatodistrict.govt.nz/public-notices/notice/2026/08/27/application-for-new-off-licence---beard-trading-limited---new-world-te-kauwhata",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waimakariri District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.waimakariri.govt.nz/council/funding-and-grants/board-grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waimate District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.waimatedc.govt.nz/community/grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waipa District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.waipadc.govt.nz/our-services/grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Wairoa District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.wairoadc.govt.nz/our-district/grants-funding/mayoral-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waitaki District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.waitaki.govt.nz/About-Waitaki/Living-here/Supporting-our-community/Community-Grants-and-Awards",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waitomo District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.waitomo.govt.nz/council/funding-and-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Wellington City Council grants",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://wellington.govt.nz/funding-grants-and-awards",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Western Bay of Plenty District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.westernbay.govt.nz/community/grants-and-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Westland District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "west-coast"
+      ],
+      "url": "http://www.westlanddc.govt.nz/community-support-and-resources/community-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Whakatane District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.whakatane.govt.nz/about-council/community-grants/event-sponsorship-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Whanganui District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.whanganui.govt.nz/Community-and-Places/Funding-Opportunities/Heritage-Grant-Fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Whangarei District Council",
+      "category": "council",
+      "tier": 2,
+      "regions": [
+        "northland"
+      ],
+      "url": "https://www.wdc.govt.nz/Community/Community-funding/Kai-Ora-Fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Alpine Energy Consumer Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://linetrustsc.org.nz/scholarship/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Buller Electricity Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "west-coast"
+      ],
+      "url": "https://bullerelectricity.co.nz/bel-scholarships/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Electra Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "wellington",
+        "manawatu-whanganui"
+      ],
+      "url": "https://www.electratrust.co.nz/wp-content/uploads/2024/07/Electra-Trust-Deed-final-marked-up-changes-simple.pdf",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Hawke's Bay Power Consumers' Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.hbpct.co.nz/wp-content/uploads/2024/06/2024_HBPCT_CANDIDATE_HANDBOOK-PQ.pdf",
+      "resolved_by": "search"
+    },
+    {
+      "name": "King Country Electric Power Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "manawatu-whanganui",
+        "waikato"
+      ],
+      "url": "https://kcpowertrust.co.nz/2020/02/27/ten-local-organisations-receive-a-2500-00-grant-from-king-country-electric-power-trust",
+      "resolved_by": "search"
+    },
+    {
+      "name": "MainPower Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://www.mainpowertrust.co.nz/wp-content/uploads/2023/07/Annual-Report-2023-27.06.23.pdf",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Marlborough Lines Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "marlborough"
+      ],
+      "url": "https://www.mept.co.nz/news/november-2025-update",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Network Tasman Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "tasman",
+        "nelson"
+      ],
+      "url": "https://www.networktasmantrustgrants.org.nz/community-grants/individual-applications",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Network Waitaki Community Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "otago",
+        "canterbury"
+      ],
+      "url": "https://www.networkwaitaki.co.nz/company/sponsorship/individual-sponsorship-application-form/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Waipa Networks Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.waipanetworkstrust.co.nz",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Westpower Trust",
+      "category": "energy-trust",
+      "tier": 2,
+      "regions": [
+        "west-coast"
+      ],
+      "url": "https://www.wcept.org.nz",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Aotearoa Gaming Trust",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.agt.nz/funding/applying-for-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Chartwell Trust",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://chartwell.org.nz/being/history",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Dunedin Casinos Charitable Trust",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "otago"
+      ],
+      "url": "https://www.dccct.co.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Four Regions Trust",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.fourregionstrust.org.nz/applications/application-forms",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Infinity Foundation Limited",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.grassrootstrustcentral.co.nz/apply-for-a-grant/funding-faqs/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Mainland Foundation",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://mainlandfoundation.co.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Pelorus Trust",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.pelorustrust.net.nz/grants/approved-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Youthtown Incorporated",
+      "category": "gaming",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.youthtown.org.nz/support-us-sponsorship-partnership",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Antarctica New Zealand",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.antarcticanz.govt.nz/science/scholarships",
+      "resolved_by": "link"
+    },
+    {
+      "name": "DIA — COGS (Community Organisation Grants Scheme)",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.communitymatters.govt.nz/community-organisation-grants-scheme-cogs/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "DIA — Lottery Grants",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.communitymatters.govt.nz/lottery-grants/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Energy Efficiency and Conservation Authority (EECA)",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.eeca.govt.nz/co-funding-and-support/",
+      "resolved_by": "model"
+    },
+    {
+      "name": "Health Research Council of NZ",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://hrc.govt.nz/grants-funding/news-applications",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Heritage New Zealand Pouhere Taonga",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.heritage.org.nz",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Kāinga Ora – Homes and Communities",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://kaingaora.govt.nz/assets/Home-ownership/Tenant-Home-Ownership-brochures/Tenant-Home-Ownership-brochure.pdf",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Ministry for Pacific Peoples",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.mpp.govt.nz/programmes-and-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Ministry of Justice",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.justice.govt.nz/family/separation-divorce/apply-for-a-divorce/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Ministry of Youth Development",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.myd.govt.nz/funding/current-funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "National Emergency Management Agency",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.civildefence.govt.nz/strategy-capability/cdem-resilience-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "New Zealand Film Commission",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.nzfilm.co.nz/funding-support-nz-filmmakers/funding/past-funding-decisions",
+      "resolved_by": "link"
+    },
+    {
+      "name": "New Zealand Police",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.police.govt.nz/advice-services/family-violence-help-and-support/childrens-flexi-fund",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Oranga Tamariki",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.orangatamariki.govt.nz/support-for-families/support-programmes/family-start",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Royal Society Te Apārangi",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.royalsociety.org.nz/what-we-do/funds-and-opportunities/marsden/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Te Māngai Pāho",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.tmp.govt.nz/en/funding/",
+      "resolved_by": "model"
+    },
+    {
+      "name": "Tertiary Education Commission",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.tec.govt.nz/funding/applying-for-funding/developing-investment-plans/new-applications-for-on-plan-funding",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Waka Kotahi NZ Transport Agency",
+      "category": "government",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.nzta.govt.nz/partners/planning-and-investment/planning-and-investment-knowledge-base/202427-nltp-investment-requirements/202427-nltp-step-2-managing-transport-programmes-and-funding-approvals/funding-approvals",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Ashburton Trust (Ashburton Licensing Trust)",
+      "category": "licensing-trust",
+      "tier": 2,
+      "regions": [
+        "canterbury"
+      ],
+      "url": "https://braidedriverscommunitytrust.co.nz/grants/other-funders",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Mataura Licensing Trust",
+      "category": "licensing-trust",
+      "tier": 2,
+      "regions": [
+        "southland"
+      ],
+      "url": "https://www.mlt.co.nz",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Māori Education Trust",
+      "category": "maori",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://maorieducation.org.nz/scholarships-and-resources/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Department of Internal Affairs - now managed by Ministry for Ethnic Communities",
+      "category": "other",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.communitymatters.govt.nz/ethnic-communities-development-fund/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "GeneROSITY New Zealand",
+      "category": "other",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.generosity.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Philanthropy New Zealand",
+      "category": "other",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://philanthropy.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "TECT",
+      "category": "other",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://tect.org.nz/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Adamson Family Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Alan and Frances Preston Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Alma Baker Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Blue Sky Community Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Cooper Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Dragon Community Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://dragon.org.nz/grants/grants-policy/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Eric Youren Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Erihapeti Rehu-Murchie Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Freemasons Foundation",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.freemasonsfoundation.org.nz",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Gallagher Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "waikato"
+      ],
+      "url": "https://www.gallaghercharitabletrust.org.nz/funding-and-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Horizon Energy Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "bay-of-plenty"
+      ],
+      "url": "https://www.trusthorizon.org.nz/funding",
+      "resolved_by": "link"
+    },
+    {
+      "name": "J N Williams Memorial Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "hawkes-bay"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "J R McKenzie Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.jrmckenzie.org.nz/what",
+      "resolved_by": "model"
+    },
+    {
+      "name": "JN Williams Memorial Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Jack Jeffs Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kate Edger Educational Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://kateedgerfoundation.org.nz/faqs/who-can-apply/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Kelliher Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "http://www.kct.co.nz/charitable-grants",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Len Reynolds Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Lois McKenzie Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Marjorie Barclay Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Mazda Foundation",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.mazda.co.nz/foundation/2020-grant-recipients",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Milestone Foundation",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.milestonefoundation.co.nz/grants.html",
+      "resolved_by": "link"
+    },
+    {
+      "name": "NEXT Foundation",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://nextfoundation.org.nz/projects",
+      "resolved_by": "search"
+    },
+    {
+      "name": "Olive Shakespeare Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sir John Logan Campbell Residuary Estate",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Sutherland Self Help Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://sutherlandselfhelptrust.org.nz/grant-application/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Ted & Mollie Carr Endowment Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "The Warehouse Group Community Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.thewarehousegroup.co.nz/community-environment/the-warehouse-group-and-kiwi-communities",
+      "resolved_by": "home"
+    },
+    {
+      "name": "Tindall Foundation",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://tindall.org.nz/other-funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Todd Foundation",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.toddfoundation.org.nz/funding/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Top Energy Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "northland"
+      ],
+      "url": "https://topenergy.co.nz/tell-me-about/sponsorship/energy-wellness-fund",
+      "resolved_by": "link"
+    },
+    {
+      "name": "W & B Cottrell Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "W & N Deane Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.perpetualguardian.co.nz/philanthropy/grant-seekers/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Wayne Francis Charitable Trust",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.wfct.org.nz/howfundingworks",
+      "resolved_by": "link"
+    },
+    {
+      "name": "William Georgetti Scholarship Fund",
+      "category": "philanthropic",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://www.publictrust.co.nz/products-and-services/when-someone-has-died/applying-for-probate/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Nuku Ora",
+      "category": "regional-sport",
+      "tier": 2,
+      "regions": [
+        "wellington"
+      ],
+      "url": "https://www.nukuora.org.nz/funding/",
+      "resolved_by": "known"
+    },
+    {
+      "name": "Halberg Foundation",
+      "category": "sports-trust",
+      "tier": 2,
+      "regions": [
+        "national"
+      ],
+      "url": "https://halberg.co.nz/club/activity-fund-grants/",
+      "resolved_by": "link"
+    },
+    {
+      "name": "Harbour Sport",
+      "category": "sports-trust",
+      "tier": 2,
+      "regions": [
+        "auckland"
+      ],
+      "url": "https://harboursport.co.nz/harbour-sport-grant-funding-map/",
+      "resolved_by": "link"
+    }
+  ],
+  "unresolved": [
+    {
+      "name": "Predator Free 2050 Limited",
+      "category": "government",
+      "website": "https://www.predatorfree.org.nz",
+      "error": "no funding page found"
+    },
+    {
+      "name": "Ministry for Ethnic Communities",
+      "category": "government",
+      "website": "https://www.ethniccommunities.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Far North District Council",
+      "category": "council",
+      "website": "https://www.fndc.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Matamata-Piako District Council",
+      "category": "council",
+      "website": "https://www.mpdc.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "South Waikato District Council",
+      "category": "council",
+      "website": "https://www.southwaikato.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Gisborne District Council",
+      "category": "council",
+      "website": "https://www.gdc.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Manawatu District Council",
+      "category": "council",
+      "website": "https://www.manawatu.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Tararua District Council",
+      "category": "council",
+      "website": "https://www.tararuadc.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Hutt City Council",
+      "category": "council",
+      "website": "https://www.huttcity.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Wellington City Council",
+      "category": "council",
+      "website": "https://www.wellington.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Selwyn District Council",
+      "category": "council",
+      "website": "https://www.selwyn.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Ashburton District Council",
+      "category": "council",
+      "website": "https://www.ashburtondc.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Timaru District Council",
+      "category": "council",
+      "website": "https://www.timaru.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Mackenzie District Council",
+      "category": "council",
+      "website": "https://www.mackenzie.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Dunedin City Council",
+      "category": "council",
+      "website": "https://www.dunedin.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Bay of Plenty Regional Council",
+      "category": "council",
+      "website": "https://www.boprc.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "West Coast Regional Council",
+      "category": "council",
+      "website": "https://www.wcrc.govt.nz",
+      "error": "no funding page found"
+    },
+    {
+      "name": "Nelson Tasman Community Trust",
+      "category": "community-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "South Canterbury Foundation",
+      "category": "community-foundation",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Auckland Energy Consumer Trust (Entrust)",
+      "category": "energy-trust",
+      "website": "https://www.entrust.org.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Eastland Community Trust",
+      "category": "energy-trust",
+      "website": "https://www.eastlandtrust.co.nz",
+      "error": "UnsafeUrlError: cannot resolve www.eastlandtrust.co.nz: [Errno 8] nodename nor servname provided, or not known"
+    },
+    {
+      "name": "Central Electric Trust",
+      "category": "energy-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Eastern Bay of Plenty Electricity Consumer Trust",
+      "category": "energy-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Networks Tasman Trust",
+      "category": "energy-trust",
+      "website": "",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Southern Trust",
+      "category": "gaming",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "First Sovereign Trust Limited",
+      "category": "gaming",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Bluegrass Distribution Limited",
+      "category": "gaming",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Eureka Charitable Trust",
+      "category": "gaming",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Bluegrass Trust",
+      "category": "gaming",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Sport Gisborne Tairawhiti",
+      "category": "sports-trust",
+      "website": "https://sportgisborne.org.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Sport Wellington",
+      "category": "sports-trust",
+      "website": "https://sportwellington.org.nz",
+      "error": "ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1082)"
+    },
+    {
+      "name": "Sport Southland",
+      "category": "sports-trust",
+      "website": "https://sportsouthland.org.nz",
+      "error": "UnsafeUrlError: cannot resolve sportsouthland.org.nz: [Errno 8] nodename nor servname provided, or not known"
+    },
+    {
+      "name": "Sport West Coast",
+      "category": "sports-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Bluff Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangiora Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Waimate Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Riccarton Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "West Coast Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rimutaka Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Wainuiomata Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Foxton Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rotorua Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Portage Licensing Trust",
+      "category": "licensing-trust",
+      "website": "https://www.portagetrust.co.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Cheviot Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Ashburton Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Wigram Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Waimarino Licensing Trust",
+      "category": "licensing-trust",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Hugh Green Foundation",
+      "category": "philanthropic",
+      "website": "https://www.hughgreenfoundation.org.nz",
+      "error": "UnsafeUrlError: cannot resolve www.hughgreenfoundation.org.nz: [Errno 8] nodename nor servname provided, or not known"
+    },
+    {
+      "name": "Eion Edgar Charitable Trust",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Gama Foundation",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Stout Trust",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Turnovsky Endowment Trust",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Stevenson Family Foundation",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "One NZ Group Foundation",
+      "category": "philanthropic",
+      "website": "",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Community Organisation Grants Scheme (COGS)",
+      "category": "philanthropic",
+      "website": "https://www.communitymatters.govt.nz",
+      "error": "search found no site that names the funder"
+    },
+    {
+      "name": "Aotearoa Foundation",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Chartwell Charitable Trust",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "The Lines Company Community Trust",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Marlborough Lines Community Trust",
+      "category": "philanthropic",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Contact Energy Community Partnerships",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Genesis Energy Community Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Manawa Energy (Trustpower) Community Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Z Energy Good in the Hood",
+      "category": "corporate",
+      "website": "",
+      "error": "no funding page found"
+    },
+    {
+      "name": "Fonterra Grassroots Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "IAG New Zealand Community Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Trade Me Charitable Foundation",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Vodafone New Zealand Foundation",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Fonterra Grass Roots Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Trustpower Community Awards",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Toyota Community Foundation New Zealand",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Trade Me Charitable Trust",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rabobank New Zealand Community Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Air New Zealand Environment Trust",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "IAG Community Fund",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Fulton Hogan Foundation",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Foodstuffs South Island Community Trust",
+      "category": "corporate",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Whātua Ōrākei Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Whātua",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Raukawa Charitable Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Tuwharetoa Māori Trust Board",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Maniapoto Māori Trust Board",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Parininihi ki Waitotara Incorporation",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Awa",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Te Whānau-ā-Apanui",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Uru Taumatua (Ngāi Tūhoe)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Whakaue Education Endowment Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Kahungunu Iwi Incorporated",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangitāne o Wairarapa",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Kahungunu ki Wairarapa",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Toa Rangatira (Ngāti Toa)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangitāne o Manawatu",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Apa (Te Rūnanga o Ngāti Apa)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Whanganui Iwi (Te Ohu Rangahau Kai)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Ruanui",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāruahine Iwi",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Atiawa (Te Kotahitanga o Te Atiawa)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngā Rauru Kītahi",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Tama (Taranaki)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga-a-Iwi o Ngāpuhi",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rarawa",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Kuri Trust Board",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Aupōuri Trust Board",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Kahu ki Whangaroa",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Atiawa o Te Waka-a-Māui",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Rārua",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Koata",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Kuia",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangitāne o Wairau",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngā Kete Mātauranga Pounamu Charitable Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngā Pae o te Māramatanga",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Poutama Trust",
+      "category": "maori",
+      "website": "https://www.poutama.org.nz",
+      "error": "UnsafeUrlError: cannot resolve www.poutama.org.nz: [Errno 8] nodename nor servname provided, or not known"
+    },
+    {
+      "name": "Māori Women's Welfare League (Ngā Māreikura Trust)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Tumu Paeroa (Office of the Māori Trustee)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Ranginui Iwi Society",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Atiawa Iwi Authority",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāruahine Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Ruanui Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Whanganui Iwi Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Te Whānau (Te Whānau-ā-Apanui)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangitāne o Manawatu Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangitāne o Wairarapa Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Kahu Trust Board",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga Nui o Te Aupōuri",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Kuri",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāi Tai ki Tāmaki Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Kawerau ā Maki Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Pāhauwera Development Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Apa ki te Rā Tō Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Tama Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Kāhui o Taranaki Iwi Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Whakaue Tribal Lands Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Kōhanga Reo National Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Pūtahitanga o Te Waipounamu",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Pou Matakana (Whānau Ora Commissioning Agency)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāti Raukawa (Te Au ki te Tonga)",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Ātiawa o Te Waka-a-Māui Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Rārua Iwi Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Koata Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Kuia Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rangitāne o Wairau Settlement Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Hine Health Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngarimu VC and 28th (Māori) Battalion Memorial Scholarship Fund",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Moana New Zealand Charitable Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Manawa Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāti Whare Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanga o Ngāi Te Rangi Iwi Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Whakatōhea Māori Trust Board",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Rūnanganui o Ngāti Whātua",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Te Aitanga-a-Māhaki Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Rongowhakaata Iwi Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    },
+    {
+      "name": "Ngāi Tāmanuhiri Trust",
+      "category": "maori",
+      "website": "",
+      "error": "no address given"
+    }
+  ]
+}

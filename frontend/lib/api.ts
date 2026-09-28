@@ -174,6 +174,9 @@ export interface OrgSetupData {
   mission?: string;
   sectors?: string[];
   geographies?: string[];
+  fit_status?: string;
+  fit_size?: string;
+  fit_need?: string;
 }
 
 export const setupOrg = (data: OrgSetupData) =>
@@ -193,6 +196,9 @@ export interface OrgProfile {
   mission?: string;
   sectors?: string[];
   geographies?: string[];
+  fit_status?: string;
+  fit_size?: string;
+  fit_need?: string;
   profile_text: string;
 }
 
@@ -204,6 +210,9 @@ export const updateOrgProfile = (updates: {
   website?: string;
   sectors?: string[];
   geographies?: string[];
+  fit_status?: string;
+  fit_size?: string;
+  fit_need?: string;
 }) =>
   request<OrgProfile>("/org/profile", {
     method: "PATCH",
@@ -487,6 +496,36 @@ export const openCaseFromPool = (opportunityId: string, country?: string) =>
   });
 
 // --- Tailored Opportunities (every account; wraps the legacy per-org cycle) ---
+
+// Tailored Picks: the live published grants ranked against the org's
+// profile by the public /fit scorer (GET /api/tailored, api/org_fit.py).
+
+export interface TailoredParams {
+  sector?: string[];
+  region?: string[];
+  status?: string;
+  size?: string;
+  need?: string;
+}
+
+export interface TailoredResult {
+  row: OpportunityRow;
+  score: number;
+  why: string[];
+}
+
+export const getTailored = () =>
+  request<{ params: TailoredParams; total: number; results: TailoredResult[] }>("/tailored");
+
+/** The vocabularies of the fit parameters, from the public taxonomy. */
+export interface FitTaxonomy {
+  currency: string;
+  entity_vocab: string[];
+  size_bands: { slug: string; revenue_min: number | null; revenue_max: number | null }[];
+  needs: string[];
+}
+
+export const getFitTaxonomy = () => request<FitTaxonomy>("/v1/taxonomy");
 
 export interface TailoredAccess {
   tailored_enabled: boolean;

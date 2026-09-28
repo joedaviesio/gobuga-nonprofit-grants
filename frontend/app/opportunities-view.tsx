@@ -14,7 +14,6 @@ import LoadingBar from "@/app/loading-bar";
 import ErrorModal from "@/app/error-modal";
 import CasesView, { isNewOpenCase } from "@/app/cases-view";
 import TailoredView from "@/app/tailored-view";
-import { getTailoredAccess, type TailoredAccess } from "@/lib/api";
 import { orgSectorsToTags, getDeploymentConfig } from "@/lib/countries";
 import { useI18n } from "@/lib/i18n";
 
@@ -73,6 +72,93 @@ function TagPill({ tag, active, onClick }: { tag: string; active: boolean; onCli
   );
 }
 
+/** One grant in a workspace list. `why` lists the reasons it fits the org
+ * (Tailored Picks). */
+export function OpportunityCard({ row, existing, opening, onOpen, why }: {
+  row: OpportunityRow;
+  existing?: CaseSummary;
+  opening: boolean;
+  onOpen: () => void;
+  why?: string[];
+}) {
+  const { t } = useI18n();
+  const amt = formatAmount(row);
+  return (
+    <div
+      className="card-gradient border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-base font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
+              {row.title}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700 mb-2">
+            <span className="font-medium">{row.funder}</span>
+            <DeadlineBadge deadline={row.deadline} />
+            {amt && <span>{amt}</span>}
+            {row.region.length > 0 && (
+              <span className="text-slate-600">
+                {row.region.includes("national") ? t("opps.national") : row.region.join(", ")}
+              </span>
+            )}
+          </div>
+          {why && why.length > 0 && (
+            <ul className="text-sm text-emerald-800 mb-2 list-disc pl-5">
+              {why.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          )}
+          {row.summary && (
+            <p className="text-sm text-slate-600 line-clamp-2 mb-2">{row.summary}</p>
+          )}
+          <div className="flex flex-wrap gap-1">
+            {row.tags.map((t) => (
+              <span
+                key={t}
+                className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+          {row.source_url && (
+            <a
+              href={row.source_url}
+              target="_blank"
+              rel="noopener"
+              className="inline-block mt-2 text-sm text-blue-600 underline hover:text-blue-800"
+            >
+              {(() => {
+                try { return new URL(row.source_url).hostname; }
+                catch { return t("opps.source"); }
+              })()}
+            </a>
+          )}
+        </div>
+        <div className="shrink-0">
+          {existing ? (
+            <a
+              href={`/case/${existing.case_id}`}
+              className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              {t("opps.view_case")}
+            </a>
+          ) : (
+            <button
+              onClick={onOpen}
+              disabled={opening}
+              className="px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
+            >
+              {opening ? t("opps.opening") : t("opps.open_case")}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OpportunitiesView() {
   const { t } = useI18n();
   const [pool, setPool] = useState<OpportunityRow[]>([]);
@@ -85,7 +171,6 @@ export default function OpportunitiesView() {
 
   // top-level tab
   const [tab, setTab] = useState<"opportunities" | "tailored" | "cases">("opportunities");
-  const [tailoredAccess, setTailoredAccess] = useState<TailoredAccess | null>(null);
 
   // filter state
   const [q, setQ] = useState("");
@@ -176,12 +261,7 @@ export default function OpportunitiesView() {
 
   useEffect(() => {
     listCases().then(setCases).catch(() => setCases([]));
-    getTailoredAccess().then(setTailoredAccess).catch(() => setTailoredAccess(null));
   }, []);
-
-  // Tailored Picks (the feed ranked against the organisation) is open to
-  // every account; hide the tab only if the access check itself failed.
-  const showTailoredTab = !!tailoredAccess;
 
   const toggleTag = (t: string) => {
     setActiveTags((curr) => curr.includes(t) ? curr.filter((x) => x !== t) : [...curr, t]);
@@ -223,18 +303,16 @@ export default function OpportunitiesView() {
           >
             {t("opps.tab_opportunities")}
           </button>
-          {showTailoredTab && (
-            <button
-              onClick={() => setTab("tailored")}
-              className={`text-base font-medium pb-1 transition-colors ${
-                tab === "tailored"
-                  ? "text-slate-900 border-b-2 border-slate-900"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {t("opps.tab_tailored")}
-            </button>
-          )}
+          <button
+            onClick={() => setTab("tailored")}
+            className={`text-base font-medium pb-1 transition-colors ${
+              tab === "tailored"
+                ? "text-slate-900 border-b-2 border-slate-900"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            {t("opps.tab_tailored")}
+          </button>
           <button
             onClick={() => setTab("cases")}
             className={`text-base font-medium pb-1 transition-colors ${
@@ -257,7 +335,20 @@ export default function OpportunitiesView() {
 
         {tab === "cases" && <CasesView cases={cases} />}
 
-        {tab === "tailored" && showTailoredTab && <TailoredView />}
+        {tab === "tailored" && (
+          <TailoredView
+            renderCard={(row, why) => (
+              <OpportunityCard
+                key={row.id}
+                row={row}
+                why={why}
+                existing={findExistingCase(row)}
+                opening={opening === row.id}
+                onOpen={() => handleOpen(row)}
+              />
+            )}
+          />
+        )}
 
         {tab === "opportunities" && (
         <>
@@ -350,77 +441,14 @@ export default function OpportunitiesView() {
         ) : (
           <div className="space-y-3">
             {pool.map((row) => {
-              const amt = formatAmount(row);
-              const existing = findExistingCase(row);
               return (
-                <div
+                <OpportunityCard
                   key={row.id}
-                  className="card-gradient border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-base font-medium text-slate-800 font-[family-name:var(--font-dm-sans)]">
-                          {row.title}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700 mb-2">
-                        <span className="font-medium">{row.funder}</span>
-                        <DeadlineBadge deadline={row.deadline} />
-                        {amt && <span>{amt}</span>}
-                        {row.region.length > 0 && (
-                          <span className="text-slate-600">
-                            {row.region.includes("national") ? t("opps.national") : row.region.join(", ")}
-                          </span>
-                        )}
-                      </div>
-                      {row.summary && (
-                        <p className="text-sm text-slate-600 line-clamp-2 mb-2">{row.summary}</p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        {row.tags.map((t) => (
-                          <span
-                            key={t}
-                            className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                      {row.source_url && (
-                        <a
-                          href={row.source_url}
-                          target="_blank"
-                          rel="noopener"
-                          className="inline-block mt-2 text-sm text-blue-600 underline hover:text-blue-800"
-                        >
-                          {(() => {
-                            try { return new URL(row.source_url).hostname; }
-                            catch { return t("opps.source"); }
-                          })()}
-                        </a>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      {existing ? (
-                        <a
-                          href={`/case/${existing.case_id}`}
-                          className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                        >
-                          {t("opps.view_case")}
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => handleOpen(row)}
-                          disabled={opening === row.id}
-                          className="px-4 py-1.5 text-sm btn-gradient rounded-lg disabled:opacity-50 transition-colors"
-                        >
-                          {opening === row.id ? t("opps.opening") : t("opps.open_case")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  row={row}
+                  existing={findExistingCase(row)}
+                  opening={opening === row.id}
+                  onOpen={() => handleOpen(row)}
+                />
               );
             })}
           </div>

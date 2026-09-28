@@ -7,12 +7,14 @@
 // same with nothing filled in, and lands on a working, unranked feed.
 //
 // What each field feeds (so it is worth asking for):
-//   sectors     → pre-selects the feed's tag filter; Tailored Picks prompts
-//   regions     → Tailored Picks prompts ("target geographies")
+//   sectors     → pre-selects the feed's tag filter; Tailored Picks ranking
+//   regions     → Tailored Picks ranking (api/org_fit.py)
+//   status, income, need → Tailored Picks ranking
 //   website     → scraped into the org's data for Tailored Picks and the bots
 //   documents   → the org's data for Tailored Picks and the bots
 
 import { useState, useEffect, useRef } from "react";
+import FitFields, { EMPTY_FIT, useFitTaxonomy, type FitValues } from "@/app/fit-fields";
 import {
   uploadOrgDocument,
   listOrgUploads,
@@ -77,6 +79,8 @@ export default function SeedPage() {
 
   const [sectors, setSectors] = useState<string[]>([]);
   const [geographies, setGeographies] = useState<string[]>([]);
+  const [fit, setFit] = useState<FitValues>(EMPTY_FIT);
+  const fitTaxonomy = useFitTaxonomy();
   const [website, setWebsite] = useState("");
   const [websiteTouched, setWebsiteTouched] = useState(false);
 
@@ -113,6 +117,7 @@ export default function SeedPage() {
       if (org) {
         setSectors(org.sectors ?? []);
         setGeographies(org.geographies ?? []);
+        setFit({ fit_status: org.fit_status ?? "", fit_size: org.fit_size ?? "", fit_need: org.fit_need ?? "" });
         setWebsite(org.website_url || org.website || "");
       }
       setReady(true);
@@ -193,6 +198,9 @@ export default function SeedPage() {
     if (!skip) {
       if (sectors.length) data.sectors = sectors;
       if (geographies.length) data.geographies = geographies;
+      if (fit.fit_status) data.fit_status = fit.fit_status;
+      if (fit.fit_size) data.fit_size = fit.fit_size;
+      if (fit.fit_need) data.fit_need = fit.fit_need;
       if (website.trim()) data.website = website.trim();
     }
     try {
@@ -256,6 +264,17 @@ export default function SeedPage() {
                 </button>
               ))}
             </div>
+          </Section>
+        )}
+
+        {fitTaxonomy && (
+          <Section label={t("seed.fit_label")} help={t("seed.fit_help")}>
+            <FitFields
+              values={fit}
+              onChange={setFit}
+              taxonomy={fitTaxonomy}
+              selectClassName="w-full px-3 py-2 text-base border border-stone-300 rounded-md bg-white text-stone-900 focus:outline-none focus:border-blue-400"
+            />
           </Section>
         )}
 

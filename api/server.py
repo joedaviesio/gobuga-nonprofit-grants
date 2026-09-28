@@ -360,6 +360,21 @@ class OrgSetupRequest(BaseModel):
     org_status: str = ""
     sectors: list[str] = []
     geographies: list[str] = []
+    # The three fit parameters Tailored Picks ranks on besides sector and
+    # region (api/org_fit.py). "" clears one.
+    fit_status: str | None = None
+    fit_size: str | None = None
+    fit_need: str | None = None
+
+
+def _check_fit_fields(values: dict, org_id: str) -> None:
+    """400 on a fit_status / fit_size / fit_need outside the vocabulary."""
+    from api.fit import FitParamError
+    from api.org_fit import validate_fit_fields
+    try:
+        validate_fit_fields(values, country_slug((get_org(org_id) or {}).get("country")))
+    except FitParamError as e:
+        raise HTTPException(400, str(e))
 
 
 @app.post("/api/org/setup")
@@ -367,8 +382,10 @@ def api_org_setup(req: OrgSetupRequest, org_id: str = Depends(get_current_org)):
     """Save org profile from the sign-up screen and generate configs.
     Accepts an empty or partial body."""
     from api.org_setup import setup_org
+    data = req.model_dump(exclude_unset=True)
+    _check_fit_fields(data, org_id)
     try:
-        result = setup_org(org_id, req.model_dump(exclude_unset=True))
+        result = setup_org(org_id, data)
         return result
     except Exception as e:
         print(f"[Setup error] {e}\n{traceback.format_exc()}")
@@ -381,6 +398,9 @@ class OrgUpdateRequest(BaseModel):
     website: str | None = None
     sectors: list[str] | None = None
     geographies: list[str] | None = None
+    fit_status: str | None = None
+    fit_size: str | None = None
+    fit_need: str | None = None
 
 
 @app.patch("/api/org/profile")
@@ -393,6 +413,7 @@ def api_org_update(req: OrgUpdateRequest, org_id: str = Depends(get_current_org)
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(400, "No fields to update")
+    _check_fit_fields(updates, org_id)
 
     # Merge with existing org data for regeneration
     merged = {**org, **updates}
@@ -1151,6 +1172,24 @@ def api_tailored_toggle(req: ToggleTailoredRequest, org_id: str = Depends(get_cu
     from api.limits import set_tailored_enabled, get_cycle_timer
     result = set_tailored_enabled(org_id, req.enabled)
     return {**result, "cycle_timer": get_cycle_timer(org_id)}
+
+
+@app.get("/api/tailored")
+def api_tailored(org_id: str = Depends(get_current_org)):
+    """Tailored Picks: the live published grants ranked against the org's
+    profile by the public /fit scorer (api/org_fit.py). Instant and free.
+    `params` are the fit parameters read from the profile; empty means the
+    profile gives nothing to rank on, and every live grant scores the same."""
+    from api.org_fit import rank_for_org
+    from api.published import load_published
+    org = get_org(org_id) or {}
+    country = country_slug(org.get("country"))
+    ranked = rank_for_org(load_published(country, include=("live",)), org, country)
+    return {
+        "params": ranked["params"],
+        "total": len(ranked["results"]),
+        "results": ranked["results"],
+    }
 
 
 @app.get("/api/tailored/access")

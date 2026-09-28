@@ -155,3 +155,52 @@ def test_open_case_ignores_a_row_only_in_the_old_pool(client, dataset):
     r = client.post("/api/opportunities/open-case", headers=headers,
                     json={"opportunity_id": "OPP-NZ-2026-04-0099"})
     assert r.status_code == 404
+
+
+# --- Tailored Picks -------------------------------------------------------------
+
+OPEN = "Charitable trusts and incorporated societies."
+
+def test_tailored_ranks_the_live_published_rows_for_the_org(client):
+    published.publish_pool("nz", "2026-09", [
+        row(1, tags=["arts"], eligibility=OPEN), row(2, tags=["sport"], eligibility=OPEN),
+        row(3, region=["otago"], eligibility=OPEN), row(4, deadline="2020-01-31", eligibility=OPEN),
+        row(5, tags=["sport"]),  # incorporated societies only
+    ], now=NOW, notifier=lambda *a: None)
+    headers = _register(client)
+    r = client.post("/api/org/setup", headers=headers, json={
+        "sectors": ["Sport & recreation"], "geographies": ["New Zealand > Canterbury"],
+        "fit_status": "charitable-trust"})
+    assert r.status_code == 200, r.text
+    body = client.get("/api/tailored", headers=headers).json()
+    assert body["params"] == {"sector": ["sport"], "region": ["canterbury"], "status": "charitable-trust"}
+    ids = [e["row"]["id"] for e in body["results"]]
+    assert ids[0] == "OPP-NZ-2026-09-0002"          # sector match first
+    assert "OPP-NZ-2026-09-0003" not in ids         # Otago only
+    assert "OPP-NZ-2026-09-0004" not in ids         # closed
+    assert "OPP-NZ-2026-09-0005" not in ids         # not open to a charitable trust
+    assert body["total"] == len(ids)
+    assert all(isinstance(e["why"], list) for e in body["results"])
+
+
+def test_tailored_with_an_empty_profile_lists_every_live_row(client, dataset):
+    headers = _register(client)
+    body = client.get("/api/tailored", headers=headers).json()
+    assert body["params"] == {}
+    assert body["total"] == 2
+
+
+def test_setup_rejects_a_fit_value_outside_the_vocabulary(client):
+    headers = _register(client)
+    r = client.post("/api/org/setup", headers=headers, json={"fit_size": "enormous"})
+    assert r.status_code == 400
+    assert "size" in r.json()["detail"]
+
+
+def test_profile_edit_saves_and_clears_fit_fields(client):
+    headers = _register(client)
+    r = client.patch("/api/org/profile", headers=headers, json={"fit_need": "equipment", "fit_size": "under-50k"})
+    assert r.status_code == 200, r.text
+    assert r.json()["fit_need"] == "equipment"
+    r = client.patch("/api/org/profile", headers=headers, json={"fit_need": ""})
+    assert r.json()["fit_need"] == "" and r.json()["fit_size"] == "under-50k"

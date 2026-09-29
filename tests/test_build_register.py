@@ -260,6 +260,16 @@ def test_md_seed_and_must_appear_names_agree():
         assert seeds.get(f["url"], f["name"]) == f["name"]
 
 
+def test_md_aliases_name_funders_on_the_lists():
+    from api import funders, sources
+    funders._get_lookup.cache_clear()
+    listed = {f["name"] for f in sources.list_seed_sources("md") + sources.must_appear_funders("md")}
+    assert set(get_country_config("md").funder_aliases) <= listed
+    assert funders.canonicalise_funder("Fundația Est-Europeană", "md") == "East Europe Foundation"
+    assert funders.canonicalise_funder("Fundatia Soros Moldova", "md") == "Soros Foundation Moldova"
+    funders._get_lookup.cache_clear()
+
+
 def test_md_tier_one_is_narrow():
     tier_one = br.register_settings("md")["tier_one"]
     assert "MDL 20 million" in tier_one and "EUR 1 million" in tier_one

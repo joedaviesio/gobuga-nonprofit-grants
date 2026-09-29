@@ -96,7 +96,59 @@
     "Dizabilități": "disability",
     "Schimbări climatice": "climate"
   },
-  "funder_aliases": {},
+  "funder_aliases": {
+    "EU Delegation to Moldova": [
+      "delegation of the european union to moldova",
+      "delegation of the european union to the republic of moldova",
+      "delegația uniunii europene în republica moldova",
+      "delegatia uniunii europene in republica moldova"
+    ],
+    "UNDP Moldova": [
+      "pnud moldova", "undp", "united nations development programme moldova",
+      "programul națiunilor unite pentru dezvoltare", "programul natiunilor unite pentru dezvoltare"
+    ],
+    "Soros Foundation Moldova": [
+      "fundația soros moldova", "fundatia soros moldova",
+      "fundația soros-moldova", "fundatia soros-moldova", "soros foundation-moldova",
+      "фонд сорос-молдова", "фонд сорос молдова"
+    ],
+    "East Europe Foundation": [
+      "fundația est-europeană", "fundatia est-europeana", "eef", "eef moldova",
+      "восточно-европейский фонд"
+    ],
+    "GIZ Moldova": [
+      "giz", "deutsche gesellschaft für internationale zusammenarbeit",
+      "deutsche gesellschaft fur internationale zusammenarbeit"
+    ],
+    "Swiss Agency for Development and Cooperation": [
+      "sdc", "sdc moldova", "swiss development cooperation", "swiss development cooperation moldova",
+      "agenția elvețiană pentru dezvoltare și cooperare", "agentia elvetiana pentru dezvoltare si cooperare"
+    ],
+    "Swedish International Development Cooperation Agency": ["sida", "sida moldova"],
+    "Ministry of Education and Research": [
+      "ministerul educației și cercetării", "ministerul educatiei si cercetarii"
+    ],
+    "National Agency for Research and Development": [
+      "ancd", "agenția națională pentru cercetare și dezvoltare",
+      "agentia nationala pentru cercetare si dezvoltare"
+    ],
+    "National Ecological Fund": [
+      "environmental fund moldova", "fondul ecologic național", "fondul ecologic national"
+    ],
+    "Moldovan Social Investment Fund": [
+      "fism", "fondul de investiții sociale din moldova", "fondul de investitii sociale din moldova"
+    ],
+    "National Youth Council of Moldova": [
+      "national youth council moldova", "cntm",
+      "consiliul național al tineretului din moldova", "consiliul national al tineretului din moldova"
+    ],
+    "Primăria Municipiului Chișinău": [
+      "primăria chișinău", "primaria chisinau", "chisinau city hall"
+    ],
+    "Primăria Municipiului Bălți": [
+      "primăria bălți", "primaria balti", "balti city hall"
+    ]
+  },
   "tiers": {
     "scanner": {
       "label": "Grant Scanner",

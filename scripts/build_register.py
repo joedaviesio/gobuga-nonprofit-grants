@@ -21,7 +21,11 @@ page come from the `register` block of the country's config
   name_stopwords         words too common to show a page names the funder
   fold_words             words match at the start of a word, in text and
                          addresses folded to plain Latin letters (for sites
-                         not in English)
+                         not in English); skip words are then checked in
+                         the link's text as well as its address
+  weak_skip_link_words   with fold_words: skip words that do not drop a link
+                         whose text names a grant ("cariera", but not
+                         "Granturi pentru dezvoltarea carierei")
   dedupe_known_by_site   one known funder per site
 
 Usage:
@@ -84,11 +88,12 @@ def _strings(reg: dict, key: str, country: str) -> list[str]:
 
 def _pattern(words: list[str], fold) -> str:
     """One alternation of the words. Folded words match only at the start of
-    a word ("grant" not in "migrant") and a space matches a hyphen too, as
-    in an address."""
+    a word ("grant" not in "migrant"), and a space or hyphen in one matches
+    a space, hyphen or underscore, as in an address."""
     if not fold:
         return "|".join(map(re.escape, words))
-    parts = [r"[\s_-]+".join(map(re.escape, fold(w).split())) for w in words]
+    parts = [r"[\s_-]+".join(map(re.escape, re.split(r"[\s_-]+", fold(w).strip())))
+             for w in words]
     if not all(parts):
         raise ValueError("a word folds to nothing")
     return r"(?<![^\W_])(?:" + "|".join(parts) + ")"
@@ -119,13 +124,23 @@ def register_settings(country: str) -> dict:
             raise _config_error(country, f"register.{key} must be true or false")
     grant_words = _strings(reg, "grant_words", country)
     skip_words = _strings(reg, "skip_link_words", country)
+    weak_words = _strings(reg, "weak_skip_link_words", country)
     stopwords = _strings(reg, "name_stopwords", country)
     fold = _to_ascii if reg.get("fold_words") else None
+    if weak_words and not fold:
+        raise _config_error(country, "register.weak_skip_link_words needs fold_words")
+    own_skip = weak_skip = None
     try:
         words = re.compile(_pattern(grant_words, fold), re.IGNORECASE)
         skip = rs.SKIP_LINK
-        if skip_words:
+        if skip_words and fold:
+            # Kept apart from the English list: in fold mode a link's text is
+            # checked too, and "Contact us to apply" is not a contact page.
+            own_skip = re.compile(_pattern(skip_words, fold), re.IGNORECASE)
+        elif skip_words:
             skip = re.compile(skip.pattern + "|" + _pattern(skip_words, fold), re.IGNORECASE)
+        if weak_words:
+            weak_skip = re.compile(_pattern(weak_words, fold), re.IGNORECASE)
     except ValueError as exc:
         raise _config_error(country, f"register words: {exc}") from exc
     return {
@@ -134,6 +149,8 @@ def register_settings(country: str) -> dict:
         "tier_one": reg["tier_one"],
         "grant_words": words,
         "skip_link": skip,
+        "own_skip": own_skip,
+        "weak_skip": weak_skip,
         "fold": fold,
         "search_terms": reg["search_terms"],
         # Folded like the names they are checked against, so "Fundația" and
@@ -146,6 +163,31 @@ def register_settings(country: str) -> dict:
 def has_grant_words(settings: dict, text: str) -> bool:
     fold = settings["fold"]
     return bool(settings["grant_words"].search(fold(text) if fold else text))
+
+
+def _skipped(settings: dict, href: str, text: str) -> bool:
+    """The country's own skip words, in the link's address or its text. A
+    weak one gives way when the text names a grant. A strong one does not:
+    "Concursul pentru ocuparea funcției publice" has a grant word, concurs."""
+    fold = settings["fold"]
+    address, label = fold(rs.decode(href)), fold(text)
+    own, weak = settings["own_skip"], settings["weak_skip"]
+    if own and (own.search(address) or own.search(label)):
+        return True
+    if weak and (weak.search(address) or weak.search(label)):
+        return not settings["grant_words"].search(label)
+    return False
+
+
+def pick_links(page: dict, home: str, settings: dict) -> list[str]:
+    """rs.pick_links with the country's words. A country without fold_words
+    gets exactly the sweep's rule."""
+    seen = {home.rstrip("/")}
+    if not settings["fold"]:
+        return rs.pick_links(page, home, seen, settings["grant_words"], settings["skip_link"])
+    links = [(h, t) for h, t in page.get("links", []) if not _skipped(settings, h, t)]
+    return rs.pick_links({**page, "links": links}, home, seen, settings["grant_words"],
+                         settings["skip_link"], settings["fold"])
 
 
 class Budget(rs.Budget):
@@ -175,10 +217,11 @@ class Budget(rs.Budget):
 
 
 def fetch(url: str, budget: Budget) -> dict:
-    """rs.fetch_page, counting the Tavily extract it makes for a page that
-    refuses a plain fetch."""
+    """rs.fetch_page, counting any Tavily extract it tried for a page that
+    refuses a plain fetch or has no text without scripts, whether or not
+    the extract brought text back. Callers check the budget first."""
     page = rs.fetch_page(url)
-    if page.get("via") == "tavily" or "extract returned nothing" in page.get("error", ""):
+    if page.get("extract_tried"):
         budget.add_extract()
     return page
 
@@ -248,17 +291,44 @@ def list_candidates(country: str, asks: list[str], budget: Budget, settings: dic
         print(f"[register] {cat}: {len(found)} listed, ${budget.spent:.2f} spent")
 
 
-def load_candidates(path: str) -> tuple[list[dict], dict[str, int]]:
+# Only NZ's candidates file was written in the first format, a bare list
+# with no country in it; any other country's must say whose it is.
+BARE_LIST_COUNTRIES = {"nz"}
+
+
+def load_candidates(path: str, country: str, categories) -> tuple[list[dict], dict[str, int]]:
     """Candidates from an earlier run, and how many asks each category has
-    had. The first format was a bare list: a category found in it counts as
-    fully asked, and one missing from it is listed again."""
+    had. In the bare-list format a category found in the file counts as
+    fully asked, and one missing from it is listed again. Candidates of a
+    category no longer configured are dropped."""
     if not os.path.exists(path):
         return [], {}
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
+
+    def refuse(why: str) -> SystemExit:
+        return SystemExit(f"[register] {path}: {why}. Move it aside to list afresh.")
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as exc:
+        raise refuse(f"cannot be read ({type(exc).__name__})") from exc
     if isinstance(data, list):
-        return data, {c["category"]: ASKS for c in data}
-    return data["candidates"], dict(data["asked"])
+        if country not in BARE_LIST_COUNTRIES:
+            raise refuse(f"an old-format list with no country, not known to be {country}'s")
+        candidates, asked = data, {c.get("category"): ASKS for c in data if isinstance(c, dict)}
+    elif isinstance(data, dict):
+        if data.get("country") != country:
+            raise refuse(f"it holds {data.get('country')!r}'s candidates, not {country!r}'s")
+        candidates, asked = data.get("candidates"), data.get("asked")
+    else:
+        raise refuse("not a candidates file")
+    if not isinstance(candidates, list) or not isinstance(asked, dict) or not all(
+            isinstance(c, dict) and isinstance(c.get("name"), str) for c in candidates):
+        raise refuse("missing its candidates or its count of asks")
+    kept = [c for c in candidates if c.get("category") in categories]
+    if len(kept) < len(candidates):
+        print(f"[register] dropped {len(candidates) - len(kept)} candidates of categories "
+              f"no longer configured")
+    return kept, {c: n for c, n in asked.items() if c in categories and isinstance(n, int)}
 
 
 def dedupe_candidates(candidates: list[dict], country: str) -> list[dict]:
@@ -418,8 +488,7 @@ def resolve(funder: dict, use_search: bool, settings: dict, budget: Budget) -> d
         page = fetch(guess, budget)
         if not page.get("error") and has_grant_words(settings, page.get("text", "")):
             return {**funder, "url": page["url"], "resolved_by": "model"}
-    links = rs.pick_links(home, home["url"], {home["url"].rstrip("/")}, settings["grant_words"],
-                          settings["skip_link"], settings["fold"])
+    links = pick_links(home, home["url"], settings)
     if links:
         return {**funder, "url": links[0], "resolved_by": "link"}
     if use_search:
@@ -465,7 +534,8 @@ def main(argv=None) -> int:
 
     budget = Budget(args.budget)
     candidates_path = path.replace("-register.json", "-register-candidates.json")
-    candidates, asked = ([], {}) if args.only_category else load_candidates(candidates_path)
+    candidates, asked = ([], {}) if args.only_category else load_candidates(
+        candidates_path, args.country, settings["categories"])
     asks = [c for c in categories for _ in range(ASKS - asked.get(c, 0))]
     if asks:
         try:

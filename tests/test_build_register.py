@@ -7,6 +7,7 @@ Pure-Python. Nothing is fetched and no model is called.
 import json
 import os
 import shutil
+import socket
 import sys
 from types import SimpleNamespace
 
@@ -76,6 +77,23 @@ def isolated(tmp_path, monkeypatch):
     clear_config_cache()
     yield sources
     clear_config_cache()
+
+
+@pytest.fixture(autouse=True)
+def no_real_calls(monkeypatch):
+    """No test here may reach a paid service or the network, whatever keys
+    the environment holds: the real clients and outbound connections fail
+    the test. A test that needs a client fakes it over this."""
+    def refuse(*a, **k):
+        raise AssertionError("a real client or connection was made")
+    guard = SimpleNamespace(Anthropic=refuse, TavilyClient=refuse)
+    monkeypatch.setitem(sys.modules, "anthropic", guard)
+    monkeypatch.setitem(sys.modules, "tavily", guard)
+    monkeypatch.setattr(rs, "_client", None)
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    monkeypatch.setattr(socket.socket, "connect_ex", refuse)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
 
 
 def test_nz_categories_are_unchanged():
@@ -150,22 +168,35 @@ def test_md_links_are_chosen_by_romanian_and_russian_words():
 
 
 def md_links(page):
-    settings = br.register_settings("md")
-    return rs.pick_links(page, "https://fond.example/", set(), settings["grant_words"],
-                         settings["skip_link"], settings["fold"])
+    return br.pick_links(page, "https://fond.example/", br.register_settings("md"))
 
 
-def test_md_grant_words_read_both_forms_of_the_romanian_letters():
-    settings = br.register_settings("md")
-    for text in ("Finanțare pentru ONG-uri", "Finanţare pentru ONG-uri", "Finantare",
-                 "Concurs de granturi", "Конкурс грантов", "Call for proposals", "Bursă de studii",
-                 "Bursa de merit", "Sprijin pentru tineri", "Oportunități", "Поддержка НКО"):
-        assert br.has_grant_words(settings, text), text
+def test_nz_links_are_the_sweeps_own():
+    page = {"links": [
+        ("https://trust.example/funding/community-grants", "Community grants"),
+        ("https://trust.example/news/grant-recipients-announced", "Read the news"),
+        ("https://trust.example/apply", "How to apply for funding"),
+        ("https://trust.example/contact", "Contact us to apply for grants"),
+    ]}
+    assert br.pick_links(page, "https://trust.example/", br.register_settings("nz")) \
+        == rs.pick_links(page, "https://trust.example/", {"https://trust.example"})
 
 
 @pytest.mark.parametrize("text", [
-    "Capela satului", "apelare gratuită", "migrant workers", "we reimburse travel",
-    "Programul de lucru",
+    "Finanțare pentru ONG-uri", "Finanţare pentru ONG-uri", "Finantare", "Concurs de granturi",
+    "Конкурс грантов", "Call for proposals", "Bursă de studii", "Bursa de merit",
+    "Sprijin pentru tineri", "Oportunități", "Поддержка НКО", "Прием заявок", "ПРИЁМ ЗАЯВОК",
+    "Apel deschis", "Apel de propuneri", "Apeluri", "Apelul de granturi",
+    "Program de microgranturi", "Subgranturi pentru ONG-uri", "Minigranturi", "Микрогранты",
+    "Мини-гранты", "Cofinanțare", "Co-finanțare",
+])
+def test_md_grant_words_are_found(text):
+    assert br.has_grant_words(br.register_settings("md"), text)
+
+
+@pytest.mark.parametrize("text", [
+    "Capela satului", "apelare gratuită", "Apelul la 112", "Apel telefonic", "migrant workers",
+    "we reimburse travel", "Programul de lucru",
 ])
 def test_md_grant_words_match_whole_word_starts_only(text):
     assert not br.has_grant_words(br.register_settings("md"), text)
@@ -181,22 +212,56 @@ def test_md_apply_and_eligibility_pages_are_not_skipped(href, text):
     assert md_links({"links": [(href, text)]}) == [href]
 
 
+@pytest.mark.parametrize("text", [
+    "Granturi pentru angajarea tinerilor",
+    "Subvenții pentru angajarea persoanelor cu dizabilități",
+    "Program de granturi pentru dezvoltarea carierei",
+    "Program de granturi pentru ocuparea forței de muncă",
+    "Granturi pentru funcții de sprijin comunitar",
+    "Granturi pentru locuri de muncă vacante",
+    "Concurs de granturi — rezultate și calendar",
+    "Achiziții verzi — granturi",
+    "Гранты для поддержки должностных лиц",
+    # The English skip list is for addresses only; these texts are calls.
+    "Contact us to apply for grants",
+    "Terms of Reference – call for proposals",
+    "News and calls for proposals",
+])
+def test_md_grant_links_that_share_a_skip_word_are_kept(text):
+    href = "https://fond.example/ro/p/7"
+    assert md_links({"links": [(href, text)]}) == [href]
+
+
 @pytest.mark.parametrize("href, text", [
     ("https://fond.example/ro/node/123", "Concursul pentru ocuparea funcției publice vacante"),
     ("https://fond.example/ro/post-vacant-concurs", "Concurs"),
-    ("https://fond.example/ru/node/5", "Конкурс на должность специалиста"),
+    ("https://fond.example/ru/node/5", "Конкурс на должность"),
+    ("https://fond.example/ru/node/6", "Конкурс на замещение должности"),
+    ("https://fond.example/ru/%D0%B2%D0%B0%D0%BA%D0%B0%D0%BD%D1%81%D0%B8%D0%B8", "Вакансии"),
     ("https://fond.example/ru/%D0%B2%D0%B0%D0%BA%D0%B0%D0%BD%D1%81%D0%B8%D0%B8", "Гранты"),
     ("https://fond.example/ro/licitatii/granturi", "Granturi"),
     ("https://fond.example/ro/lista-beneficiarilor-granturi", "Granturi"),
     ("https://fond.example/ro/n%C4%83ut%C4%83%C8%9Bi/granturi", "Noutăți: granturi"),
+    ("https://fond.example/ro/p/8", "Rezultatele concursului de granturi 2025"),
+    ("https://fond.example/ro/p/9", "Achiziții publice: granturi"),
 ])
 def test_md_vacancies_tenders_and_past_winners_are_skipped(href, text):
     assert md_links({"links": [(href, text)]}) == []
 
 
+def test_a_weak_skip_word_gives_way_only_to_a_grant():
+    kept = ("https://fond.example/ro/cariera-granturi", "Granturi pentru tineri")
+    assert md_links({"links": [kept]}) == [kept[0]]
+    # The same address with text that names no grant is a jobs page.
+    assert md_links({"links": [("https://fond.example/ro/cariera-granturi", "Cariera")]}) == []
+    assert md_links({"links": [("https://fond.example/ro/granturi/p", "Angajări")]}) == []
+
+
 def test_md_percent_encoded_cyrillic_address_counts():
     href = "https://fond.example/ru/%D0%B3%D1%80%D0%B0%D0%BD%D1%82%D1%8B"  # /ru/гранты
     assert md_links({"links": [(href, "Подробнее")]}) == [href]
+    twice = "https://fond.example/ru/%25D0%25B3%25D1%2580%25D0%25B0%25D0%25BD%25D1%2582%25D1%258B"
+    assert md_links({"links": [(twice, "Подробнее")]}) == [twice]
 
 
 @pytest.mark.parametrize("name, text", [
@@ -313,9 +378,10 @@ def test_a_register_that_is_not_an_object_is_refused(isolated):
 
 
 @pytest.mark.parametrize("slug", ["MD", "Md", "../sources/nz", "md/../nz", "m", "", "nz\n"])
-def test_a_bad_country_slug_is_refused(slug):
+def test_a_bad_country_slug_is_refused(paid, slug):
     with pytest.raises(SystemExit, match="not a country slug"):
         br.main([slug, "--confirm"])
+    assert paid.asks == []
 
 
 def test_a_country_needs_its_own_config_file():
@@ -407,14 +473,42 @@ def test_a_partial_listing_is_resumed_not_taken_as_whole(isolated, paid):
     assert not [p for p in os.listdir(isolated) if p.endswith(".tmp")]
 
 
-def test_a_bare_list_of_candidates_is_still_read(isolated, paid):
-    (isolated / "md-register-candidates.json").write_text(json.dumps([
-        {"name": "Old Funder", "category": "international", "website": "", "funding_url": None,
-         "regions": [], "tier": 2}]))
-    assert br.main(["md", "--confirm", "--no-search", "--budget", "100"]) == 0
-    assert len(paid.asks) == 6 * br.ASKS
-    saved = json.loads((isolated / "md-register-candidates.json").read_text())
-    assert saved["candidates"][0]["name"] == "Old Funder"
+def test_nzs_bare_list_of_candidates_is_still_read():
+    path = os.path.join(tenant.PROJECT_ROOT, "platform", "sources", "nz-register-candidates.json")
+    candidates, asked = br.load_candidates(path, "nz", NZ_CATEGORIES)
+    assert len(candidates) == len(json.load(open(path, encoding="utf-8")))
+    assert asked == {c: br.ASKS for c in NZ_CATEGORIES}
+
+
+OLD_FUNDER = {"name": "Trust Waikato", "category": "council", "website": "", "funding_url": None,
+              "regions": [], "tier": 2}
+
+
+@pytest.mark.parametrize("content, message", [
+    ([OLD_FUNDER], "old-format list with no country, not known to be md's"),
+    ({"country": "nz", "asked": {"council": 2}, "candidates": [OLD_FUNDER]}, "holds 'nz'"),
+    ({"country": "md", "candidates": [OLD_FUNDER]}, "missing its candidates or its count"),
+    ({"country": "md", "asked": {}, "candidates": "none"}, "missing its candidates or its count"),
+    ("{not json", "cannot be read"),
+])
+def test_a_candidates_file_that_is_not_this_countrys_is_refused(isolated, paid, content, message):
+    path = isolated / "md-register-candidates.json"
+    path.write_text(content if isinstance(content, str) else json.dumps(content))
+    with pytest.raises(SystemExit, match=message) as stop:
+        br.main(["md", "--confirm", "--no-search"])
+    assert str(path) in str(stop.value)
+    assert paid.asks == [] and not (isolated / "md-register.json").exists()
+
+
+def test_candidates_of_a_dropped_category_are_dropped(isolated, capsys):
+    path = isolated / "md-register-candidates.json"
+    path.write_text(json.dumps({
+        "country": "md", "asked": {"international": 2, "gaming": 2},
+        "candidates": [{**OLD_FUNDER, "category": "gaming"},
+                       {**OLD_FUNDER, "name": "Kept", "category": "international"}]}))
+    candidates, asked = br.load_candidates(str(path), "md", br.register_settings("md")["categories"])
+    assert [c["name"] for c in candidates] == ["Kept"] and asked == {"international": 2}
+    assert "dropped 1 candidates" in capsys.readouterr().out
 
 
 def test_a_failed_write_leaves_the_old_file(isolated):
@@ -431,7 +525,7 @@ def test_the_budget_stops_the_resolve_phase(monkeypatch):
     and one search; the third and later are left unresolved."""
     monkeypatch.setenv("TAVILY_API_KEY", "test")
     monkeypatch.setattr(rs, "fetch_page", lambda url: {
-        "url": url, "text": "About us.", "links": [], "via": "tavily"})
+        "url": url, "text": "About us.", "links": [], "via": "tavily", "extract_tried": True})
 
     class Tavily:
         def __init__(self, api_key):
@@ -451,6 +545,60 @@ def test_the_budget_stops_the_resolve_phase(monkeypatch):
     # call is started after it.
     assert (budget.searches, budget.extracts) == (2, 3)
     assert budget.spent == pytest.approx(5 * br.TAVILY_PRICE)
+
+
+@pytest.fixture
+def served(monkeypatch):
+    """fetch_page reading `served.html` from a fake server, and Tavily's
+    extract answering with `served.extract` (a callable)."""
+    import httpx
+    state = SimpleNamespace(html="", extract=lambda urls: {"results": []})
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, html=state.html))
+    real_client = httpx.Client
+    monkeypatch.setattr(rs.httpx, "Client", lambda **kw: real_client(transport=transport, **kw))
+    monkeypatch.setattr(rs, "assert_public_url", lambda url: None)
+    monkeypatch.setattr(rs, "PER_HOST_DELAY_S", 0)
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+
+    class Tavily:
+        def __init__(self, api_key):
+            pass
+
+        def extract(self, urls):
+            return state.extract(urls)
+    monkeypatch.setitem(sys.modules, "tavily", SimpleNamespace(TavilyClient=Tavily))
+    return state
+
+
+def failed_extract(urls):
+    raise RuntimeError("Tavily is down")
+
+
+@pytest.mark.parametrize("extract, sweep_count", [
+    (lambda urls: {"results": []}, 1),      # empty: the sweep counts it, as before
+    (failed_extract, 0),                     # failed: the sweep does not, as before
+])
+def test_an_extract_that_brings_nothing_is_still_counted(served, extract, sweep_count):
+    """A page with no text without scripts is sent to Tavily's extract. The
+    build counts every attempt; the sweep's own count is as it was."""
+    served.html = "<html><body><p>Loading…</p></body></html>"
+    served.extract = extract
+    before = rs.SEARCH_CREDITS["extract"]
+    settings = br.register_settings("md")
+    budget = br.Budget(2.5 * br.TAVILY_PRICE)
+    funders = [{"name": f"Funder {n}", "category": "international", "tier": 2, "regions": [],
+                "website": f"https://f{n}.example/"} for n in range(5)]
+    out = [br.resolve(f, False, settings, budget) for f in funders]
+    assert [r["error"] for r in out] == ["no funding page found"] * 3 + [br.BUDGET_REACHED] * 2
+    assert budget.extracts == 3 and budget.spent == pytest.approx(3 * br.TAVILY_PRICE)
+    assert rs.SEARCH_CREDITS["extract"] - before == 3 * sweep_count
+
+
+def test_a_page_with_text_is_returned_to_the_sweep_as_before(served):
+    served.html = "<html><body><main><p>" + "Community grants open now. " * 30 + "</p></main></body></html>"
+    served.extract = failed_extract
+    page = rs.fetch_page("https://f.example/")
+    assert set(page) == {"url", "text", "links"}
 
 
 def test_md_lists_no_longer_carry_usaid():

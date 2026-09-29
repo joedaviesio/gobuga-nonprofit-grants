@@ -186,16 +186,23 @@
     "dedupe_known_by_site": true,
     "grant_words": [
       "grant", "funding", "apply", "application", "call for proposals", "proposals", "scholarship",
-      "finanț", "fonduri", "apel de propuneri", "apeluri", "propuneri", "concurs",
+      "finanț", "cofinanț", "co-finanț", "fonduri", "propuneri", "concurs",
+      "apel deschis", "apel de propuneri", "apelul de propuneri", "apel de granturi",
+      "apelul de granturi", "apeluri", "microgrant", "minigrant", "subgrant",
       "subvenți", "burs", "sprijin", "oportunități",
-      "грант", "финансир", "конкурс", "заявк", "стипенди", "субсиди", "поддержк"
+      "грант", "микрогрант", "мини-грант", "финансир", "конкурс", "заяв", "стипенди",
+      "субсиди", "поддержк"
     ],
     "skip_link_words": [
-      "noutăți", "știri", "новости", "carier", "angajar", "ocuparea", "vacant", "funcție",
-      "funcției", "funcții", "resurse umane", "вакан", "должност",
-      "achiziții", "licitație", "licitații", "закупк", "тендер",
-      "câștigători", "победител", "lista beneficiarilor", "beneficiari contractați", "rezultate"
+      "noutăți", "știri", "новости",
+      "posturi vacante", "post vacant", "funcții vacante", "funcției publice", "funcții publice",
+      "funcție publică", "funcția publică", "ocuparea postului", "ocuparea funcției",
+      "вакан", "на должность", "замещение должност",
+      "achiziții publice", "licitație", "licitații", "закупк", "тендер",
+      "câștigători", "победител", "lista beneficiarilor", "beneficiari contractați",
+      "rezultatele concursului", "rezultatele selecției"
     ],
+    "weak_skip_link_words": ["cariera", "angajări"],
     "search_terms": "granturi finanțare apel de propuneri",
     "name_stopwords": [
       "the", "foundation", "fund", "agency", "ministry", "national", "embassy", "moldova",

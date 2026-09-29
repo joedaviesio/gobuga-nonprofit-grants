@@ -237,9 +237,10 @@ def _site(host: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
-def pick_links(page: dict, home: str, seen: set[str]) -> list[str]:
+def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SKIP_LINK) -> list[str]:
     """Same-site links whose text or address looks like a grant programme,
-    best first. Pure: decided by rule, not by a model."""
+    best first. Pure: decided by rule, not by a model. `words` and `skip`
+    let a country whose sites are not in English bring its own."""
     site = _site(urlsplit(home).hostname)
     scored = []
     for href, text in page.get("links", []):
@@ -247,9 +248,9 @@ def pick_links(page: dict, home: str, seen: set[str]) -> list[str]:
         if parts.scheme not in ("http", "https") or _site(parts.hostname) != site:
             continue
         key = href.rstrip("/")
-        if key in seen or SKIP_LINK.search(href):
+        if key in seen or skip.search(href):
             continue
-        score = 2 * len(GRANT_WORDS.findall(text)) + len(GRANT_WORDS.findall(parts.path))
+        score = 2 * len(words.findall(text)) + len(words.findall(parts.path))
         if score:
             scored.append((-score, len(href), href))
     out, picked = [], set()

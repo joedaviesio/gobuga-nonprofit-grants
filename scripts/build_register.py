@@ -12,6 +12,10 @@ Three steps, each resumable from the file the step before it wrote:
 Costs real money (a few model calls, one search per unresolved funder), so it
 asks for `--confirm`. Without it, it prints what it would do.
 
+The funder categories, the tier 1 threshold and the words that mark a funding
+page come from the `register` block of the country's config
+(`platform/sources/<country>.json`).
+
 Usage:
     python scripts/build_register.py nz --confirm [--budget 3] [--only-category council]
 """
@@ -34,35 +38,45 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 from api.country_config import get_country_config  # noqa: E402
+from api.funders import _to_ascii  # noqa: E402
 from api.sources import register_path  # noqa: E402
+from api.tenant import platform_sources_path  # noqa: E402
 from orchestrator import register_sweep as rs  # noqa: E402
 
 LIST_MODEL = "claude-sonnet-5"
 LIST_PRICE_IN, LIST_PRICE_OUT = 3.00, 15.00
 TAVILY_PRICE = 0.008
 
-CATEGORIES = {
-    "government": "central government departments, ministries and Crown entities that run "
-                  "contestable funds open to community organisations, iwi, schools or clubs "
-                  "(list each funder once, not each fund)",
-    "council": "every territorial authority and regional council: all 67 city and district "
-               "councils and all 11 regional councils",
-    "community-trust": "the 12 community trusts formed from the trust banks",
-    "community-foundation": "community foundations (members of Community Foundations of "
-                            "Aotearoa New Zealand)",
-    "energy-trust": "energy, power and lines consumer trusts that make community grants",
-    "gaming": "class 4 gaming societies that distribute grants to the community",
-    "sports-trust": "regional sports trusts, and national sport funders",
-    "licensing-trust": "licensing trusts and their charitable foundations",
-    "philanthropic": "private, family and statutory philanthropic trusts and foundations that "
-                     "accept applications, including funds administered by Perpetual Guardian "
-                     "and Public Trust (list the fund, with the administrator's site if it has "
-                     "no site of its own)",
-    "corporate": "corporate foundations and company community-grant programmes",
-    "maori": "iwi, rūnanga, Māori trusts and Māori-focused funders that make grants",
-}
+REQUIRED = ("categories", "tier_one", "grant_words", "search_terms")
 
-PROMPT = """List funders in New Zealand of this kind: {what}.
+
+def register_settings(country: str) -> dict:
+    """The country's `register` block, checked and ready to use. Stops with a
+    message naming what is missing, before any call is paid for."""
+    cfg = get_country_config(country)
+    reg = cfg.register or {}
+    missing = [k for k in REQUIRED if not reg.get(k)]
+    if missing:
+        raise SystemExit(f"[register] no register {', '.join(missing)} for {country!r}: add them "
+                         f"to the \"register\" block of {platform_sources_path(country)}")
+    skip = rs.SKIP_LINK
+    if reg.get("skip_link_words"):
+        skip = re.compile(skip.pattern + "|" + "|".join(map(re.escape, reg["skip_link_words"])),
+                          re.IGNORECASE)
+    return {
+        "country": cfg.country_label,
+        "categories": dict(reg["categories"]),
+        "tier_one": reg["tier_one"],
+        "grant_words": re.compile("|".join(map(re.escape, reg["grant_words"])), re.IGNORECASE),
+        "skip_link": skip,
+        "search_terms": reg["search_terms"],
+        # Folded like the names they are checked against, so "Fundația" and
+        # "Fundatia" are one word.
+        "name_stopwords": {_to_ascii(w) for w in reg.get("name_stopwords", [])},
+    }
+
+
+PROMPT = """List funders in {country} of this kind: {what}.
 
 Be complete: list every funder of this kind that you are confident exists and gives grants \
 an organisation or person can apply for. The name is what matters. Never invent a web \
@@ -74,11 +88,16 @@ Answer with one JSON object and nothing else:
 "tier": 1 or 2}}]}}
 
 regions: slugs from this list only: {regions}. Use ["national"] for a funder open nationwide.
-tier 1: a funder that distributes more than about NZD 5 million a year, or is the main \
-funder for its region. tier 2: everyone else."""
+tier 1: {tier_one}. tier 2: everyone else."""
 
 
-def list_candidates(country: str, categories: list[str], budget: rs.Budget) -> list[dict]:
+def list_prompt(settings: dict, category: str, regions: list[str]) -> str:
+    return PROMPT.format(country=settings["country"], what=settings["categories"][category],
+                         regions=", ".join(regions), tier_one=settings["tier_one"])
+
+
+def list_candidates(country: str, categories: list[str], budget: rs.Budget,
+                    settings: dict) -> list[dict]:
     import anthropic
     client = anthropic.Anthropic(max_retries=4)
     cfg = get_country_config(country)
@@ -91,8 +110,7 @@ def list_candidates(country: str, categories: list[str], budget: rs.Budget) -> l
             break
         with client.messages.stream(
             model=LIST_MODEL, max_tokens=16000,
-            messages=[{"role": "user", "content": PROMPT.format(
-                what=CATEGORIES[cat], regions=", ".join(cfg.regions))}],
+            messages=[{"role": "user", "content": list_prompt(settings, cat, cfg.regions)}],
         ) as stream:
             resp = stream.get_final_message()
         with budget._lock:
@@ -148,24 +166,21 @@ def known_funders(country: str) -> list[dict]:
     return list(out.values())
 
 
-def tavily_find(name: str, site: str) -> str | None:
+def tavily_find(name: str, site: str, terms: str) -> str | None:
     from tavily import TavilyClient
     client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
-    res = client.search(query=f"{name} grants funding how to apply", max_results=5,
-                        include_domains=[site])
+    res = client.search(query=f"{name} {terms}", max_results=5, include_domains=[site])
     for r in res.get("results", []):
         if rs._site(urlsplit(r.get("url", "")).hostname) == site:
             return r["url"]
     return None
 
 
-def _name_words(name: str) -> list[str]:
-    stop = {"trust", "the", "limited", "foundation", "community", "council", "zealand",
-            "charitable", "fund", "society", "incorporated"}
-    return [w for w in re.findall(r"[^\W\d_]{4,}", name.lower()) if w not in stop]
+def _name_words(name: str, stop=frozenset()) -> list[str]:
+    return [w for w in re.findall(r"[^\W\d_]{4,}", _to_ascii(name)) if w not in stop]
 
 
-PICK_PROMPT = """Which of these search results is the official website of the New Zealand \
+PICK_PROMPT = """Which of these search results is the official website of the {country} \
 funder "{name}"? Its own site only: not a news story, a directory, a grant-writing service, \
 a council page about other funders, or a different organisation with a similar name.
 
@@ -174,21 +189,21 @@ a council page about other funders, or a different organisation with a similar n
 Answer with one JSON object and nothing else: {{"index": number or null}}"""
 
 
-def tavily_site(name: str, budget: rs.Budget | None = None) -> str | None:
+def tavily_site(name: str, country: str, budget: rs.Budget | None = None) -> str | None:
     """The funder's own site, when the guessed address does not answer.
 
     A cheap model picks among the search results; the caller then checks that
     the page it picked names the funder, so a wrong pick is dropped."""
     from tavily import TavilyClient
     client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
-    res = client.search(query=f'"{name}" New Zealand', max_results=8)
+    res = client.search(query=f'"{name}" {country}', max_results=8)
     results = [r for r in res.get("results", []) if r.get("url")]
     if not results:
         return None
     listing = "\n".join(f"{i}. {r['url']} | {(r.get('title') or '')[:90]} | "
                         f"{(r.get('content') or '')[:160]}" for i, r in enumerate(results))
-    raw, tin, tout = rs.anthropic_ask("You answer with JSON only.",
-                                      PICK_PROMPT.format(name=name, results=listing))
+    raw, tin, tout = rs.anthropic_ask("You answer with JSON only.", PICK_PROMPT.format(
+        country=country, name=name, results=listing))
     if budget is not None:
         budget.add(tin, tout)
     index = (rs.parse_json(raw) or {}).get("index")
@@ -197,24 +212,28 @@ def tavily_site(name: str, budget: rs.Budget | None = None) -> str | None:
     return None
 
 
-def names_funder(page: dict, name: str) -> bool:
-    """The page carries every distinctive word of the funder's name."""
-    text = rs._norm(page.get("text", ""))
+def names_funder(page: dict, name: str, stop=frozenset()) -> bool:
+    """The page carries every distinctive word of the funder's name.
+
+    Both sides are folded to plain Latin letters: Romanian pages mix ș and ş
+    or drop the diacritics, and a Cyrillic name may be written either way."""
+    text = _to_ascii(rs._norm(page.get("text", "")))
     core = re.sub(r"\([^)]*\)", " ", name)
-    words = _name_words(core) or re.findall(r"[^\W\d_]{3,}", core.lower())
+    words = _name_words(core, stop) or re.findall(r"[^\W\d_]{3,}", _to_ascii(core))
     return bool(words) and all(w in text for w in words)
 
 
 BUDGET: rs.Budget | None = None
 
 
-def resolve(funder: dict, use_search: bool) -> dict:
+def resolve(funder: dict, use_search: bool, settings: dict) -> dict:
     """Fill `url` (the funding page) and `resolved_by`, or `error`."""
+    words = settings["grant_words"]
     home = (rs.fetch_page(funder["website"]) if funder["website"].startswith("http")
             else {"error": "no address given"})
     if home.get("error") and use_search:
         try:
-            found = tavily_site(funder["name"], BUDGET)
+            found = tavily_site(funder["name"], settings["country"], BUDGET)
         except Exception as exc:  # noqa: BLE001
             found = None
             print(f"[register] site search failed for {funder['name']}: {type(exc).__name__}")
@@ -223,7 +242,8 @@ def resolve(funder: dict, use_search: bool) -> dict:
             root = "{0.scheme}://{0.netloc}/".format(urlsplit(found))
             for candidate in (found, root):
                 page = rs.fetch_page(candidate)
-                if not page.get("error") and names_funder(page, funder["name"]):
+                if not page.get("error") and names_funder(page, funder["name"],
+                                                          settings["name_stopwords"]):
                     home = page
                     break
             else:
@@ -234,20 +254,21 @@ def resolve(funder: dict, use_search: bool) -> dict:
     guess = funder.get("funding_url")
     if isinstance(guess, str) and rs._site(urlsplit(guess).hostname) == site:
         page = rs.fetch_page(guess)
-        if not page.get("error") and rs.GRANT_WORDS.search(page.get("text", "")):
+        if not page.get("error") and words.search(page.get("text", "")):
             return {**funder, "url": page["url"], "resolved_by": "model"}
-    links = rs.pick_links(home, home["url"], {home["url"].rstrip("/")})
+    links = rs.pick_links(home, home["url"], {home["url"].rstrip("/")}, words,
+                          settings["skip_link"])
     if links:
         return {**funder, "url": links[0], "resolved_by": "link"}
     if use_search:
         try:
-            found = tavily_find(funder["name"], site)
+            found = tavily_find(funder["name"], site, settings["search_terms"])
         except Exception as exc:  # noqa: BLE001
             found = None
             print(f"[register] search failed for {funder['name']}: {type(exc).__name__}")
         if found:
             return {**funder, "url": found, "resolved_by": "search", "searched": True}
-    if rs.GRANT_WORDS.search(home.get("text", "")):
+    if words.search(home.get("text", "")):
         return {**funder, "url": home["url"], "resolved_by": "home", "searched": use_search}
     return {**funder, "error": "no funding page found", "searched": use_search}
 
@@ -257,11 +278,17 @@ def main(argv=None) -> int:
     ap.add_argument("country")
     ap.add_argument("--confirm", action="store_true")
     ap.add_argument("--budget", type=float, default=3.0)
-    ap.add_argument("--only-category", action="append", choices=list(CATEGORIES))
+    ap.add_argument("--only-category", action="append")
     ap.add_argument("--no-search", action="store_true", help="do not use Tavily")
     ap.add_argument("--limit", type=int, help="resolve only the first N candidates")
     args = ap.parse_args(argv)
-    categories = args.only_category or list(CATEGORIES)
+    settings = register_settings(args.country)
+    # Categories differ by country, so they are checked here, not by argparse.
+    unknown = [c for c in args.only_category or [] if c not in settings["categories"]]
+    if unknown:
+        ap.error(f"no category {', '.join(unknown)} for {args.country}; choose from "
+                 f"{', '.join(settings['categories'])}")
+    categories = args.only_category or list(settings["categories"])
     path = register_path(args.country)
     if not args.confirm:
         print(f"Would list funders in {len(categories)} categories with {LIST_MODEL}, check each "
@@ -275,7 +302,7 @@ def main(argv=None) -> int:
         candidates = json.load(open(candidates_path, encoding="utf-8"))
         print(f"[register] reusing {len(candidates)} candidates from {candidates_path}")
     else:
-        candidates = list_candidates(args.country, categories, budget)
+        candidates = list_candidates(args.country, categories, budget, settings)
         seen, unique = set(), []
         for c in candidates:
             key = rs.slugify_funder(re.sub(r"\([^)]*\)|\b(limited|ltd|the)\b", " ", c["name"],
@@ -306,7 +333,7 @@ def main(argv=None) -> int:
     print(f"[register] {len(known)} funders already known, {len(todo)} to resolve")
 
     with ThreadPoolExecutor(max_workers=rs.CRAWL_CONCURRENCY) as pool:
-        resolved = list(pool.map(lambda c: resolve(c, not args.no_search), todo))
+        resolved = list(pool.map(lambda c: resolve(c, not args.no_search, settings), todo))
     if not args.only_category:
         resolved = list(known.values()) + resolved
     searches = sum(1 for r in resolved if r.get("searched"))

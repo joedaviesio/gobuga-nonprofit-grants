@@ -119,12 +119,37 @@
       "model": "claude-sonnet-5"
     }
   },
-  "must_appear_funders": [
-    {
-      "name": "USAID Moldova",
-      "url": "https://www.usaid.gov/moldova",
-      "sectors": ["community", "business", "education", "health"]
+  "register": {
+    "tier_one": "a funder that gives more than about MDL 20 million (about EUR 1 million) a year in Moldova, or is a main funder for its sector or region",
+    "categories": {
+      "international": "international donors and development agencies active in Moldova: the EU, UNDP and other UN agencies, and bilateral agencies such as Sida, SDC, GIZ and ADA, that run grant programmes or calls for proposals open to Moldovan organisations (list each funder once, not each programme)",
+      "embassy": "embassy small-grant programmes run in Moldova by foreign embassies (list each embassy once)",
+      "foundation": "international and regional foundations that make grants in Moldova, such as Soros Foundation Moldova and East Europe Foundation, and Moldovan foundations that regrant donor funds",
+      "government": "Moldovan ministries, state agencies and national funds that run contestable funds or grant competitions open to NGOs, schools, researchers or local public authorities (list each funder once, not each fund)",
+      "council": "municipalities, district (raion) councils and the Gagauzia administration that run grant competitions for local organisations",
+      "cross-border": "cross-border and regional EU programmes open to Moldovan applicants, such as Interreg NEXT Romania-Moldova (list each programme once)",
+      "corporate": "corporate foundations, company community-grant programmes, and diaspora foundations and funds that make grants in Moldova"
     },
+    "grant_words": [
+      "grant", "funding", "apply", "application", "proposals", "scholarship",
+      "finanț", "finanţ", "finant", "fonduri", "apel", "propuneri", "concurs",
+      "subvenț", "subvenţ", "subventi", "burse",
+      "грант", "финансир", "конкурс", "заявк", "стипенди", "субсиди"
+    ],
+    "skip_link_words": [
+      "noutati", "stiri", "novosti", "cariera", "angajar", "ocuparea", "vacante", "vakansii",
+      "achizitii", "licitati", "zakupki", "beneficiari", "castigatori", "rezultate", "pobediteli"
+    ],
+    "search_terms": "granturi finanțare apel de propuneri",
+    "name_stopwords": [
+      "the", "foundation", "fund", "agency", "ministry", "national", "embassy", "moldova",
+      "fundația", "fondul", "asociația", "obștească", "primăria", "consiliul", "raional",
+      "ministerul", "agenția", "națională", "ambasada", "republica",
+      "фонд", "ассоциация", "министерство", "агентство", "национальный", "посольство",
+      "молдова", "республика"
+    ]
+  },
+  "must_appear_funders": [
     {
       "name": "EU Delegation to Moldova",
       "url": "https://www.eeas.europa.eu/delegations/moldova_en",
@@ -139,6 +164,11 @@
       "name": "Soros Foundation Moldova",
       "url": "https://www.soros.md/",
       "sectors": ["community", "education", "arts", "youth", "inclusion"]
+    },
+    {
+      "name": "East Europe Foundation",
+      "url": "https://eef.md/",
+      "sectors": ["community", "business", "education"]
     },
     {
       "name": "GIZ Moldova",
@@ -172,13 +202,6 @@
     }
   ],
   "seed_sources": [
-    {
-      "name": "USAID Moldova programs",
-      "url": "https://www.usaid.gov/moldova",
-      "category": "international",
-      "scope": "national",
-      "sectors": ["community", "business", "education", "health"]
-    },
     {
       "name": "EU funding opportunities Moldova",
       "url": "https://www.eeas.europa.eu/delegations/moldova_en",

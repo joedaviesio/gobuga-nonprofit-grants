@@ -97,50 +97,58 @@
     "Schimbări climatice": "climate"
   },
   "funder_aliases": {
-    "EU Delegation to Moldova": [
+    "Delegația Uniunii Europene în Republica Moldova": [
+      "delegatia uniunii europene in republica moldova",
+      "eu delegation to moldova",
       "delegation of the european union to moldova",
-      "delegation of the european union to the republic of moldova",
-      "delegația uniunii europene în republica moldova",
-      "delegatia uniunii europene in republica moldova"
+      "delegation of the european union to the republic of moldova"
     ],
-    "UNDP Moldova": [
-      "pnud moldova", "undp", "united nations development programme moldova",
-      "programul națiunilor unite pentru dezvoltare", "programul natiunilor unite pentru dezvoltare"
+    "PNUD Moldova": [
+      "undp moldova", "united nations development programme moldova"
     ],
-    "Soros Foundation Moldova": [
-      "fundația soros moldova", "fundatia soros moldova",
-      "fundația soros-moldova", "fundatia soros-moldova", "soros foundation-moldova",
+    "Fundația Soros Moldova": [
+      "fundatia soros moldova", "fundația soros-moldova", "fundatia soros-moldova",
+      "soros foundation moldova", "soros foundation-moldova",
       "фонд сорос-молдова", "фонд сорос молдова"
     ],
-    "East Europe Foundation": [
-      "fundația est-europeană", "fundatia est-europeana", "eef", "eef moldova",
+    "Fundația Est-Europeană": [
+      "fundatia est-europeana", "east europe foundation", "eef moldova",
       "восточно-европейский фонд"
     ],
-    "GIZ Moldova": [
-      "giz", "deutsche gesellschaft für internationale zusammenarbeit",
-      "deutsche gesellschaft fur internationale zusammenarbeit"
+    "Ministerul Educației și Cercetării": [
+      "ministerul educatiei si cercetarii", "ministry of education and research"
     ],
-    "Swiss Agency for Development and Cooperation": [
-      "sdc", "sdc moldova", "swiss development cooperation", "swiss development cooperation moldova",
-      "agenția elvețiană pentru dezvoltare și cooperare", "agentia elvetiana pentru dezvoltare si cooperare"
+    "Agenția Națională pentru Cercetare și Dezvoltare": [
+      "agentia nationala pentru cercetare si dezvoltare", "ancd",
+      "national agency for research and development"
     ],
-    "Swedish International Development Cooperation Agency": ["sida", "sida moldova"],
-    "Ministry of Education and Research": [
-      "ministerul educației și cercetării", "ministerul educatiei si cercetarii"
+    "Fondul Național pentru Mediu": [
+      "fondul national pentru mediu", "fondul național pentru mediu (onipm)",
+      "fondul national pentru mediu (onipm)", "national environmental fund"
     ],
-    "National Agency for Research and Development": [
-      "ancd", "agenția națională pentru cercetare și dezvoltare",
-      "agentia nationala pentru cercetare si dezvoltare"
+    "Organizația pentru Dezvoltarea Antreprenoriatului": [
+      "organizatia pentru dezvoltarea antreprenoriatului", "oda moldova",
+      "organizația pentru dezvoltarea antreprenoriatului (oda)",
+      "organization for entrepreneurship development"
     ],
-    "National Ecological Fund": [
-      "environmental fund moldova", "fondul ecologic național", "fondul ecologic national"
+    "Agenția Națională pentru Tineret": [
+      "agentia nationala pentru tineret", "national youth agency"
     ],
-    "Moldovan Social Investment Fund": [
-      "fism", "fondul de investiții sociale din moldova", "fondul de investitii sociale din moldova"
+    "Agenția de Intervenție și Plăți pentru Agricultură": [
+      "agentia de interventie si plati pentru agricultura", "aipa",
+      "agency for intervention and payments in agriculture"
     ],
-    "National Youth Council of Moldova": [
-      "national youth council moldova", "cntm",
-      "consiliul național al tineretului din moldova", "consiliul national al tineretului din moldova"
+    "Fondul Național pentru Dezvoltare Regională și Locală": [
+      "fondul national pentru dezvoltare regionala si locala",
+      "national fund for regional and local development"
+    ],
+    "Ministerul Culturii": ["ministry of culture"],
+    "Biroul Relații cu Diaspora": [
+      "biroul relatii cu diaspora", "diaspora relations bureau"
+    ],
+    "Interreg NEXT România–Republica Moldova": [
+      "interreg next romania-republica moldova", "interreg next romania-moldova",
+      "interreg next românia-republica moldova"
     ],
     "Primăria Municipiului Chișinău": [
       "primăria chișinău", "primaria chisinau", "chisinau city hall"
@@ -214,144 +222,196 @@
   },
   "must_appear_funders": [
     {
-      "name": "EU Delegation to Moldova",
-      "url": "https://www.eeas.europa.eu/delegations/moldova_en",
-      "sectors": ["community", "business", "infrastructure", "environment"]
+      "name": "Fundația Est-Europeană",
+      "url": "https://eef.md/ro/oportunitati-de-finantare/333",
+      "sectors": ["community", "business", "education", "inclusion"]
     },
     {
-      "name": "UNDP Moldova",
-      "url": "https://www.undp.org/moldova",
-      "sectors": ["community", "environment", "business", "inclusion"]
-    },
-    {
-      "name": "Soros Foundation Moldova",
-      "url": "https://www.soros.md/",
-      "sectors": ["community", "education", "arts", "youth", "inclusion"]
-    },
-    {
-      "name": "East Europe Foundation",
-      "url": "https://eef.md/",
-      "sectors": ["community", "business", "education"]
-    },
-    {
-      "name": "GIZ Moldova",
-      "url": "https://www.giz.de/en/worldwide/294.html",
-      "sectors": ["business", "environment", "infrastructure"]
-    },
-    {
-      "name": "Swiss Agency for Development and Cooperation",
-      "url": "https://www.eda.admin.ch/deza/en/home/countries/moldova.html",
-      "sectors": ["health", "business", "infrastructure"]
-    },
-    {
-      "name": "Swedish International Development Cooperation Agency",
-      "url": "https://www.sida.se/en",
-      "sectors": ["inclusion", "environment", "community"]
-    },
-    {
-      "name": "Ministry of Education and Research",
-      "url": "https://mecc.gov.md/",
+      "name": "Agenția Națională pentru Cercetare și Dezvoltare",
+      "url": "https://www.ancd.gov.md/ro/content/apeluri-deschise",
       "sectors": ["education"]
     },
     {
-      "name": "National Agency for Research and Development",
-      "url": "https://ancd.gov.md/",
-      "sectors": ["education"]
+      "name": "Organizația pentru Dezvoltarea Antreprenoriatului",
+      "url": "https://oda.md/ro/granturi/calendar-granturi",
+      "sectors": ["business"]
     },
     {
-      "name": "National Ecological Fund",
-      "url": "https://www.mediu.gov.md/",
-      "sectors": ["environment"]
+      "name": "Ministerul Culturii",
+      "url": "https://mc.gov.md/ro/content/anunt-proiecte-culturale-2026",
+      "sectors": ["arts"]
+    },
+    {
+      "name": "National Endowment for Democracy",
+      "url": "https://www.ned.org/apply-for-grant/en/",
+      "sectors": ["community", "inclusion"]
     }
   ],
   "seed_sources": [
     {
-      "name": "EU Delegation to Moldova",
-      "url": "https://www.eeas.europa.eu/delegations/moldova_en",
+      "name": "Delegația Uniunii Europene în Republica Moldova",
+      "url": "https://www.eeas.europa.eu/delegations/moldova/finan%C8%9Bare-%C8%99i-granturi_ro",
       "category": "international",
       "scope": "national",
       "sectors": ["community", "business", "infrastructure", "environment"]
     },
     {
-      "name": "UNDP Moldova",
+      "name": "PNUD Moldova",
       "url": "https://www.undp.org/moldova",
       "category": "international",
       "scope": "national",
       "sectors": ["community", "environment", "business", "inclusion"]
     },
     {
-      "name": "Soros Foundation Moldova",
-      "url": "https://www.soros.md/",
+      "name": "Fundația Soros Moldova",
+      "url": "https://soros.md/concursuri/",
       "category": "foundation",
       "scope": "national",
       "sectors": ["community", "education", "arts", "youth", "inclusion"]
     },
     {
-      "name": "GIZ Moldova",
-      "url": "https://www.giz.de/en/worldwide/294.html",
-      "category": "international",
-      "scope": "national",
-      "sectors": ["business", "environment", "infrastructure"]
-    },
-    {
-      "name": "Swiss Agency for Development and Cooperation",
-      "url": "https://www.eda.admin.ch/deza/en/home/countries/moldova.html",
-      "category": "international",
-      "scope": "national",
-      "sectors": ["health", "business", "infrastructure"]
-    },
-    {
-      "name": "EEA and Norway Grants",
-      "url": "https://eeagrants.org/",
-      "category": "international",
-      "scope": "national",
-      "sectors": ["community", "environment", "youth"]
-    },
-    {
-      "name": "East Europe Foundation",
-      "url": "https://eef.md/",
+      "name": "Fundația Est-Europeană",
+      "url": "https://eef.md/ro/oportunitati-de-finantare/333",
       "category": "foundation",
       "scope": "national",
-      "sectors": ["community", "business", "education"]
+      "sectors": ["community", "business", "education", "inclusion"]
     },
     {
-      "name": "National Ecological Fund",
-      "url": "https://www.mediu.gov.md/",
-      "category": "government",
+      "name": "National Endowment for Democracy",
+      "url": "https://www.ned.org/apply-for-grant/en/",
+      "category": "foundation",
       "scope": "national",
-      "sectors": ["environment"]
+      "sectors": ["community", "inclusion"]
     },
     {
-      "name": "National Agency for Research and Development",
-      "url": "https://ancd.gov.md/",
+      "name": "European Endowment for Democracy",
+      "url": "https://democracyendowment.eu/support",
+      "category": "foundation",
+      "scope": "national",
+      "sectors": ["community", "inclusion"]
+    },
+    {
+      "name": "Black Sea Trust for Regional Cooperation",
+      "url": "https://www.gmfus.org/bst-grantmaking",
+      "category": "foundation",
+      "scope": "national",
+      "sectors": ["community"]
+    },
+    {
+      "name": "Ministerul Educației și Cercetării",
+      "url": "https://mec.gov.md/ro/content/programul-de-granturi-scolare-pgs",
       "category": "government",
       "scope": "national",
       "sectors": ["education"]
     },
     {
-      "name": "Ministry of Education and Research",
-      "url": "https://mecc.gov.md/",
+      "name": "Agenția Națională pentru Cercetare și Dezvoltare",
+      "url": "https://www.ancd.gov.md/ro/content/apeluri-deschise",
       "category": "government",
       "scope": "national",
-      "sectors": ["education", "youth"]
+      "sectors": ["education"]
     },
     {
-      "name": "Moldovan Social Investment Fund",
-      "url": "https://www.fism.gov.md/",
+      "name": "Fondul Național pentru Mediu",
+      "url": "https://onipm.gov.md/ro/fnm/calls-for-funding",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["environment"]
+    },
+    {
+      "name": "Organizația pentru Dezvoltarea Antreprenoriatului",
+      "url": "https://oda.md/ro/granturi/calendar-granturi",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["business"]
+    },
+    {
+      "name": "Agenția Națională pentru Tineret",
+      "url": "https://tineret.gov.md/programe/programul-de-granturi-pentru-organizatiile-de-tineret",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["youth"]
+    },
+    {
+      "name": "Agenția de Intervenție și Plăți pentru Agricultură",
+      "url": "https://aipa.gov.md/subventii/",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["business"]
+    },
+    {
+      "name": "Fondul Național pentru Dezvoltare Regională și Locală",
+      "url": "https://midr.gov.md/portofoliu/dezvoltare-regionala-si-locala",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["infrastructure", "community"]
+    },
+    {
+      "name": "Ministerul Culturii",
+      "url": "https://mc.gov.md/ro/content/anunt-proiecte-culturale-2026",
+      "category": "government",
+      "scope": "national",
+      "sectors": ["arts"]
+    },
+    {
+      "name": "Biroul Relații cu Diaspora",
+      "url": "https://brd.gov.md/categorie-program/programul-diaspora-acasa-reuseste-dar-13/",
       "category": "government",
       "scope": "national",
       "sectors": ["community", "infrastructure"]
     },
     {
-      "name": "National Youth Council of Moldova",
-      "url": "https://cntm.md/",
-      "category": "foundation",
+      "name": "Embassy of Japan in Moldova",
+      "url": "https://www.md.emb-japan.go.jp/itprtop_en/index.html",
+      "category": "embassy",
       "scope": "national",
-      "sectors": ["youth"]
+      "sectors": ["community", "health", "education"]
+    },
+    {
+      "name": "German Embassy Chișinău",
+      "url": "https://chisinau.diplo.de/md-de/willkommen/1341814-1341814",
+      "category": "embassy",
+      "scope": "national",
+      "sectors": ["community", "education"]
+    },
+    {
+      "name": "Canada Fund for Local Initiatives",
+      "url": "https://www.international.gc.ca/world-monde/funding-financement/cfli-fcil/moldova.aspx?lang=eng",
+      "category": "embassy",
+      "scope": "national",
+      "sectors": ["community", "inclusion"]
+    },
+    {
+      "name": "Embassy of the Czech Republic in Chișinău",
+      "url": "https://mzv.gov.cz/chisinau/cz/rozvojova_pomoc/velvyslanectvi_ceske_republiky_v.html",
+      "category": "embassy",
+      "scope": "national",
+      "sectors": ["community"]
+    },
+    {
+      "name": "Slovak Aid",
+      "url": "https://slovakaid.sk/en/countries/moldova/",
+      "category": "embassy",
+      "scope": "national",
+      "sectors": ["community"]
+    },
+    {
+      "name": "Interreg NEXT România–Republica Moldova",
+      "url": "https://ro-md.net/ro/finantari/apeluri-de-proiecte",
+      "category": "cross-border",
+      "scope": "national",
+      "sectors": ["community", "environment", "infrastructure"]
+    },
+    {
+      "name": "Interreg NEXT Black Sea Basin",
+      "url": "https://blacksea-cbc.net/",
+      "category": "cross-border",
+      "scope": "national",
+      "sectors": ["environment", "business"]
     },
     {
       "name": "Primăria Municipiului Chișinău",
-      "url": "https://www.chisinau.md/",
+      "url": "https://cultura.chisinau.md/concurs-pentru-finantarea-nerambursabila-a-proiectelor-culturale-2026/",
       "category": "council",
       "scope": "regional",
       "regions": ["chisinau"],
@@ -363,14 +423,6 @@
       "category": "council",
       "scope": "regional",
       "regions": ["balti"],
-      "sectors": []
-    },
-    {
-      "name": "Gagauzia Executive Committee",
-      "url": "https://gagauzia.md/",
-      "category": "council",
-      "scope": "regional",
-      "regions": ["comrat", "gagauzia"],
       "sectors": []
     }
   ]

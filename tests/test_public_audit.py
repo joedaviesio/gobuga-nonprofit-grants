@@ -67,7 +67,7 @@ def test_funder_slugs_keep_their_letters(name, slug):
     "Fundația Soros Moldova", "Fundatia Soros Moldova", "Фонд Сорос Молдова",
 ])
 def test_a_funders_romanian_and_russian_names_share_its_slug(name):
-    assert slugify_funder(name, "md") == "soros-foundation-moldova"
+    assert slugify_funder(name, "md") == "fundatia-soros-moldova"
 
 
 def test_two_cyrillic_funders_do_not_share_a_slug():

@@ -308,7 +308,7 @@ def test_md_known_funders_have_one_entry_per_site():
     sites = [rs._site(urlsplit(f["url"]).hostname) for f in known]
     assert len(sites) == len(set(sites))
     names = {f["name"] for f in known}
-    assert {"UNDP Moldova", "Primăria Municipiului Chișinău"} <= names
+    assert {"PNUD Moldova", "Primăria Municipiului Chișinău"} <= names
     assert not [n for n in names if n.endswith((" grants", " projects", " programs"))]
 
 
@@ -330,9 +330,47 @@ def test_md_aliases_name_funders_on_the_lists():
     funders._get_lookup.cache_clear()
     listed = {f["name"] for f in sources.list_seed_sources("md") + sources.must_appear_funders("md")}
     assert set(get_country_config("md").funder_aliases) <= listed
-    assert funders.canonicalise_funder("Fundația Est-Europeană", "md") == "East Europe Foundation"
-    assert funders.canonicalise_funder("Fundatia Soros Moldova", "md") == "Soros Foundation Moldova"
+    # The Romanian name is the funder's name; English and Russian lead to it.
+    assert funders.canonicalise_funder("East Europe Foundation", "md") == "Fundația Est-Europeană"
+    assert funders.canonicalise_funder("Фонд Сорос-Молдова", "md") == "Fundația Soros Moldova"
     funders._get_lookup.cache_clear()
+
+
+def test_md_aliases_are_not_bare_acronyms_shared_with_other_bodies():
+    aliases = {a for names in get_country_config("md").funder_aliases.values() for a in names}
+    assert not aliases & {"undp", "oda", "eef", "ned", "eed", "bst", "giz", "sdc", "sida"}
+
+
+def _md_lists():
+    from api import sources
+    return sources.list_seed_sources("md"), sources.must_appear_funders("md")
+
+
+@pytest.mark.parametrize("gone", [
+    "eeagrants", "norway grants", "fism", "social investment fund", "cntm", "youth council",
+    "gagauzia", "giz", "eda.admin.ch", "swiss agency", "sida", "swedish",
+])
+def test_md_lists_no_longer_carry_the_removed_funders(gone):
+    seeds, must = _md_lists()
+    assert not [e for e in seeds + must if gone in (e["name"] + " " + e["url"]).lower()]
+    known = br.known_funders("md", br.register_settings("md")["dedupe_known_by_site"])
+    assert not [f for f in known if gone in (f["name"] + " " + f["url"]).lower()]
+
+
+def test_md_seed_categories_are_configured():
+    seeds, _ = _md_lists()
+    assert {s["category"] for s in seeds} <= set(br.register_settings("md")["categories"])
+
+
+def test_md_must_appear_funders_are_seeds_too():
+    seeds, must = _md_lists()
+    listed = {(s["name"], s["url"]) for s in seeds}
+    assert [(f["name"], f["url"]) for f in must if (f["name"], f["url"]) not in listed] == []
+
+
+def test_md_seeds_do_not_share_a_url():
+    seeds, _ = _md_lists()
+    assert len({s["url"] for s in seeds}) == len(seeds) == 25
 
 
 def test_md_tier_one_is_narrow():

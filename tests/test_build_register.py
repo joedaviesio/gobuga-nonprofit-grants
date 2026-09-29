@@ -7,6 +7,8 @@ Pure-Python. Nothing is fetched and no model is called.
 import json
 import os
 import shutil
+import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -134,7 +136,6 @@ def test_an_unknown_category_is_refused():
 
 
 def test_md_links_are_chosen_by_romanian_and_russian_words():
-    settings = br.register_settings("md")
     page = {"links": [
         ("https://fond.example/despre-noi", "Despre noi"),
         ("https://fond.example/noutati/granturi-acordate", "Granturi acordate"),
@@ -142,19 +143,60 @@ def test_md_links_are_chosen_by_romanian_and_russian_words():
         ("https://fond.example/apeluri", "Apel de propuneri"),
         ("https://fond.example/ru/programmy", "Гранты и финансирование"),
     ]}
-    picked = rs.pick_links(page, "https://fond.example/", set(), settings["grant_words"],
-                           settings["skip_link"])
-    assert picked == ["https://fond.example/apeluri", "https://fond.example/ru/programmy"]
+    assert md_links(page) == ["https://fond.example/ru/programmy", "https://fond.example/apeluri"]
     # The English rules alone miss the call and follow the news story.
     assert rs.pick_links(page, "https://fond.example/", set()) == [
         "https://fond.example/noutati/granturi-acordate"]
 
 
+def md_links(page):
+    settings = br.register_settings("md")
+    return rs.pick_links(page, "https://fond.example/", set(), settings["grant_words"],
+                         settings["skip_link"], settings["fold"])
+
+
 def test_md_grant_words_read_both_forms_of_the_romanian_letters():
-    words = br.register_settings("md")["grant_words"]
+    settings = br.register_settings("md")
     for text in ("Finanțare pentru ONG-uri", "Finanţare pentru ONG-uri", "Finantare",
-                 "Concurs de granturi", "Конкурс грантов", "Call for proposals"):
-        assert words.search(text), text
+                 "Concurs de granturi", "Конкурс грантов", "Call for proposals", "Bursă de studii",
+                 "Bursa de merit", "Sprijin pentru tineri", "Oportunități", "Поддержка НКО"):
+        assert br.has_grant_words(settings, text), text
+
+
+@pytest.mark.parametrize("text", [
+    "Capela satului", "apelare gratuită", "migrant workers", "we reimburse travel",
+    "Programul de lucru",
+])
+def test_md_grant_words_match_whole_word_starts_only(text):
+    assert not br.has_grant_words(br.register_settings("md"), text)
+
+
+@pytest.mark.parametrize("href, text", [
+    ("https://fond.example/ro/cum-sa-solicitati-finantare", "Cum să solicitați finanțare"),
+    ("https://fond.example/ro/solicitati-un-grant", "Solicitați un grant"),
+    ("https://fond.example/ro/beneficiari-eligibili", "Beneficiari eligibili pentru granturi"),
+    ("https://fond.example/ro/granturi-pentru-beneficiari", "Granturi pentru beneficiari"),
+])
+def test_md_apply_and_eligibility_pages_are_not_skipped(href, text):
+    assert md_links({"links": [(href, text)]}) == [href]
+
+
+@pytest.mark.parametrize("href, text", [
+    ("https://fond.example/ro/node/123", "Concursul pentru ocuparea funcției publice vacante"),
+    ("https://fond.example/ro/post-vacant-concurs", "Concurs"),
+    ("https://fond.example/ru/node/5", "Конкурс на должность специалиста"),
+    ("https://fond.example/ru/%D0%B2%D0%B0%D0%BA%D0%B0%D0%BD%D1%81%D0%B8%D0%B8", "Гранты"),
+    ("https://fond.example/ro/licitatii/granturi", "Granturi"),
+    ("https://fond.example/ro/lista-beneficiarilor-granturi", "Granturi"),
+    ("https://fond.example/ro/n%C4%83ut%C4%83%C8%9Bi/granturi", "Noutăți: granturi"),
+])
+def test_md_vacancies_tenders_and_past_winners_are_skipped(href, text):
+    assert md_links({"links": [(href, text)]}) == []
+
+
+def test_md_percent_encoded_cyrillic_address_counts():
+    href = "https://fond.example/ru/%D0%B3%D1%80%D0%B0%D0%BD%D1%82%D1%8B"  # /ru/гранты
+    assert md_links({"links": [(href, "Подробнее")]}) == [href]
 
 
 @pytest.mark.parametrize("name, text", [
@@ -172,6 +214,233 @@ def test_a_page_that_does_not_name_the_funder_is_not_its_site():
     assert not br.names_funder({"text": "Primăria Cahul"}, "Primăria Bălți", stop)
     assert not br.names_funder({"text": "Toi Foundation"}, "Rātā Foundation",
                                br.register_settings("nz")["name_stopwords"])
+
+
+@pytest.mark.parametrize("text, found", [
+    ("Rātā Foundation grants", True),
+    ("Rata Foundation grants", True),
+    ("Strata title management", False),
+])
+def test_names_are_whole_words(text, found):
+    stop = br.register_settings("nz")["name_stopwords"]
+    assert br.names_funder({"text": text}, "Rātā Foundation", stop) is found
+
+
+@pytest.mark.parametrize("name, text", [
+    ("ADA", "Canada Fund for Local Initiatives"),
+    ("GIZ", "The gizmo shop"),
+    ("UNDP", "sundpa travel"),
+])
+def test_short_and_acronym_names_are_not_found_inside_other_words(name, text):
+    stop = br.register_settings("md")["name_stopwords"]
+    assert not br.names_funder({"text": text}, name, stop)
+    assert br.names_funder({"text": f"About {name} in Moldova"}, name, stop)
+
+
+def test_md_known_funders_have_one_entry_per_site():
+    from urllib.parse import urlsplit
+    known = br.known_funders("md", br.register_settings("md")["dedupe_known_by_site"])
+    sites = [rs._site(urlsplit(f["url"]).hostname) for f in known]
+    assert len(sites) == len(set(sites))
+    names = {f["name"] for f in known}
+    assert {"UNDP Moldova", "Primăria Municipiului Chișinău"} <= names
+    assert not [n for n in names if n.endswith((" grants", " projects", " programs"))]
+
+
+def test_nz_known_funders_are_not_deduped_by_site():
+    assert br.register_settings("nz")["dedupe_known_by_site"] is False
+    names = {f["name"] for f in br.known_funders("nz")}
+    assert {"Sport NZ", "Sport NZ funding"} <= names
+
+
+def test_md_seed_and_must_appear_names_agree():
+    from api import sources
+    seeds = {s["url"]: s["name"] for s in sources.list_seed_sources("md")}
+    for f in sources.must_appear_funders("md"):
+        assert seeds.get(f["url"], f["name"]) == f["name"]
+
+
+def test_md_tier_one_is_narrow():
+    tier_one = br.register_settings("md")["tier_one"]
+    assert "MDL 20 million" in tier_one and "EUR 1 million" in tier_one
+    assert "main funder for its sector or region" not in tier_one
+
+
+# --- Config checks -------------------------------------------------------------
+
+def edit_md(isolated, change):
+    data = json.loads((isolated / "md.json").read_text())
+    change(data["register"])
+    (isolated / "md.json").write_text(json.dumps(data, ensure_ascii=False))
+    clear_config_cache()
+
+
+@pytest.mark.parametrize("change, message", [
+    (lambda r: r.update(grant_words="grant"), "grant_words must be a list"),
+    (lambda r: r["grant_words"].append(""), "grant_words must be a list"),
+    (lambda r: r["grant_words"].append("  "), "grant_words must be a list"),
+    (lambda r: r["skip_link_words"].append(""), "skip_link_words must be a list"),
+    (lambda r: r.update(name_stopwords="the"), "name_stopwords must be a list"),
+    (lambda r: r["categories"].update(embassy=3), "categories must map"),
+    (lambda r: r.update(categories=["international"]), "categories must map"),
+    (lambda r: r.update(tier_one=["big"]), "tier_one must be"),
+    (lambda r: r.update(fold_words="yes"), "fold_words must be"),
+    (lambda r: r["grant_words"].append("ъ"), "folds to nothing"),
+])
+def test_bad_config_stops_before_any_call(isolated, change, message):
+    edit_md(isolated, change)
+    with pytest.raises(SystemExit, match=message):
+        br.register_settings("md")
+
+
+def test_a_register_that_is_not_an_object_is_refused(isolated):
+    data = json.loads((isolated / "md.json").read_text())
+    data["register"] = [1, 2]
+    (isolated / "md.json").write_text(json.dumps(data))
+    clear_config_cache()
+    with pytest.raises(SystemExit, match="register must be an object"):
+        br.register_settings("md")
+
+
+@pytest.mark.parametrize("slug", ["MD", "Md", "../sources/nz", "md/../nz", "m", "", "nz\n"])
+def test_a_bad_country_slug_is_refused(slug):
+    with pytest.raises(SystemExit, match="not a country slug"):
+        br.main([slug, "--confirm"])
+
+
+def test_a_country_needs_its_own_config_file():
+    with pytest.raises(SystemExit, match="no zz.json"):
+        br.register_settings("zz")
+
+
+# --- Runs, with every paid call faked -------------------------------------------
+
+class FakeAnthropic:
+    """Stands in for the anthropic module: each ask lists one new funder and
+    costs `COST` dollars at the listing model's price."""
+    asks: list[str] = []
+    COST = 1.0
+
+    def __init__(self, **_):
+        self.messages = self
+
+    def stream(self, model, max_tokens, messages):
+        FakeAnthropic.asks.append(messages[0]["content"])
+        n = len(FakeAnthropic.asks)
+        body = json.dumps({"funders": [{"name": f"Funder {n}", "website": f"https://f{n}.example/"}]})
+        resp = SimpleNamespace(
+            usage=SimpleNamespace(input_tokens=0,
+                                  output_tokens=round(self.COST * 1e6 / br.LIST_PRICE_OUT)),
+            content=[SimpleNamespace(type="text", text=body)])
+        return _Stream(resp)
+
+
+class _Stream:
+    def __init__(self, resp):
+        self.resp = resp
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+    def get_final_message(self):
+        return self.resp
+
+
+@pytest.fixture
+def paid(monkeypatch):
+    """Every paid call faked; a real one would fail the test."""
+    FakeAnthropic.asks = []
+    monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=FakeAnthropic))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+    monkeypatch.setattr(rs, "fetch_page", lambda url: {"url": url, "error": "offline"})
+
+    def no_call(*a, **k):
+        raise AssertionError("a paid call was made")
+    monkeypatch.setattr(rs, "anthropic_ask", no_call)
+    monkeypatch.setattr(br, "tavily_site", no_call)
+    monkeypatch.setattr(br, "tavily_find", no_call)
+    return FakeAnthropic
+
+
+@pytest.mark.parametrize("key", ["ANTHROPIC_API_KEY", "TAVILY_API_KEY"])
+def test_a_missing_key_stops_the_run_before_any_call(paid, monkeypatch, key):
+    monkeypatch.delenv(key)
+    with pytest.raises(SystemExit, match=key):
+        br.main(["md", "--confirm"])
+    assert paid.asks == []
+
+
+def test_confirm_without_a_register_block_stops_before_any_call(isolated, paid):
+    edit_md(isolated, lambda r: r.clear())
+    with pytest.raises(SystemExit, match="no register categories"):
+        br.main(["md", "--confirm"])
+    assert paid.asks == []
+
+
+def test_a_partial_listing_is_resumed_not_taken_as_whole(isolated, paid):
+    candidates = isolated / "md-register-candidates.json"
+    # $1 an ask against $1.50: the second ask reaches the budget.
+    assert br.main(["md", "--confirm", "--no-search", "--budget", "1.5"]) == 1
+    saved = json.loads(candidates.read_text())
+    assert saved["asked"] == {"international": 2} and len(saved["candidates"]) == 2
+    assert not (isolated / "md-register.json").exists()
+    assert br.main(["md", "--confirm", "--no-search", "--budget", "100"]) == 0
+    assert len(paid.asks) == 2 + 6 * br.ASKS
+    assert all("of this kind: international donors" not in a for a in paid.asks[2:])
+    saved = json.loads(candidates.read_text())
+    assert set(saved["asked"].values()) == {br.ASKS} and len(saved["asked"]) == 7
+    assert json.loads((isolated / "md-register.json").read_text())["country"] == "md"
+    assert not [p for p in os.listdir(isolated) if p.endswith(".tmp")]
+
+
+def test_a_bare_list_of_candidates_is_still_read(isolated, paid):
+    (isolated / "md-register-candidates.json").write_text(json.dumps([
+        {"name": "Old Funder", "category": "international", "website": "", "funding_url": None,
+         "regions": [], "tier": 2}]))
+    assert br.main(["md", "--confirm", "--no-search", "--budget", "100"]) == 0
+    assert len(paid.asks) == 6 * br.ASKS
+    saved = json.loads((isolated / "md-register-candidates.json").read_text())
+    assert saved["candidates"][0]["name"] == "Old Funder"
+
+
+def test_a_failed_write_leaves_the_old_file(isolated):
+    path = str(isolated / "md-register.json")
+    br.write_json(path, {"ok": True})
+    with pytest.raises(TypeError):
+        br.write_json(path, {"bad": object()})
+    assert json.loads(open(path).read()) == {"ok": True}
+    assert not [p for p in os.listdir(isolated) if p.endswith(".tmp")]
+
+
+def test_the_budget_stops_the_resolve_phase(monkeypatch):
+    """Each funder costs one extract (its home page refuses a plain fetch)
+    and one search; the third and later are left unresolved."""
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+    monkeypatch.setattr(rs, "fetch_page", lambda url: {
+        "url": url, "text": "About us.", "links": [], "via": "tavily"})
+
+    class Tavily:
+        def __init__(self, api_key):
+            pass
+
+        def search(self, query, max_results, include_domains=None):
+            return {"results": [{"url": f"https://{include_domains[0]}/grants"}]}
+    monkeypatch.setitem(sys.modules, "tavily", SimpleNamespace(TavilyClient=Tavily))
+    settings = br.register_settings("md")
+    budget = br.Budget(4.5 * br.TAVILY_PRICE)
+    funders = [{"name": f"Funder {n}", "category": "international", "tier": 2, "regions": [],
+                "website": f"https://f{n}.example/"} for n in range(5)]
+    out = [br.resolve(f, True, settings, budget) for f in funders]
+    assert [r.get("resolved_by") for r in out[:2]] == ["search", "search"]
+    assert [r.get("error") for r in out[2:]] == [br.BUDGET_REACHED] * 3
+    # The third funder's home page was read before the cap was reached; no
+    # call is started after it.
+    assert (budget.searches, budget.extracts) == (2, 3)
+    assert budget.spent == pytest.approx(5 * br.TAVILY_PRICE)
 
 
 def test_md_lists_no_longer_carry_usaid():

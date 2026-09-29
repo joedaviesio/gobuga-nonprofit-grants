@@ -34,7 +34,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from html.parser import HTMLParser
-from urllib.parse import urldefrag, urljoin, urlsplit
+from urllib.parse import unquote, urldefrag, urljoin, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -237,10 +237,11 @@ def _site(host: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
-def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SKIP_LINK) -> list[str]:
+def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SKIP_LINK,
+               fold=None) -> list[str]:
     """Same-site links whose text or address looks like a grant programme,
-    best first. Pure: decided by rule, not by a model. `words` and `skip`
-    let a country whose sites are not in English bring its own."""
+    best first. Pure: decided by rule, not by a model. `words`, `skip` and
+    `fold` let a country whose sites are not in English bring its own."""
     site = _site(urlsplit(home).hostname)
     scored = []
     for href, text in page.get("links", []):
@@ -248,9 +249,15 @@ def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SK
         if parts.scheme not in ("http", "https") or _site(parts.hostname) != site:
             continue
         key = href.rstrip("/")
-        if key in seen or skip.search(href):
+        address, path = href, parts.path
+        if fold:
+            # Decoded and folded to plain Latin letters, so a Cyrillic or
+            # percent-encoded address reads like any other. The link text is
+            # checked too: a vacancy's address is often just a number.
+            address, path, text = fold(unquote(href)), fold(unquote(parts.path)), fold(text)
+        if key in seen or skip.search(address) or (fold and skip.search(text)):
             continue
-        score = 2 * len(words.findall(text)) + len(words.findall(parts.path))
+        score = 2 * len(words.findall(text)) + len(words.findall(path))
         if score:
             scored.append((-score, len(href), href))
     out, picked = [], set()

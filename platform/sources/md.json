@@ -120,7 +120,7 @@
     }
   },
   "register": {
-    "tier_one": "a funder that gives more than about MDL 20 million (about EUR 1 million) a year in Moldova, or is a main funder for its sector or region",
+    "tier_one": "a funder that gives more than about MDL 20 million (about EUR 1 million) a year in grants in Moldova, or is the single largest grant-maker in the whole country for its sector; most funders are not tier 1",
     "categories": {
       "international": "international donors and development agencies active in Moldova: the EU, UNDP and other UN agencies, and bilateral agencies such as Sida, SDC, GIZ and ADA, that run grant programmes or calls for proposals open to Moldovan organisations (list each funder once, not each programme)",
       "embassy": "embassy small-grant programmes run in Moldova by foreign embassies (list each embassy once)",
@@ -130,15 +130,19 @@
       "cross-border": "cross-border and regional EU programmes open to Moldovan applicants, such as Interreg NEXT Romania-Moldova (list each programme once)",
       "corporate": "corporate foundations, company community-grant programmes, and diaspora foundations and funds that make grants in Moldova"
     },
+    "fold_words": true,
+    "dedupe_known_by_site": true,
     "grant_words": [
-      "grant", "funding", "apply", "application", "proposals", "scholarship",
-      "finanț", "finanţ", "finant", "fonduri", "apel", "propuneri", "concurs",
-      "subvenț", "subvenţ", "subventi", "burse",
-      "грант", "финансир", "конкурс", "заявк", "стипенди", "субсиди"
+      "grant", "funding", "apply", "application", "call for proposals", "proposals", "scholarship",
+      "finanț", "fonduri", "apel de propuneri", "apeluri", "propuneri", "concurs",
+      "subvenți", "burs", "sprijin", "oportunități",
+      "грант", "финансир", "конкурс", "заявк", "стипенди", "субсиди", "поддержк"
     ],
     "skip_link_words": [
-      "noutati", "stiri", "novosti", "cariera", "angajar", "ocuparea", "vacante", "vakansii",
-      "achizitii", "licitati", "zakupki", "beneficiari", "castigatori", "rezultate", "pobediteli"
+      "noutăți", "știri", "новости", "carier", "angajar", "ocuparea", "vacant", "funcție",
+      "funcției", "funcții", "resurse umane", "вакан", "должност",
+      "achiziții", "licitație", "licitații", "закупк", "тендер",
+      "câștigători", "победител", "lista beneficiarilor", "beneficiari contractați", "rezultate"
     ],
     "search_terms": "granturi finanțare apel de propuneri",
     "name_stopwords": [
@@ -196,21 +200,21 @@
       "sectors": ["education"]
     },
     {
-      "name": "Environmental Fund Moldova",
+      "name": "National Ecological Fund",
       "url": "https://www.mediu.gov.md/",
       "sectors": ["environment"]
     }
   ],
   "seed_sources": [
     {
-      "name": "EU funding opportunities Moldova",
+      "name": "EU Delegation to Moldova",
       "url": "https://www.eeas.europa.eu/delegations/moldova_en",
       "category": "international",
       "scope": "national",
       "sectors": ["community", "business", "infrastructure", "environment"]
     },
     {
-      "name": "UNDP Moldova grants",
+      "name": "UNDP Moldova",
       "url": "https://www.undp.org/moldova",
       "category": "international",
       "scope": "national",
@@ -224,21 +228,21 @@
       "sectors": ["community", "education", "arts", "youth", "inclusion"]
     },
     {
-      "name": "GIZ Moldova projects",
+      "name": "GIZ Moldova",
       "url": "https://www.giz.de/en/worldwide/294.html",
       "category": "international",
       "scope": "national",
       "sectors": ["business", "environment", "infrastructure"]
     },
     {
-      "name": "Swiss Development Cooperation Moldova",
+      "name": "Swiss Agency for Development and Cooperation",
       "url": "https://www.eda.admin.ch/deza/en/home/countries/moldova.html",
       "category": "international",
       "scope": "national",
       "sectors": ["health", "business", "infrastructure"]
     },
     {
-      "name": "EEA & Norway Grants Moldova",
+      "name": "EEA and Norway Grants",
       "url": "https://eeagrants.org/",
       "category": "international",
       "scope": "national",
@@ -259,7 +263,7 @@
       "sectors": ["environment"]
     },
     {
-      "name": "ANCD grants and programs",
+      "name": "National Agency for Research and Development",
       "url": "https://ancd.gov.md/",
       "category": "government",
       "scope": "national",
@@ -280,14 +284,14 @@
       "sectors": ["community", "infrastructure"]
     },
     {
-      "name": "National Youth Council Moldova",
+      "name": "National Youth Council of Moldova",
       "url": "https://cntm.md/",
       "category": "foundation",
       "scope": "national",
       "sectors": ["youth"]
     },
     {
-      "name": "Primăria Chișinău grants",
+      "name": "Primăria Municipiului Chișinău",
       "url": "https://www.chisinau.md/",
       "category": "council",
       "scope": "regional",
@@ -295,7 +299,7 @@
       "sectors": []
     },
     {
-      "name": "Primăria Bălți grants",
+      "name": "Primăria Municipiului Bălți",
       "url": "https://www.balti.md/",
       "category": "council",
       "scope": "regional",

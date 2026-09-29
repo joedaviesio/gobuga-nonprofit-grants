@@ -116,39 +116,70 @@
       "восточно-европейский фонд"
     ],
     "Ministerul Educației și Cercetării": [
-      "ministerul educatiei si cercetarii", "ministry of education and research"
+      "ministerul educatiei si cercetarii",
+      "ministry of education and research of the republic of moldova",
+      "ministry of education and research of moldova",
+      "ministry of education and research (moldova)"
     ],
     "Agenția Națională pentru Cercetare și Dezvoltare": [
       "agentia nationala pentru cercetare si dezvoltare", "ancd",
-      "national agency for research and development"
+      "national agency for research and development of the republic of moldova",
+      "national agency for research and development of moldova",
+      "national agency for research and development (moldova)"
     ],
     "Fondul Național pentru Mediu": [
       "fondul national pentru mediu", "fondul național pentru mediu (onipm)",
-      "fondul national pentru mediu (onipm)", "national environmental fund"
+      "fondul national pentru mediu (onipm)", "national environmental fund of moldova",
+      "national environmental fund of the republic of moldova",
+      "national environmental fund (moldova)"
     ],
     "Organizația pentru Dezvoltarea Antreprenoriatului": [
       "organizatia pentru dezvoltarea antreprenoriatului", "oda moldova",
       "organizația pentru dezvoltarea antreprenoriatului (oda)",
-      "organization for entrepreneurship development"
+      "organization for entrepreneurship development of moldova",
+      "organization for entrepreneurship development (moldova)",
+      "organization for entrepreneurship development (oda moldova)"
     ],
     "Agenția Națională pentru Tineret": [
-      "agentia nationala pentru tineret", "national youth agency"
+      "agentia nationala pentru tineret", "national youth agency of moldova",
+      "national youth agency of the republic of moldova", "national youth agency (moldova)"
     ],
     "Agenția de Intervenție și Plăți pentru Agricultură": [
       "agentia de interventie si plati pentru agricultura", "aipa",
-      "agency for intervention and payments in agriculture"
+      "agency for intervention and payments in agriculture of moldova",
+      "agency for intervention and payments in agriculture (aipa)",
+      "agency for interventions and payments in agriculture (aipa)",
+      "agency for interventions and payments in agriculture of moldova"
     ],
     "Fondul Național pentru Dezvoltare Regională și Locală": [
       "fondul national pentru dezvoltare regionala si locala",
-      "national fund for regional and local development"
+      "national fund for regional and local development of moldova",
+      "national fund for regional and local development (moldova)"
     ],
-    "Ministerul Culturii": ["ministry of culture"],
+    "Ministerul Culturii": [
+      "ministry of culture of the republic of moldova", "ministry of culture of moldova",
+      "ministry of culture (moldova)", "ministerul culturii al republicii moldova"
+    ],
     "Biroul Relații cu Diaspora": [
-      "biroul relatii cu diaspora", "diaspora relations bureau"
+      "biroul relatii cu diaspora", "diaspora relations bureau of moldova",
+      "diaspora relations bureau (moldova)"
     ],
     "Interreg NEXT România–Republica Moldova": [
       "interreg next romania-republica moldova", "interreg next romania-moldova",
-      "interreg next românia-republica moldova"
+      "interreg next românia-republica moldova", "interreg next romania–moldova",
+      "interreg next românia–moldova", "interreg next romania-republic of moldova",
+      "interreg next romania–republic of moldova"
+    ],
+    "Embassy of Japan in Moldova": [
+      "embassy of japan in the republic of moldova",
+      "ambasada japoniei în republica moldova", "ambasada japoniei in republica moldova"
+    ],
+    "German Embassy Chișinău": [
+      "german embassy chisinau", "embassy of the federal republic of germany in chisinau",
+      "embassy of the federal republic of germany in chișinău",
+      "ambasada republicii federale germania la chișinău",
+      "ambasada republicii federale germania la chisinau",
+      "ambasada germaniei la chișinău", "ambasada germaniei la chisinau"
     ],
     "Primăria Municipiului Chișinău": [
       "primăria chișinău", "primaria chisinau", "chisinau city hall"
@@ -182,22 +213,42 @@
   "register": {
     "tier_one": "a funder that gives more than about MDL 20 million (about EUR 1 million) a year in grants in Moldova, or is the single largest grant-maker in the whole country for its sector; most funders are not tier 1",
     "categories": {
-      "international": "international donors and development agencies active in Moldova: the EU, UNDP and other UN agencies, and bilateral agencies such as Sida, SDC, GIZ and ADA, that run grant programmes or calls for proposals open to Moldovan organisations (list each funder once, not each programme)",
+      "international": "international donors and development agencies active in Moldova, such as the EU, UNDP and other UN agencies, that run grant programmes or calls for proposals open to Moldovan organisations (list each funder once, not each programme)",
       "embassy": "embassy small-grant programmes run in Moldova by foreign embassies (list each embassy once)",
       "foundation": "international and regional foundations that make grants in Moldova, such as Soros Foundation Moldova and East Europe Foundation, and Moldovan foundations that regrant donor funds",
       "government": "Moldovan ministries, state agencies and national funds that run contestable funds or grant competitions open to NGOs, schools, researchers or local public authorities (list each funder once, not each fund)",
-      "council": "municipalities, district (raion) councils and the Gagauzia administration that run grant competitions for local organisations",
+      "council": "municipalities and district (raion) councils that run grant competitions for local organisations",
       "cross-border": "cross-border and regional EU programmes open to Moldovan applicants, such as Interreg NEXT Romania-Moldova (list each programme once)",
       "corporate": "corporate foundations, company community-grant programmes, and diaspora foundations and funds that make grants in Moldova"
     },
     "fold_words": true,
     "dedupe_known_by_site": true,
+    "tier_one_from_manifest": true,
+    "shared_hosts": [
+      "mzv.gov.cz", "international.gc.ca", "gmfus.org", "eeas.europa.eu", "undp.org"
+    ],
+    "exclude": [
+      "USAID", "USAID Moldova", "United States Agency for International Development",
+      "Agenția Statelor Unite pentru Dezvoltare Internațională",
+      "GIZ", "Deutsche Gesellschaft für Internationale Zusammenarbeit",
+      "Swiss Agency for Development and Cooperation", "SDC", "DEZA",
+      "Agenția Elvețiană pentru Dezvoltare și Cooperare",
+      "Swedish International Development Cooperation Agency", "Sida",
+      "Agenția Suedeză pentru Dezvoltare și Cooperare Internațională",
+      "EEA and Norway Grants", "EEA Grants", "Norway Grants", "Granturile SEE și Norvegiene",
+      "Moldovan Social Investment Fund", "Moldova Social Investment Fund", "FISM",
+      "Fondul de Investiții Sociale din Moldova",
+      "National Youth Council of Moldova", "CNTM",
+      "Consiliul Național al Tineretului din Moldova",
+      "Gagauzia Executive Committee", "Executive Committee of Gagauzia",
+      "Comitetul Executiv al Găgăuziei", "Исполнительный комитет Гагаузии"
+    ],
     "grant_words": [
       "grant", "funding", "apply", "application", "call for proposals", "proposals", "scholarship",
       "finanț", "cofinanț", "co-finanț", "fonduri", "propuneri", "concurs",
       "apel deschis", "apel de propuneri", "apelul de propuneri", "apel de granturi",
       "apelul de granturi", "apeluri", "microgrant", "minigrant", "subgrant",
-      "subvenți", "burs", "sprijin", "oportunități",
+      "subvenți", "burs", "sprijin",
       "грант", "микрогрант", "мини-грант", "финансир", "конкурс", "заяв", "стипенди",
       "субсиди", "поддержк"
     ],
@@ -208,9 +259,13 @@
       "вакан", "на должность", "замещение должност",
       "achiziții publice", "licitație", "licitații", "закупк", "тендер",
       "câștigători", "победител", "lista beneficiarilor", "beneficiari contractați",
-      "rezultatele concursului", "rezultatele selecției"
+      "rezultatele concursului", "rezultatele selecției",
+      "concurs de angajare", "concursul de angajare", "concursului de angajare",
+      "anunț de angajare", "oportunități de angajare",
+      "funcției vacante", "funcția vacantă", "funcție vacantă", "suplinirea",
+      "funcția de director", "închise", "итоги конкурса", "результаты конкурса"
     ],
-    "weak_skip_link_words": ["cariera", "angajări"],
+    "weak_skip_link_words": ["carier", "карьер", "angajări"],
     "search_terms": "granturi finanțare apel de propuneri",
     "name_stopwords": [
       "the", "foundation", "fund", "agency", "ministry", "national", "embassy", "moldova",

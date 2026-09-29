@@ -26,7 +26,15 @@ page come from the `register` block of the country's config
   weak_skip_link_words   with fold_words: skip words that do not drop a link
                          whose text names a grant ("cariera", but not
                          "Granturi pentru dezvoltarea carierei")
-  dedupe_known_by_site   one known funder per site
+  dedupe_known_by_site   one known funder per site, and a candidate on a known
+                         funder's site is merged into it, not added
+  shared_hosts           hosts where one known funder's site may hold another
+                         body's pages: never merged by site
+  exclude                funders ruled out; a candidate naming one, as a whole
+                         word or acronym, is dropped before any resolve spend
+  tier_one_from_manifest tier 1 only for the manifest's must_appear_funders,
+                         whatever the model says, since the register's tier 1
+                         becomes the publish gate
 
 Usage:
     python scripts/build_register.py nz --confirm [--budget 3] [--only-category council]
@@ -40,6 +48,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlsplit
 
@@ -51,7 +60,7 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 from api.country_config import get_country_config  # noqa: E402
-from api.funders import _to_ascii  # noqa: E402
+from api.funders import _to_ascii, canonicalise_funder  # noqa: E402
 from api.sources import register_path  # noqa: E402
 from api.tenant import platform_sources_dir, platform_sources_path  # noqa: E402
 from orchestrator import register_sweep as rs  # noqa: E402
@@ -119,13 +128,15 @@ def register_settings(country: str) -> dict:
     for key in ("tier_one", "search_terms"):
         if not isinstance(reg[key], str) or not reg[key].strip():
             raise _config_error(country, f"register.{key} must be a non-empty string")
-    for key in ("fold_words", "dedupe_known_by_site"):
+    for key in ("fold_words", "dedupe_known_by_site", "tier_one_from_manifest"):
         if not isinstance(reg.get(key, False), bool):
             raise _config_error(country, f"register.{key} must be true or false")
     grant_words = _strings(reg, "grant_words", country)
     skip_words = _strings(reg, "skip_link_words", country)
     weak_words = _strings(reg, "weak_skip_link_words", country)
     stopwords = _strings(reg, "name_stopwords", country)
+    excluded = _strings(reg, "exclude", country)
+    shared_hosts = _strings(reg, "shared_hosts", country)
     fold = _to_ascii if reg.get("fold_words") else None
     if weak_words and not fold:
         raise _config_error(country, "register.weak_skip_link_words needs fold_words")
@@ -141,6 +152,9 @@ def register_settings(country: str) -> dict:
             skip = re.compile(skip.pattern + "|" + _pattern(skip_words, fold), re.IGNORECASE)
         if weak_words:
             weak_skip = re.compile(_pattern(weak_words, fold), re.IGNORECASE)
+        # Whole words only, at both ends: "Sida" is not in "Sidanova".
+        exclude = (re.compile(_pattern(excluded, _to_ascii) + r"(?![^\W_])", re.IGNORECASE)
+                   if excluded else None)
     except ValueError as exc:
         raise _config_error(country, f"register words: {exc}") from exc
     return {
@@ -157,7 +171,20 @@ def register_settings(country: str) -> dict:
         # "Fundatia" are one word.
         "name_stopwords": {_to_ascii(w) for w in stopwords},
         "dedupe_known_by_site": reg.get("dedupe_known_by_site", False),
+        "shared_hosts": {rs._site(h) for h in shared_hosts},
+        "exclude": exclude,
+        "tier_one_from_manifest": reg.get("tier_one_from_manifest", False),
     }
+
+
+def is_excluded(settings: dict, name: str, country: str) -> bool:
+    """The candidate names a funder the owner ruled out, by its own name or
+    the name its alias leads to."""
+    exclude = settings["exclude"]
+    if not exclude:
+        return False
+    names = {name, canonicalise_funder(name, country)}
+    return any(exclude.search(_to_ascii(n)) for n in names)
 
 
 def has_grant_words(settings: dict, text: str) -> bool:
@@ -274,19 +301,30 @@ def list_candidates(country: str, asks: list[str], budget: Budget, settings: dic
             break
         with client.messages.stream(
             model=LIST_MODEL, max_tokens=16000,
+            # A list to recall, not a problem to reason through. Without
+            # thinking the whole allowance is left for the JSON answer.
+            thinking={"type": "disabled"},
             messages=[{"role": "user", "content": list_prompt(settings, cat, cfg.regions)}],
         ) as stream:
             resp = stream.get_final_message()
         budget.add_listing(resp.usage.input_tokens, resp.usage.output_tokens)
         text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
-        found = (rs.parse_json(text) or {}).get("funders") or []
-        for f in found:
+        parsed = rs.parse_json(text)
+        found = parsed.get("funders") if isinstance(parsed, dict) else None
+        for f in found if isinstance(found, list) else []:
             if isinstance(f, dict) and f.get("name"):
                 out.append({"name": str(f["name"]).strip(), "category": cat,
                             "website": str(f.get("website") or "").strip(),
                             "funding_url": f.get("funding_url"),
                             "regions": [r for r in (f.get("regions") or []) if r in cfg.regions],
                             "tier": 1 if f.get("tier") == 1 else 2})
+        # A reply cut off, refused or unreadable is not a finished ask: the
+        # next run asks again. An empty list that ended normally is finished.
+        if resp.stop_reason != "end_turn" or not isinstance(found, list):
+            print(f"[register] {cat}: ask not finished (stop reason {resp.stop_reason}, "
+                  f"{len(found) if isinstance(found, list) else 0} funders read); "
+                  f"it will be asked again")
+            continue
         asked[cat] = asked.get(cat, 0) + 1
         print(f"[register] {cat}: {len(found)} listed, ${budget.spent:.2f} spent")
 
@@ -329,6 +367,29 @@ def load_candidates(path: str, country: str, categories) -> tuple[list[dict], di
         print(f"[register] dropped {len(candidates) - len(kept)} candidates of categories "
               f"no longer configured")
     return kept, {c: n for c, n in asked.items() if c in categories and isinstance(n, int)}
+
+
+def load_progress(path: str, country: str) -> dict[str, dict]:
+    """Funders resolved by an earlier run that the budget stopped, by key, so
+    a re-run does not pay for them again. Refused like the candidates file
+    when it is another country's or unreadable."""
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"[register] {path}: cannot be read ({type(exc).__name__}). "
+                         f"Move it aside to resolve afresh.") from exc
+    if not isinstance(data, dict) or data.get("country") != country or not isinstance(
+            data.get("resolved"), dict):
+        raise SystemExit(f"[register] {path}: not the resolve progress for {country!r}. "
+                         f"Move it aside to resolve afresh.")
+    return data["resolved"]
+
+
+def funder_key(name: str, country: str) -> str:
+    return rs.slugify_funder(name, country)
 
 
 def dedupe_candidates(candidates: list[dict], country: str) -> list[dict]:
@@ -386,6 +447,25 @@ def known_funders(country: str, by_site: bool = False) -> list[dict]:
         else:
             sites[key] = f
     return list(sites.values())
+
+
+def _site_of(url) -> str:
+    if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+        return ""
+    return rs._site(urlsplit(url).hostname)
+
+
+def known_sites(known, settings: dict) -> dict[str, dict]:
+    """Known funders by site, for merging a candidate found on one. A shared
+    host (one known funder's pages among other bodies') is left out: two
+    funders there are not taken to be one."""
+    out = {}
+    for k in known:
+        for url in (k.get("url"), k.get("website")):
+            site = _site_of(url)
+            if site and site not in settings["shared_hosts"]:
+                out.setdefault(site, k)
+    return out
 
 
 def tavily_find(name: str, site: str, terms: str, budget: Budget) -> str | None:
@@ -550,31 +630,87 @@ def main(argv=None) -> int:
     short = [c for c in categories if asked.get(c, 0) < ASKS]
     if short:
         print(f"[register] listing not finished ({', '.join(short)}); the candidates so far "
-              f"are saved. Re-run with a larger --budget to list the rest.")
+              f"are saved. Re-run (with a larger --budget if it ran out) to list the rest.")
         return 1
+    if settings["exclude"]:
+        dropped = [c["name"] for c in candidates if is_excluded(settings, c["name"], args.country)]
+        candidates = [c for c in candidates
+                      if not is_excluded(settings, c["name"], args.country)]
+        print(f"[register] {len(dropped)} candidates excluded by the owner's list"
+              + (f": {', '.join(dropped)}" if dropped else ""))
     if args.limit:
         candidates = candidates[:args.limit]
 
     # A funder already known keeps its known page; the model's entry only
     # supplies the category and tier.
+    from_manifest = settings["tier_one_from_manifest"]
     known = {k["name"].lower(): k
              for k in known_funders(args.country, settings["dedupe_known_by_site"])}
     slugs = {rs.slugify_funder(n, args.country): n for n in known}
+    by_site = known_sites(known.values(), settings) if settings["dedupe_known_by_site"] else {}
+    merges = []
+
+    def merge(match: dict, c: dict, why: str | None = None) -> None:
+        match["category"] = c["category"]
+        if not from_manifest:
+            match["tier"] = min(match["tier"], c["tier"])
+        match["regions"] = match["regions"] or c["regions"]
+        if why:
+            merges.append(f"{c['name']} -> {match['name']} ({why})")
+            print(f"[register] merged {c['name']!r} into {match['name']!r}: {why}")
+
     todo = []
     for c in candidates:
         match = known.get(c["name"].lower()) or known.get(
             slugs.get(rs.slugify_funder(c["name"], args.country), ""))
+        site = _site_of(c.get("website"))
         if match:
-            match["category"], match["tier"] = c["category"], min(match["tier"], c["tier"])
-            match["regions"] = match["regions"] or c["regions"]
+            merge(match, c)
+        elif site in by_site:
+            # Merged before any resolve spend: its listed site is a known one.
+            merge(by_site[site], c, f"listed site {site}")
         else:
             todo.append(c)
     print(f"[register] {len(known)} funders already known, {len(todo)} to resolve")
 
+    # Results are saved as they come, so a run the budget stops can resume
+    # without paying for them again.
+    progress_path = path.replace("-register.json", "-register-progress.json")
+    progress = {} if args.only_category else load_progress(progress_path, args.country)
+    done = [progress[funder_key(c["name"], args.country)] for c in todo
+            if funder_key(c["name"], args.country) in progress]
+    todo = [c for c in todo if funder_key(c["name"], args.country) not in progress]
+    if done:
+        print(f"[register] {len(done)} resolved by an earlier run, {len(todo)} left")
+    lock = threading.Lock()
+
+    def work(c: dict) -> dict:
+        r = resolve(c, not args.no_search, settings, budget)
+        if r.get("error") != BUDGET_REACHED and not args.only_category:
+            with lock:
+                progress[funder_key(c["name"], args.country)] = r
+                write_json(progress_path, {"country": args.country, "resolved": progress})
+        return r
+
     with ThreadPoolExecutor(max_workers=rs.CRAWL_CONCURRENCY) as pool:
-        resolved = list(pool.map(lambda c: resolve(c, not args.no_search, settings, budget), todo))
+        resolved = done + list(pool.map(work, todo))
+    if by_site:
+        # A funding page found on a known funder's site is that funder's.
+        kept = []
+        for r in resolved:
+            site = _site_of(r.get("url"))
+            if site in by_site:
+                merge(by_site[site], r, f"funding page on {site}")
+            else:
+                kept.append(r)
+        resolved = kept
     if not args.only_category:
         resolved = list(known.values()) + resolved
+    if from_manifest:
+        from api.sources import load_manifest
+        must = {f["name"].lower() for f in load_manifest(args.country)["must_appear_funders"]}
+        for r in resolved:
+            r["tier"] = 1 if r["name"].lower() in must else 2
     funders = [{k: r[k] for k in ("name", "category", "tier", "regions", "url", "resolved_by")}
                for r in resolved if r.get("url")]
     unresolved = [{"name": r["name"], "category": r["category"], "website": r["website"],
@@ -586,6 +722,8 @@ def main(argv=None) -> int:
     written = None if (args.limit or args.only_category or stopped) else path
     if written:
         write_json(path, {"country": args.country, "funders": funders, "unresolved": unresolved})
+        if os.path.exists(progress_path):
+            os.unlink(progress_path)
     by = {}
     for f in funders:
         by.setdefault(f["category"], [0, 0])[f["tier"] - 1] += 1
@@ -596,6 +734,7 @@ def main(argv=None) -> int:
         "resolved_by": {k: sum(1 for f in funders if f["resolved_by"] == k)
                         for k in ("known", "model", "link", "search", "site-search", "home")},
         "tier_1": sum(1 for f in funders if f["tier"] == 1),
+        "merged_by_site": merges,
         "by_category_tier1_tier2": by,
         "spent_usd": round(budget.spent, 3), "model_usd": round(budget.spent - tavily_usd, 3),
         "model_calls": budget.calls, "tavily_searches": budget.searches,

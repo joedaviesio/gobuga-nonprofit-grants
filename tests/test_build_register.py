@@ -185,7 +185,8 @@ def test_nz_links_are_the_sweeps_own():
 @pytest.mark.parametrize("text", [
     "Finanțare pentru ONG-uri", "Finanţare pentru ONG-uri", "Finantare", "Concurs de granturi",
     "Конкурс грантов", "Call for proposals", "Bursă de studii", "Bursa de merit",
-    "Sprijin pentru tineri", "Oportunități", "Поддержка НКО", "Прием заявок", "ПРИЁМ ЗАЯВОК",
+    "Sprijin pentru tineri", "Oportunități de finanțare", "Поддержка НКО", "Прием заявок",
+    "ПРИЁМ ЗАЯВОК",
     "Apel deschis", "Apel de propuneri", "Apeluri", "Apelul de granturi",
     "Program de microgranturi", "Subgranturi pentru ONG-uri", "Minigranturi", "Микрогранты",
     "Мини-гранты", "Cofinanțare", "Co-finanțare",
@@ -247,6 +248,35 @@ def test_md_grant_links_that_share_a_skip_word_are_kept(text):
 ])
 def test_md_vacancies_tenders_and_past_winners_are_skipped(href, text):
     assert md_links({"links": [(href, text)]}) == []
+
+
+@pytest.mark.parametrize("text", [
+    "Concurs de angajare", "Anunț privind organizarea concursului de angajare",
+    "Concurs pentru suplinirea funcției vacante", "Concurs pentru funcția de director",
+    "Итоги конкурса", "Результаты конкурса", "Concursuri închise", "Apeluri închise",
+    "Oportunități de angajare", "Oportunități de carieră", "Карьера",
+])
+def test_md_vacancy_and_results_texts_are_skipped(text):
+    assert md_links({"links": [("https://fond.example/ro/content/481", text)]}) == []
+
+
+@pytest.mark.parametrize("path", [
+    "/ro/content/anunt-privind-organizarea-concursului-de-angajare",
+    "/ro/content/concurs-suplinirea-functiei-vacante-de-specialist",
+    "/ro/content/concurs-pentru-functia-de-director",
+    "/ro/cariere/concurs-angajare",
+])
+def test_md_vacancy_addresses_are_skipped(path):
+    assert md_links({"links": [("https://fond.example" + path, "Detalii")]}) == []
+
+
+@pytest.mark.parametrize("text", [
+    "Apeluri deschise", "Concurs de granturi", "Oportunități de finanțare",
+    "Granturi pentru programe de angajare a tinerilor", "Гранты для карьерного роста",
+])
+def test_md_calls_near_vacancy_words_are_kept(text):
+    href = "https://fond.example/ro/content/482"
+    assert md_links({"links": [(href, text)]}) == [href]
 
 
 def test_a_weak_skip_word_gives_way_only_to_a_grant():
@@ -431,18 +461,26 @@ def test_a_country_needs_its_own_config_file():
 
 class FakeAnthropic:
     """Stands in for the anthropic module: each ask lists one new funder and
-    costs `COST` dollars at the listing model's price."""
+    costs `COST` dollars at the listing model's price. `reply`, when set,
+    takes (ask number, prompt) and returns (reply text, stop reason)."""
     asks: list[str] = []
+    options: list[dict] = []
     COST = 1.0
+    reply = None
 
     def __init__(self, **_):
         self.messages = self
 
-    def stream(self, model, max_tokens, messages):
+    def stream(self, model, max_tokens, messages, **options):
         FakeAnthropic.asks.append(messages[0]["content"])
+        FakeAnthropic.options.append({"max_tokens": max_tokens, **options})
         n = len(FakeAnthropic.asks)
-        body = json.dumps({"funders": [{"name": f"Funder {n}", "website": f"https://f{n}.example/"}]})
+        body, stop = json.dumps({"funders": [
+            {"name": f"Funder {n}", "website": f"https://f{n}.example/"}]}), "end_turn"
+        if FakeAnthropic.reply:
+            body, stop = FakeAnthropic.reply(n, messages[0]["content"])
         resp = SimpleNamespace(
+            stop_reason=stop,
             usage=SimpleNamespace(input_tokens=0,
                                   output_tokens=round(self.COST * 1e6 / br.LIST_PRICE_OUT)),
             content=[SimpleNamespace(type="text", text=body)])
@@ -466,7 +504,7 @@ class _Stream:
 @pytest.fixture
 def paid(monkeypatch):
     """Every paid call faked; a real one would fail the test."""
-    FakeAnthropic.asks = []
+    FakeAnthropic.asks, FakeAnthropic.options, FakeAnthropic.reply = [], [], None
     monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=FakeAnthropic))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
     monkeypatch.setenv("TAVILY_API_KEY", "test")
@@ -637,6 +675,211 @@ def test_a_page_with_text_is_returned_to_the_sweep_as_before(served):
     served.extract = failed_extract
     page = rs.fetch_page("https://f.example/")
     assert set(page) == {"url", "text", "links"}
+
+
+# --- The owner's lists hold: exclusions, the gate, merges, resumes ------------------
+
+def reply_by_category(funders_by_category: dict, stop="end_turn"):
+    """A listing reply that depends on which category the prompt asks for."""
+    descriptions = br.register_settings("md")["categories"]
+
+    def reply(n, prompt):
+        category = next(c for c, d in descriptions.items() if f"of this kind: {d}." in prompt)
+        return json.dumps({"funders": funders_by_category.get(category, [])}), stop
+    return reply
+
+
+def claim(name, website="", tier=1):
+    return {"name": name, "website": website, "tier": tier}
+
+
+SIMULATED_LISTING = {
+    "international": [
+        claim("USAID Moldova", "https://www.usaid.gov/moldova"), claim("GIZ"),
+        claim("Swiss Agency for Development and Cooperation (SDC)"), claim("Sida"),
+        claim("EEA and Norway Grants"), claim("Delegation of the European Union to Moldova"),
+        claim("UNDP Moldova"), claim("World Bank Moldova", "https://www.worldbank.org/"),
+    ],
+    "government": [
+        claim("Ministry of Culture of the Republic of Moldova", "https://mc.gov.md/"),
+        claim("Ministry of Education and Research of the Republic of Moldova", "https://mec.gov.md/"),
+        claim("Agency for Interventions and Payments in Agriculture (AIPA)", "https://aipa.gov.md/"),
+        claim("Moldovan Social Investment Fund (FISM)"),
+        claim("Ministerul Muncii și Protecției Sociale", "https://social.gov.md/"),
+        claim("Ministry of Culture of Moldova Republic", "https://www.mc.gov.md/"),
+        claim("Cultural Projects Fund", "https://cultural-projects.example/"),
+    ],
+    "council": [
+        claim("Gagauzia Executive Committee"), claim("Primăria Municipiului Cahul", "https://cahul.md/"),
+        claim("Consiliul Raional Orhei", "https://orhei.md/"),
+    ],
+    "embassy": [
+        claim("Embassy of Japan in the Republic of Moldova", "https://www.md.emb-japan.go.jp/"),
+        claim("Embassy of the Federal Republic of Germany in Chisinau", "https://chisinau.diplo.de/"),
+        claim("German Embassy in Moldova", "https://chisinau.diplo.de/md-ro"),
+        claim("US Embassy Chisinau", "https://md.usembassy.gov/"),
+    ],
+    "cross-border": [
+        claim("Interreg NEXT Romania-Republic of Moldova", "https://ro-md.net/"),
+        claim("Interreg NEXT Black Sea Basin", "https://blacksea-cbc.net/"),
+    ],
+    "foundation": [
+        claim("Soros Foundation Moldova"), claim("National Endowment for Democracy"),
+        claim("Fundația Sidanova", "https://sidanova.example/"),
+        claim("German Marshall Fund of the United States", "https://www.gmfus.org/"),
+    ],
+    "corporate": [claim("Fundația Orange Moldova", "https://www.orange.md/", tier=2)],
+}
+EXCLUDED_IN_LISTING = {"USAID Moldova", "GIZ", "Swiss Agency for Development and Cooperation (SDC)",
+                       "Sida", "EEA and Norway Grants", "Moldovan Social Investment Fund (FISM)",
+                       "Gagauzia Executive Committee"}
+
+
+@pytest.fixture
+def simulated(isolated, paid, monkeypatch):
+    """The md build with every paid call faked: the listing above, and every
+    page answering with grant words. The Cultural Projects Fund's page turns
+    out to live on the Ministry of Culture's site."""
+    paid.reply = reply_by_category(SIMULATED_LISTING)
+    paid.COST = 0.0
+
+    def fetch_page(url):
+        if "cultural-projects" in url:
+            url = "https://mc.gov.md/ro/content/proiecte-culturale"
+        return {"url": url, "text": "Granturi și finanțare pentru ONG-uri. " * 20, "links": []}
+    monkeypatch.setattr(rs, "fetch_page", fetch_page)
+    resolved = []
+    real_resolve = br.resolve
+
+    def resolve(funder, *a, **k):
+        resolved.append(funder["name"])
+        return real_resolve(funder, *a, **k)
+    monkeypatch.setattr(br, "resolve", resolve)
+    assert br.main(["md", "--confirm", "--no-search", "--budget", "100"]) == 0
+    register = json.loads((isolated / "md-register.json").read_text())
+    return SimpleNamespace(register=register, resolved=resolved)
+
+
+def test_md_prompts_name_no_excluded_funder():
+    settings = br.register_settings("md")
+    for category in settings["categories"]:
+        prompt = br.list_prompt(settings, category, get_country_config("md").regions)
+        assert not settings["exclude"].search(br._to_ascii(prompt)), category
+
+
+@pytest.mark.parametrize("name, excluded", [
+    ("USAID", True), ("USAID Moldova", True), ("Sida", True), ("SIDA Moldova", True),
+    ("GIZ Moldova", True), ("Swiss Agency for Development and Cooperation (SDC)", True),
+    ("Granturile SEE și Norvegiene", True), ("Fondul de Investitii Sociale din Moldova", True),
+    ("Fundația Sidanova", False), ("Gizmo Foundation", False), ("SDCX Trust", False),
+    ("Mesida Fund", False), ("Fundația Est-Europeană", False),
+])
+def test_exclusion_matches_whole_words_only(name, excluded):
+    assert br.is_excluded(br.register_settings("md"), name, "md") is excluded
+
+
+def test_nz_has_no_exclusions_or_manifest_tier():
+    settings = br.register_settings("nz")
+    assert settings["exclude"] is None and settings["tier_one_from_manifest"] is False
+    assert not br.is_excluded(settings, "USAID", "nz")
+
+
+@pytest.mark.parametrize("change, message", [
+    (lambda r: r.update(exclude="USAID"), "exclude must be a list"),
+    (lambda r: r["exclude"].append(""), "exclude must be a list"),
+    (lambda r: r.update(shared_hosts=[1]), "shared_hosts must be a list"),
+    (lambda r: r.update(tier_one_from_manifest="yes"), "tier_one_from_manifest must be"),
+])
+def test_bad_new_keys_stop_before_any_call(isolated, change, message):
+    edit_md(isolated, change)
+    with pytest.raises(SystemExit, match=message):
+        br.register_settings("md")
+
+
+def test_an_excluded_candidate_never_reaches_resolve(simulated):
+    assert not EXCLUDED_IN_LISTING & set(simulated.resolved)
+    names = {f["name"] for f in simulated.register["funders"] + simulated.register["unresolved"]}
+    assert not EXCLUDED_IN_LISTING & names
+    assert "Fundația Sidanova" in names
+
+
+def test_the_register_tier_one_is_the_manifests_must_appear_list(simulated):
+    from api import sources
+    tier_one = {f["name"] for f in simulated.register["funders"] if f["tier"] == 1}
+    assert sum(1 for fs in SIMULATED_LISTING.values() for f in fs if f["tier"] == 1) >= 20
+    assert tier_one == {f["name"] for f in sources.must_appear_funders("md")}
+
+
+def test_a_candidate_on_a_known_site_is_merged_not_added(simulated):
+    from urllib.parse import urlsplit
+    names = {f["name"] for f in simulated.register["funders"]}
+    english = {"Ministry of Culture of the Republic of Moldova", "Ministry of Culture of Moldova Republic",
+               "Ministry of Education and Research of the Republic of Moldova",
+               "Agency for Interventions and Payments in Agriculture (AIPA)",
+               "Interreg NEXT Romania-Republic of Moldova",
+               "Embassy of Japan in the Republic of Moldova",
+               "Embassy of the Federal Republic of Germany in Chisinau", "German Embassy in Moldova",
+               "Cultural Projects Fund"}
+    assert not english & names
+    # Merged before resolving, except the one whose page was found there.
+    assert not (english - {"Cultural Projects Fund"}) & set(simulated.resolved)
+    assert "Cultural Projects Fund" in simulated.resolved
+    shared = br.register_settings("md")["shared_hosts"]
+    sites = [rs._site(urlsplit(f["url"]).hostname) for f in simulated.register["funders"]]
+    assert [s for s in sites if sites.count(s) > 1 and s not in shared] == []
+    # A shared host holds two funders: they are not merged.
+    assert {"German Marshall Fund of the United States",
+            "Black Sea Trust for Regional Cooperation"} <= names
+
+
+def test_a_truncated_listing_reply_is_not_counted_as_asked(isolated, paid):
+    cut = [True]
+
+    def reply(n, prompt):
+        if cut.pop() if cut else False:
+            return '{"funders": [{"name": "Half a fun', "max_tokens"
+        return json.dumps({"funders": []}), "end_turn"
+    paid.reply = reply
+    paid.COST = 0.0
+    assert br.main(["md", "--confirm", "--no-search"]) == 1
+    saved = json.loads((isolated / "md-register-candidates.json").read_text())
+    assert saved["asked"]["international"] == 1 and saved["asked"]["embassy"] == 2
+    assert not (isolated / "md-register.json").exists()
+    assert all(o["thinking"] == {"type": "disabled"} for o in paid.options)
+    # The next run asks only the ask that failed.
+    paid.asks = []
+    assert br.main(["md", "--confirm", "--no-search"]) == 0
+    assert len(paid.asks) == 1 and "of this kind: international donors" in paid.asks[0]
+
+
+def test_a_run_stopped_in_resolve_resumes_without_paying_again(isolated, paid, monkeypatch):
+    paid.COST = 0.0
+    fetched = []
+
+    def fetch_page(url):
+        fetched.append(url)
+        return {"url": url, "text": "Granturi. " * 40, "links": [], "extract_tried": True}
+    monkeypatch.setattr(rs, "fetch_page", fetch_page)
+    monkeypatch.setattr(rs, "CRAWL_CONCURRENCY", 1)
+    progress = isolated / "md-register-progress.json"
+    # Each resolve costs one extract; the budget covers four.
+    assert br.main(["md", "--confirm", "--no-search", "--budget", str(3.5 * br.TAVILY_PRICE)]) == 1
+    assert not (isolated / "md-register.json").exists()
+    assert len(json.loads(progress.read_text())["resolved"]) == 4 == len(fetched)
+    fetched.clear()
+    assert br.main(["md", "--confirm", "--no-search", "--budget", "100"]) == 0
+    assert len(fetched) == 14 - 4
+    register = json.loads((isolated / "md-register.json").read_text())
+    assert sum(1 for f in register["funders"] if f["name"].startswith("Funder ")) == 14
+    assert not progress.exists()
+
+
+def test_another_countrys_resolve_progress_is_refused(isolated, paid):
+    progress = isolated / "md-register-progress.json"
+    progress.write_text(json.dumps({"country": "nz", "resolved": {"trust-waikato": OLD_FUNDER}}))
+    with pytest.raises(SystemExit, match="not the resolve progress for 'md'") as stop:
+        br.main(["md", "--confirm", "--no-search"])
+    assert str(progress) in str(stop.value)
 
 
 def test_md_lists_no_longer_carry_usaid():

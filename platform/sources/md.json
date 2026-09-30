@@ -225,7 +225,52 @@
     "dedupe_known_by_site": true,
     "tier_one_from_manifest": true,
     "shared_hosts": [
-      "mzv.gov.cz", "international.gc.ca", "gmfus.org", "eeas.europa.eu", "undp.org"
+      "mzv.gov.cz", "international.gc.ca", "gmfus.org", "eeas.europa.eu", "undp.org",
+      "gov.uk", "ec.europa.eu"
+    ],
+    "merge_new_by_site": true,
+    "merge_name_stopwords": [
+      "stiftung", "republic", "republicii", "chisinau", "chișinău",
+      "grant", "grants", "granturi", "program", "programs", "programme", "programul",
+      "small", "community", "comunitar", "comunitare", "united", "nations", "states"
+    ],
+    "merge_kind_words": [
+      "primăria", "primaria", "consiliul", "raional", "municipal", "municipiului", "orașului",
+      "comunei", "примэрия", "совет"
+    ],
+    "strict_pages": true,
+    "strong_grant_words": [
+      "grant", "funding", "call for proposals", "calls for proposals", "call for applications",
+      "request for proposals",
+      "open call", "open calls", "scholarship", "fellowship",
+      "microgrant", "minigrant", "subgrant",
+      "finanțar", "cofinanțar", "co-finanțar",
+      "apel de propuneri", "apelul de propuneri", "apeluri de propuneri", "apel deschis",
+      "apeluri deschise", "apel de proiecte", "apeluri de proiecte", "concurs de proiecte",
+      "concursul de proiecte", "nerambursabil", "subvenți", "burs",
+      "грант", "микрогрант", "мини-грант", "финансирован", "субсиди", "стипенди",
+      "конкурс проектов", "прием заявок", "приём заявок", "финансовая поддержка"
+    ],
+    "strong_path_words": ["apply", "aplic", "calls", "apeluri"],
+    "programme_path_words": ["program", "програм"],
+    "not_funding_path_words": [
+      "news", "noutăți", "știri", "новости", "stories", "story", "reportaj",
+      "publications", "publicații", "comunicate", "blog", "articles", "article", "articol",
+      "statement", "statements", "about us", "despre noi"
+    ],
+    "not_funding_path_parts": [
+      "media", "events", "evenimente", "resources", "press", "contact", "contacte"
+    ],
+    "aggregator_hosts": [
+      "developmentaid.org", "fundsforngos.org", "devex.com", "europeanfundingguide.eu",
+      "eufundingportal.eu", "grantwatch.com", "instrumentl.com", "candid.org",
+      "globalgiving.org", "civic.md", "wikipedia.org", "facebook.com", "linkedin.com"
+    ],
+    "host_generic_words": [
+      "development", "international", "european", "europe", "fund", "funds", "foundation",
+      "grant", "grants", "moldova", "rural", "women", "national", "agency", "community",
+      "pentru", "program", "programme", "support", "democracy", "civic", "public", "global",
+      "world", "united", "nations", "bank", "office", "embassy", "council"
     ],
     "exclude": [
       "USAID", "USAID Moldova", "United States Agency for International Development",
@@ -233,7 +278,7 @@
       "GIZ", "Deutsche Gesellschaft für Internationale Zusammenarbeit",
       "Swiss Agency for Development and Cooperation", "SDC", "DEZA",
       "Agenția Elvețiană pentru Dezvoltare și Cooperare",
-      "Swedish International Development Cooperation Agency", "Sida",
+      "Swedish International Development Cooperation Agency", "Sida Moldova", "Sida Sweden",
       "Agenția Suedeză pentru Dezvoltare și Cooperare Internațională",
       "EEA and Norway Grants", "EEA Grants", "Norway Grants", "Granturile SEE și Norvegiene",
       "Moldovan Social Investment Fund", "Moldova Social Investment Fund", "FISM",
@@ -263,7 +308,8 @@
       "concurs de angajare", "concursul de angajare", "concursului de angajare",
       "anunț de angajare", "oportunități de angajare",
       "funcției vacante", "funcția vacantă", "funcție vacantă", "suplinirea",
-      "funcția de director", "închise", "итоги конкурса", "результаты конкурса"
+      "funcția de director", "închise", "итоги конкурса", "результаты конкурса",
+      "bursa locurilor de muncă", "bursa de valori"
     ],
     "weak_skip_link_words": ["carier", "карьер", "angajări"],
     "search_terms": "granturi finanțare apel de propuneri",
@@ -293,7 +339,7 @@
     },
     {
       "name": "Ministerul Culturii",
-      "url": "https://mc.gov.md/ro/content/anunt-proiecte-culturale-2026",
+      "url": "https://www.mc.gov.md/",
       "sectors": ["arts"]
     },
     {
@@ -403,7 +449,7 @@
     },
     {
       "name": "Ministerul Culturii",
-      "url": "https://mc.gov.md/ro/content/anunt-proiecte-culturale-2026",
+      "url": "https://www.mc.gov.md/",
       "category": "government",
       "scope": "national",
       "sectors": ["arts"]

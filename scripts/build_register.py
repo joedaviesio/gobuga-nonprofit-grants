@@ -35,6 +35,39 @@ page come from the `register` block of the country's config
   tier_one_from_manifest tier 1 only for the manifest's must_appear_funders,
                          whatever the model says, since the register's tier 1
                          becomes the publish gate
+  merge_new_by_site      two new funders on one site are merged when they
+                         reach the same page or their names agree, once the
+                         words in name_stopwords and merge_name_stopwords
+                         are set aside ("Konrad Adenauer Foundation" and
+                         "Konrad Adenauer Stiftung")
+  merge_name_stopwords   with merge_new_by_site: words that tell two names
+                         on one site apart no better than a translation does
+  strict_pages           with fold_words: a funding page is refused when its
+                         address is a document, a dated or news path, or a
+                         slug as long as a headline; a link, a guessed page
+                         and a search result each need a strong_grant_words
+                         word (a path may use strong_path_words too); and a
+                         site found by search must carry the funder's name
+  strong_grant_words     with strict_pages: words that show a page is about
+                         applying for funding, not just about money
+  strong_path_words      with strict_pages: more such words, trusted in an
+                         address only ("how-to-apply", not "Apply now")
+  not_funding_path_words with strict_pages: a path part starting with one of
+                         these marks a page that is not a funding page
+                         (news, stories, publications), unless the part
+                         names funding itself
+  not_funding_path_parts with strict_pages: words with a funding sense too
+                         (media, events, contact): only a whole path part,
+                         and not beside a part naming funding or a programme
+  programme_path_words   with strict_pages: path words that excuse such a part
+                         (/programmes/media)
+  merge_kind_words       with merge_new_by_site: words naming a kind of body
+                         (primăria, raional); two names with no kind word in
+                         common are never merged
+  aggregator_hosts       with strict_pages: grant listing sites a search may
+                         find that are never a funder's own
+  host_generic_words     with strict_pages: name words too common to show a
+                         host is the funder's ("development", "women")
 
 Usage:
     python scripts/build_register.py nz --confirm [--budget 3] [--only-category council]
@@ -45,10 +78,12 @@ import tirith  # noqa: F401  — must come before anthropic
 import argparse
 import json
 import os
+import random
 import re
 import sys
 import tempfile
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlsplit
 
@@ -73,6 +108,38 @@ BUDGET_REACHED = "budget reached"
 
 COUNTRY_SLUG = re.compile(r"[a-z]{2,8}")  # as api/metrics.py
 REQUIRED = ("categories", "tier_one", "grant_words", "search_terms")
+
+# Tavily answers HTTP 429 both for too many requests a minute and for a plan
+# out of credits; its SDK raises UsageLimitExceededError for either. The
+# first passes in seconds, so the call waits and tries again; the second
+# does not, so a message that says so is not retried.
+TAVILY_TRIES = 4
+TAVILY_WAIT_S = 4.0             # the first wait; doubled each time, with jitter
+TAVILY_MAX_WAIT_S = 45.0        # in all, for one call
+RATE_LIMITED = "UsageLimitExceededError"
+# The SDK raises ForbiddenError for HTTP 403, 432 (plan limit) and 433
+# (pay-as-you-go limit): the credits are used up, or the key may not call.
+# Either way no later call will do better, so the run stops using Tavily.
+PLAN_LIMIT = "ForbiddenError"
+LIMIT_ERRORS = (RATE_LIMITED, PLAN_LIMIT, "TavilyStopped")
+OUT_OF_CREDITS = re.compile(r"credit|quota|upgrade|billing|pay.as.you.go|plan'?s? (set )?"
+                            r"(usage )?limit|usage limit", re.IGNORECASE)
+TOO_FAST = re.compile(r"rate|too many|per minute|excessive|slow down", re.IGNORECASE)
+_out_of_credits = threading.Event()
+
+
+class TavilyStopped(Exception):
+    """Raised in place of a Tavily call once Tavily has said the plan or
+    credits are used up: the call would fail, so it is not made."""
+
+# A register URL that is a file, not a page: it has no links to follow and
+# goes stale with the call it was written for.
+DOCUMENT = re.compile(r"\.(pdf|docx?|xlsx?|pptx?|odt|ods|rtf|zip|rar)$|/wp-content/uploads/|"
+                      r"/sites/default/files/", re.IGNORECASE)
+YEAR = re.compile(r"(19|20)\d\d")
+MONTH = re.compile(r"0?[1-9]|1[0-2]")
+HEADLINE_WORDS = 10             # a slug this long is a headline, whatever it says
+LONG_SLUG_WORDS = 7             # this long, a headline unless it names funding
 
 
 def _config_error(country: str, message: str) -> SystemExit:
@@ -128,7 +195,8 @@ def register_settings(country: str) -> dict:
     for key in ("tier_one", "search_terms"):
         if not isinstance(reg[key], str) or not reg[key].strip():
             raise _config_error(country, f"register.{key} must be a non-empty string")
-    for key in ("fold_words", "dedupe_known_by_site", "tier_one_from_manifest"):
+    for key in ("fold_words", "dedupe_known_by_site", "tier_one_from_manifest",
+                "merge_new_by_site", "strict_pages"):
         if not isinstance(reg.get(key, False), bool):
             raise _config_error(country, f"register.{key} must be true or false")
     grant_words = _strings(reg, "grant_words", country)
@@ -137,10 +205,24 @@ def register_settings(country: str) -> dict:
     stopwords = _strings(reg, "name_stopwords", country)
     excluded = _strings(reg, "exclude", country)
     shared_hosts = _strings(reg, "shared_hosts", country)
+    merge_stopwords = _strings(reg, "merge_name_stopwords", country)
+    strong_words = _strings(reg, "strong_grant_words", country)
+    path_words = _strings(reg, "strong_path_words", country)
+    not_funding = _strings(reg, "not_funding_path_words", country)
+    not_funding_parts = _strings(reg, "not_funding_path_parts", country)
+    programme_words = _strings(reg, "programme_path_words", country)
+    kind_words = _strings(reg, "merge_kind_words", country)
+    aggregators = _strings(reg, "aggregator_hosts", country)
+    host_generic = _strings(reg, "host_generic_words", country)
     fold = _to_ascii if reg.get("fold_words") else None
     if weak_words and not fold:
         raise _config_error(country, "register.weak_skip_link_words needs fold_words")
-    own_skip = weak_skip = None
+    strict = reg.get("strict_pages", False)
+    if strict and not (fold and strong_words):
+        raise _config_error(country,
+                            "register.strict_pages needs fold_words and strong_grant_words")
+    own_skip = weak_skip = strong = path_strong = not_funding_part = None
+    not_funding_whole = programme = None
     try:
         words = re.compile(_pattern(grant_words, fold), re.IGNORECASE)
         skip = rs.SKIP_LINK
@@ -155,6 +237,21 @@ def register_settings(country: str) -> dict:
         # Whole words only, at both ends: "Sida" is not in "Sidanova".
         exclude = (re.compile(_pattern(excluded, _to_ascii) + r"(?![^\W_])", re.IGNORECASE)
                    if excluded else None)
+        if strict:
+            strong = re.compile(_pattern(strong_words, fold), re.IGNORECASE)
+            path_strong = re.compile(_pattern(strong_words + path_words, fold), re.IGNORECASE)
+            if not_funding:
+                # A whole path part, or its first words: "news", "news-and-events",
+                # "press-releases", but not "newsletter".
+                not_funding_part = re.compile(
+                    "^" + _pattern(not_funding, fold) + r"(?![^\W_])", re.IGNORECASE)
+            if not_funding_parts:
+                # Words with a funding sense too ("media-grants", "contact-grants"):
+                # only a path part that is the word and nothing else.
+                not_funding_whole = re.compile(
+                    "^" + _pattern(not_funding_parts, fold) + "$", re.IGNORECASE)
+            if programme_words:
+                programme = re.compile(_pattern(programme_words, fold), re.IGNORECASE)
     except ValueError as exc:
         raise _config_error(country, f"register words: {exc}") from exc
     return {
@@ -174,6 +271,20 @@ def register_settings(country: str) -> dict:
         "shared_hosts": {rs._site(h) for h in shared_hosts},
         "exclude": exclude,
         "tier_one_from_manifest": reg.get("tier_one_from_manifest", False),
+        "merge_new_by_site": reg.get("merge_new_by_site", False),
+        # Words naming a kind of body ("primăria", "raional") are not set
+        # aside: a town hall and a raion council of one town are two funders.
+        "merge_stopwords": ({_to_ascii(w) for w in stopwords + merge_stopwords}
+                            - {_to_ascii(w) for w in kind_words}),
+        "merge_kind_words": {_to_ascii(w) for w in kind_words},
+        "strict_pages": strict,
+        "strong_words": strong,
+        "path_strong_words": path_strong,
+        "not_funding_part": not_funding_part,
+        "not_funding_whole": not_funding_whole,
+        "programme_path": programme,
+        "aggregator_hosts": {rs._site(h) for h in aggregators},
+        "host_generic_words": {_to_ascii(w) for w in stopwords + host_generic},
     }
 
 
@@ -217,6 +328,112 @@ def pick_links(page: dict, home: str, settings: dict) -> list[str]:
                          settings["skip_link"], settings["fold"])
 
 
+def page_problem(settings: dict, url: str) -> str | None:
+    """Why `url` cannot be a funding page, judged by its address alone, or
+    None. Only with strict_pages; otherwise every address may be one.
+
+    A document. A dated folder: a year followed by a month (/2026/02/), or
+    a year with no funding word before it (/topics/2025/...), but not
+    /granturi/2026/apel-deschis. A path part naming news, stories or the
+    like, unless the part names funding itself; the ambiguous words (media,
+    events, resources, press, contact) only as a whole part, and not after
+    or before a part naming funding or a programme (/programmes/media,
+    /resources/grants). A last part as long as a headline, counting words
+    of three letters or more, so "de", "a" and "si" do not make a call's
+    title a headline; seven such words stand only when one names funding."""
+    if not settings["strict_pages"]:
+        return None
+    fold = settings["fold"]
+    path = fold(rs.decode(urlsplit(url).path))
+    if DOCUMENT.search(path):
+        return "a document"
+    parts = [p for p in path.split("/") if p]
+    strong = settings["path_strong_words"]
+    programme = settings["programme_path"]
+
+    def funding_part(p: str) -> bool:
+        return bool(strong.search(p) or (programme and programme.search(p)))
+    for i, p in enumerate(parts[:-1]):
+        if YEAR.fullmatch(p) and (MONTH.fullmatch(parts[i + 1]) or not any(
+                strong.search(q) for q in parts[:i])):
+            return "a dated path"
+    marker, whole = settings["not_funding_part"], settings["not_funding_whole"]
+    for i, p in enumerate(parts):
+        if strong.search(p):
+            continue
+        if marker and marker.search(p):
+            return "a news or other non-funding path"
+        if whole and whole.search(p) and not any(
+                funding_part(q) for j, q in enumerate(parts) if j != i):
+            return "a news or other non-funding path"
+    slug = re.sub(r"\.(html?|aspx?|php)$", "", parts[-1]) if parts else ""
+    words = re.findall(r"[^\W\d_]{3,}", slug)
+    if len(words) >= HEADLINE_WORDS or (
+            len(words) >= LONG_SLUG_WORDS and not strong.search(slug)):
+        return "an article slug"
+    return None
+
+
+def strong_text(settings: dict, text: str) -> bool:
+    """Words that show a page is about applying for funding, not about
+    money in general: "finanțare", not "Direcția finanțe"."""
+    return bool(settings["strong_words"].search(settings["fold"](text or "")))
+
+
+def strong_path(settings: dict, url: str) -> bool:
+    fold = settings["fold"]
+    return bool(settings["path_strong_words"].search(fold(rs.decode(urlsplit(url).path))))
+
+
+def funding_links(settings: dict, home: dict) -> list[str]:
+    """pick_links, keeping under strict_pages only a link whose address is
+    not refused and whose text or path names funding in strong words. One
+    grant stem in a news slug no longer ties with a real "Granturi" page,
+    and "Apply for an emergency travel document" is not a call."""
+    links = pick_links(home, home["url"], settings)
+    if not settings["strict_pages"]:
+        return links
+    texts: dict[str, list[str]] = {}
+    for href, text in home.get("links", []):
+        texts.setdefault(href.rstrip("/"), []).append(text)
+    return [h for h in links if not page_problem(settings, h) and (
+        strong_path(settings, h) or any(strong_text(settings, t)
+                                        for t in texts.get(h.rstrip("/"), [])))]
+
+
+def site_is_funders(settings: dict, url: str, funder: dict) -> bool:
+    """A site found by search belongs to the funder when it is the site the
+    listing gave; never when it is a grants aggregator; otherwise when its
+    host carries the funder's name, as one of:
+
+      the acronym as a host label or the start of one: fee.md for the
+        Energy Efficiency Fund (FEE), but not coffee.md
+      a distinctive name word starting or ending a host label: cahul.md for
+        Consiliul Raional Cahul, crungheni.md for Ungheni, civilspace.eu
+        for the Civil Society Development Foundation
+      two distinctive name words anywhere in the host
+
+    A distinctive word is not one of name_stopwords or host_generic_words:
+    "development" alone does not make developmentaid.org UNDP's, nor
+    "women" womenfund.org UN Women's. A place name is distinctive, so a
+    council whose only other words are generic is found by its town."""
+    site = _site_of(url)
+    if site and site == _site_of(funder.get("website")):
+        return True
+    if not site or site in settings["aggregator_hosts"]:
+        return False
+    labels = [lab for lab in re.split(r"[.-]", site) if lab and lab != "www"]
+    words = [w for w in _name_words(funder["name"]) if w not in settings["host_generic_words"]]
+    acronyms = [a.lower() for a in re.findall(r"\b[A-Z]{3,}\b", funder["name"])]
+
+    def at_edge(w: str) -> bool:
+        return any(lab.startswith(w) or lab.endswith(w) for lab in labels)
+    host = "".join(labels)
+    return (any(lab.startswith(a) for a in acronyms for lab in labels)
+            or any(at_edge(w) for w in words)
+            or sum(1 for w in set(words) if w in host) >= 2)
+
+
 class Budget(rs.Budget):
     """The sweep's budget, also counting the listing model and Tavily, so one
     cap covers every paid call the build makes."""
@@ -243,13 +460,88 @@ class Budget(rs.Budget):
             self.spent += TAVILY_PRICE
 
 
-def fetch(url: str, budget: Budget) -> dict:
-    """rs.fetch_page, counting any Tavily extract it tried for a page that
-    refuses a plain fetch or has no text without scripts, whether or not
-    the extract brought text back. Callers check the budget first."""
-    page = rs.fetch_page(url)
-    if page.get("extract_tried"):
-        budget.add_extract()
+def _pause(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _wait(attempt: int, waited: float) -> float:
+    """How long to wait before try `attempt + 2`, or 0 to give up: doubling
+    from TAVILY_WAIT_S, each wait jittered so the resolve threads do not all
+    come back in the same second, and never more than TAVILY_MAX_WAIT_S in
+    all."""
+    if attempt + 1 >= TAVILY_TRIES or _out_of_credits.is_set():
+        return 0.0
+    return min(TAVILY_WAIT_S * 2 ** attempt * random.uniform(0.5, 1.0),
+               TAVILY_MAX_WAIT_S - waited)
+
+
+def _describe(exc: Exception) -> str:
+    message = " ".join(str(exc).split())
+    return f"{type(exc).__name__}: {message}"[:200] if message else type(exc).__name__
+
+
+def _too_fast(exc: Exception) -> bool:
+    """A 429 worth waiting out. One whose message says the credits or the
+    plan are used up is not, nor a ForbiddenError (432, 433); after either
+    no other call is made."""
+    if type(exc).__name__ == PLAN_LIMIT:
+        _out_of_credits.set()
+        return False
+    if type(exc).__name__ != RATE_LIMITED:
+        return False
+    message = str(exc)
+    if OUT_OF_CREDITS.search(message) and not TOO_FAST.search(message):
+        _out_of_credits.set()
+        return False
+    return True
+
+
+def tavily_call(call, *args, **kwargs):
+    """One Tavily call, tried again after a wait while Tavily says too many
+    requests. Whatever else goes wrong, or the last try's error, is raised
+    to the caller. A call that fails is not paid for, so the caller counts
+    one only once it has an answer."""
+    waited = 0.0
+    for attempt in range(TAVILY_TRIES):
+        if _out_of_credits.is_set():
+            raise TavilyStopped("Tavily said the plan or credits are used up earlier in this run")
+        try:
+            return call(*args, **kwargs)
+        except Exception as exc:  # noqa: BLE001
+            wait = _wait(attempt, waited) if _too_fast(exc) else 0.0
+            if wait <= 0:
+                raise
+            waited += wait
+            _pause(wait)
+
+
+def fetch(url: str, budget: Budget, failed: list | None = None) -> dict:
+    """rs.fetch_page, counting a Tavily extract for a page that refuses a
+    plain fetch or has no text without scripts only when the extract
+    brought the page back: Tavily bills only a successful extraction, and
+    an attempt that failed (a 429, or nothing returned) costs nothing.
+
+    The sweep's fetch keeps only the error's class name, so an extract
+    turned away as too many requests is told by that name; the page is
+    fetched again after a wait, as a search is. Callers check the budget
+    first. An extract Tavily turned away for good is added to `failed`, so
+    the funder is tried again on a re-run."""
+    waited = 0.0
+    for attempt in range(TAVILY_TRIES):
+        page = rs.fetch_page(url)
+        if page.get("via") == "tavily":
+            budget.add_extract()
+        why = page.get("extract_error") or page.get("error") or ""
+        if f"extract failed: {PLAN_LIMIT}" in why:
+            _out_of_credits.set()
+        limited = any(f"extract failed: {e}" in why for e in LIMIT_ERRORS)
+        wait = _wait(attempt, waited) if f"extract failed: {RATE_LIMITED}" in why else 0.0
+        if wait <= 0:
+            if limited and failed is not None:
+                failed.append("extract")
+            return page
+        waited += wait
+        _pause(wait)
     return page
 
 
@@ -468,15 +760,121 @@ def known_sites(known, settings: dict) -> dict[str, dict]:
     return out
 
 
-def tavily_find(name: str, site: str, terms: str, budget: Budget) -> str | None:
+def same_page(a: str, b: str) -> bool:
+    """One page, whatever the www., the scheme or a closing slash."""
+    pa, pb = urlsplit(a), urlsplit(b)
+    return (rs._site(pa.hostname), pa.path.rstrip("/"), pa.query) == (
+        rs._site(pb.hostname), pb.path.rstrip("/"), pb.query)
+
+
+def _merge_words(settings: dict, name: str, acronyms: bool = True) -> set[str]:
+    stop = settings["merge_stopwords"]
+    return set(_name_words(name, stop)) | ({
+        a.lower() for a in re.findall(r"\b[A-Z]{3}\b", name) if a.lower() not in stop}
+        if acronyms else set())
+
+
+def kinds_differ(settings: dict, a: str, b: str) -> bool:
+    """Each name says what kind of body it is, and they have no kind word in
+    common: "Consiliul Raional Cahul" and "Primăria Cahul" are a raion
+    council and a town hall. "Primăria Municipiului Bălți" and "Primăria
+    Bălți" are one town hall."""
+    kinds = settings["merge_kind_words"]
+
+    def kind(name: str) -> set[str]:
+        return set(re.findall(r"[^\W\d_]+", _to_ascii(name))) & kinds
+    ka, kb = kind(a), kind(b)
+    return bool(ka and kb) and not ka & kb
+
+
+def names_agree(settings: dict, a: str, b: str, exact: bool = False) -> bool:
+    """The distinctive words of one name are all in the other, once the
+    country's stopwords and merge_name_stopwords are set aside: "Konrad
+    Adenauer Foundation Moldova" and "Konrad Adenauer Stiftung Moldova",
+    "MAIB Foundation" and "Moldova Agroindbank (MAIB) Community Grants".
+    Not "U.S. Embassy Chisinau Democracy Commission Small Grants Program"
+    and "U.S. Embassy Chisinau Public Affairs Section Small Grants": two
+    programmes, each a way in for applicants. Acronyms count as words.
+    With `exact`, the words must be the same, not one set inside the other;
+    a three-letter acronym given by one name only ("Black Sea Trust (BST)")
+    does not count against it."""
+    if kinds_differ(settings, a, b):
+        return False
+    x, y = _merge_words(settings, a), _merge_words(settings, b)
+    if not (x and y):
+        return False
+    if not exact:
+        return x <= y or y <= x
+    short_a, short_b = x - _merge_words(settings, a, False), y - _merge_words(settings, b, False)
+    return x - short_a == y - short_b and bool(x - short_a) and (
+        not (short_a and short_b) or bool(short_a & short_b))
+
+
+def same_funder(settings: dict, others: list[dict], c: dict, by_page: bool = False,
+                shared: bool = False, page: str = "url") -> dict | None:
+    """The first of `others` (funders on c's site, in listing order) that
+    is c. A known funder's aliases count as its names.
+
+    On a site of its own: its name agrees, or with `by_page` it reached the
+    same page. On a shared host, where one ministry or agency hosts many
+    bodies: its words are exactly c's ("European Union (Delegation to
+    Moldova)" and "European Union Delegation to Moldova (EU grants)"), or it
+    reached the same page, not the host's home page, and the two names
+    share a distinctive word ("British Embassy Chisinau (UK Government
+    Bilateral Programme)" and "Chevening / British Embassy Chisinau Small
+    Grants"). A name inside a longer one is not enough there: German
+    Marshall Fund and Black Sea Trust share gmfus.org, and a generic page
+    reached by two UN agencies is not one agency's. `page` names the field
+    holding each one's page: "website" before resolve."""
+    for o in others:
+        names = [o["name"]] + list(o.get("aliases", []))
+        if any(kinds_differ(settings, n, c["name"]) for n in names):
+            continue
+        one_page = bool(by_page and o.get(page) and c.get(page)
+                        and same_page(o[page], c[page]))
+        if not shared:
+            if one_page or any(names_agree(settings, n, c["name"]) for n in names):
+                return o
+        elif any(names_agree(settings, n, c["name"], exact=True) for n in names) or (
+                one_page and urlsplit(c[page]).path.strip("/") and any(
+                    _merge_words(settings, n) & _merge_words(settings, c["name"])
+                    for n in names)):
+            return o
+    return None
+
+
+def retry_later(result: dict) -> bool:
+    """A result reached after a Tavily call gave up: a re-run tries again."""
+    return bool(result.get("search_failed")) or any(
+        e in str(result.get("error", "")) for e in LIMIT_ERRORS)
+
+
+def tavily_find(name: str, site: str, terms: str, budget: Budget, accept=None) -> str | None:
+    """The first result on the site, or with `accept` (strict_pages) the
+    first on the site that `accept` takes."""
     from tavily import TavilyClient
     client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
-    res = client.search(query=f"{name} {terms}", max_results=5, include_domains=[site])
+    res = tavily_call(client.search, query=f"{name} {terms}", max_results=5,
+                      include_domains=[site])
     budget.add_search()
     for r in res.get("results", []):
-        if rs._site(urlsplit(r.get("url", "")).hostname) == site:
+        if rs._site(urlsplit(r.get("url", "")).hostname) == site and (
+                accept is None or accept(r)):
             return r["url"]
     return None
+
+
+def search_result_is_funding(settings: dict, result: dict) -> bool:
+    """Under strict_pages a search result stands only when its address is
+    not refused and its path or title names funding in strong words. Its
+    snippet is not enough: a news story about a grant says "grant" too."""
+    url = result.get("url", "")
+    if _skipped(settings, url, result.get("title") or ""):
+        # The owner's skip words hold for a search result as for a link:
+        # "Rezultatele concursului de granturi 2025" is not a call.
+        return False
+    return not page_problem(settings, url) and (
+        strong_path(settings, url) or strong_text(settings, result.get("title") or ""))
 
 
 def _name_words(name: str, stop=frozenset()) -> list[str]:
@@ -499,7 +897,7 @@ def tavily_site(name: str, country: str, budget: Budget) -> str | None:
     the page it picked names the funder, so a wrong pick is dropped."""
     from tavily import TavilyClient
     client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
-    res = client.search(query=f'"{name}" {country}', max_results=8)
+    res = tavily_call(client.search, query=f'"{name}" {country}', max_results=8)
     budget.add_search()
     results = [r for r in res.get("results", []) if r.get("url")]
     if not results or budget.exhausted:
@@ -530,11 +928,21 @@ def names_funder(page: dict, name: str, stop=frozenset()) -> bool:
 def resolve(funder: dict, use_search: bool, settings: dict, budget: Budget) -> dict:
     """Fill `url` (the funding page) and `resolved_by`, or `error`. Every
     paid step first checks the budget; once it is reached the funder is left
-    unresolved with that reason."""
+    unresolved with that reason. A result reached after a Tavily call gave
+    up is marked `search_failed`, so it is not saved as done: a re-run tries
+    that funder again."""
+    failed: list[str] = []
+    out = _resolve(funder, use_search, settings, budget, failed)
+    return {**out, "search_failed": True} if failed else out
+
+
+def _resolve(funder: dict, use_search: bool, settings: dict, budget: Budget,
+             failed: list[str]) -> dict:
+    strict = settings["strict_pages"]
     stopped = {**funder, "error": BUDGET_REACHED}
     if budget.exhausted:
         return stopped
-    home = (fetch(funder["website"], budget) if funder["website"].startswith("http")
+    home = (fetch(funder["website"], budget, failed) if funder["website"].startswith("http")
             else {"error": "no address given"})
     if home.get("error") and use_search:
         if budget.exhausted:
@@ -543,13 +951,19 @@ def resolve(funder: dict, use_search: bool, settings: dict, budget: Budget) -> d
             found = tavily_site(funder["name"], settings["country"], budget)
         except Exception as exc:  # noqa: BLE001
             found = None
-            print(f"[register] site search failed for {funder['name']}: {type(exc).__name__}")
+            failed.append("site search")
+            print(f"[register] site search failed for {funder['name']}: {_describe(exc)}")
+        if found and strict and not site_is_funders(settings, found, funder):
+            # A page that happens to mention the funder, on someone else's
+            # site: a tyre dealer's article is not the Energy Efficiency Fund.
+            return {**funder, "error": f"search found {_site_of(found)}, not the funder's site"}
         if found:
             root = "{0.scheme}://{0.netloc}/".format(urlsplit(found))
-            for candidate in (found, root):
+            tries = (root,) if page_problem(settings, found) else (found, root)
+            for candidate in tries:
                 if budget.exhausted:
                     return stopped
-                page = fetch(candidate, budget)
+                page = fetch(candidate, budget, failed)
                 if not page.get("error") and names_funder(page, funder["name"],
                                                           settings["name_stopwords"]):
                     home = page
@@ -562,26 +976,35 @@ def resolve(funder: dict, use_search: bool, settings: dict, budget: Budget) -> d
         return {**funder, "error": home["error"]}
     site = rs._site(urlsplit(home["url"]).hostname)
     guess = funder.get("funding_url")
-    if isinstance(guess, str) and rs._site(urlsplit(guess).hostname) == site:
+    if isinstance(guess, str) and rs._site(urlsplit(guess).hostname) == site and not (
+            page_problem(settings, guess) or (strict and _skipped(settings, guess, ""))):
         if budget.exhausted:
             return stopped
-        page = fetch(guess, budget)
-        if not page.get("error") and has_grant_words(settings, page.get("text", "")):
+        page = fetch(guess, budget, failed)
+        text = page.get("text", "")
+        # Under strict_pages one broad stem ("sprijin", "fonduri") is not
+        # enough, and a guess that redirects to a news story is refused.
+        good = (strong_text(settings, text) and not page_problem(settings, page.get("url", ""))
+                and not _skipped(settings, page.get("url", ""), "")
+                if strict else has_grant_words(settings, text))
+        if not page.get("error") and good:
             return {**funder, "url": page["url"], "resolved_by": "model"}
-    links = pick_links(home, home["url"], settings)
+    links = funding_links(settings, home)
     if links:
         return {**funder, "url": links[0], "resolved_by": "link"}
     if use_search:
         if budget.exhausted:
             return stopped
+        accept = (lambda r: search_result_is_funding(settings, r)) if strict else None
         try:
-            found = tavily_find(funder["name"], site, settings["search_terms"], budget)
+            found = tavily_find(funder["name"], site, settings["search_terms"], budget, accept)
         except Exception as exc:  # noqa: BLE001
             found = None
-            print(f"[register] search failed for {funder['name']}: {type(exc).__name__}")
+            failed.append("search")
+            print(f"[register] search failed for {funder['name']}: {_describe(exc)}")
         if found:
             return {**funder, "url": found, "resolved_by": "search"}
-    if has_grant_words(settings, home.get("text", "")):
+    if has_grant_words(settings, home.get("text", "")) and not page_problem(settings, home["url"]):
         return {**funder, "url": home["url"], "resolved_by": "home"}
     return {**funder, "error": "no funding page found"}
 
@@ -649,6 +1072,20 @@ def main(argv=None) -> int:
     slugs = {rs.slugify_funder(n, args.country): n for n in known}
     by_site = known_sites(known.values(), settings) if settings["dedupe_known_by_site"] else {}
     merges = []
+    # Two new funders on one site are one funder when their names agree or
+    # they reach the same page; the first listed keeps its name. On a shared
+    # host the test is stricter (see same_funder), and a new funder may also
+    # be merged into a known one there, never the other way round.
+    merge_new = settings["merge_new_by_site"]
+    new_by_site: dict[str, list[dict]] = {}
+    known_shared: dict[str, list[dict]] = {}
+    if merge_new:
+        aliases = get_country_config(args.country).funder_aliases or {}
+        for k in known.values():
+            k["aliases"] = aliases.get(k["name"], [])
+            for site in {_site_of(k.get("url")), _site_of(k.get("website"))}:
+                if site in settings["shared_hosts"]:
+                    known_shared.setdefault(site, []).append(k)
 
     def merge(match: dict, c: dict, why: str | None = None) -> None:
         match["category"] = c["category"]
@@ -659,50 +1096,114 @@ def main(argv=None) -> int:
             merges.append(f"{c['name']} -> {match['name']} ({why})")
             print(f"[register] merged {c['name']!r} into {match['name']!r}: {why}")
 
+    def absorb(keep: dict, c: dict, why: str) -> None:
+        if not from_manifest:
+            keep["tier"] = min(keep["tier"], c["tier"])
+        keep["regions"] = keep["regions"] or c["regions"]
+        merges.append(f"{c['name']} -> {keep['name']} ({why})")
+        print(f"[register] merged {c['name']!r} into {keep['name']!r}: {why}")
+
     todo = []
     for c in candidates:
         match = known.get(c["name"].lower()) or known.get(
             slugs.get(rs.slugify_funder(c["name"], args.country), ""))
         site = _site_of(c.get("website"))
+        shared = site in settings["shared_hosts"]
+        # On a shared host the listed address is a page, not a home page
+        # ("undp.org/moldova"), so it counts as the page reached.
+        on_known = (same_funder(settings, known_shared.get(site, []), c, by_page=shared,
+                                shared=True, page="website") if merge_new and shared else None)
+        twin = (same_funder(settings, new_by_site.get(site, []), c, by_page=shared,
+                            shared=shared, page="website") if merge_new and site else None)
         if match:
             merge(match, c)
         elif site in by_site:
             # Merged before any resolve spend: its listed site is a known one.
             merge(by_site[site], c, f"listed site {site}")
+        elif on_known:
+            why = "same page" if same_page(on_known["website"], c["website"]) else "same name"
+            merge(on_known, c, f"listed site {site}, shared host, {why}")
+        elif twin:
+            # Merged before any resolve spend too: the same funder, listed twice.
+            why = "same name"
+            if shared:
+                why = "shared host, " + ("same page" if same_page(twin["website"], c["website"])
+                                         else "same name")
+            absorb(twin, c, f"listed site {site}, {why}")
         else:
             todo.append(c)
+            if merge_new and site:
+                new_by_site.setdefault(site, []).append(c)
     print(f"[register] {len(known)} funders already known, {len(todo)} to resolve")
 
     # Results are saved as they come, so a run the budget stops can resume
-    # without paying for them again.
+    # without paying for them again. A saved result the current rules refuse
+    # (an address strict_pages turns away, or one reached after a Tavily call
+    # gave up) is resolved again.
     progress_path = path.replace("-register.json", "-register-progress.json")
     progress = {} if args.only_category else load_progress(progress_path, args.country)
-    done = [progress[funder_key(c["name"], args.country)] for c in todo
-            if funder_key(c["name"], args.country) in progress]
-    todo = [c for c in todo if funder_key(c["name"], args.country) not in progress]
-    if done:
-        print(f"[register] {len(done)} resolved by an earlier run, {len(todo)} left")
+    stale = [k for k, r in progress.items() if not isinstance(r, dict) or retry_later(r) or (
+        r.get("url") and page_problem(settings, r["url"]))]
+    for k in stale:
+        del progress[k]
+    if stale:
+        print(f"[register] {len(stale)} saved results refused by the current rules; "
+              f"they are resolved again")
+    saved = {funder_key(c["name"], args.country) for c in todo} & set(progress)
+    left = [c for c in todo if funder_key(c["name"], args.country) not in saved]
+    if saved:
+        print(f"[register] {len(saved)} resolved by an earlier run, {len(left)} left")
     lock = threading.Lock()
 
     def work(c: dict) -> dict:
         r = resolve(c, not args.no_search, settings, budget)
-        if r.get("error") != BUDGET_REACHED and not args.only_category:
+        if r.get("error") != BUDGET_REACHED and not retry_later(r) and not args.only_category:
             with lock:
                 progress[funder_key(c["name"], args.country)] = r
                 write_json(progress_path, {"country": args.country, "resolved": progress})
         return r
 
     with ThreadPoolExecutor(max_workers=rs.CRAWL_CONCURRENCY) as pool:
-        resolved = done + list(pool.map(work, todo))
-    if by_site:
-        # A funding page found on a known funder's site is that funder's.
+        fresh = iter(list(pool.map(work, left)))
+    # In the listing's order, saved or not, so which name a merge keeps does
+    # not depend on what an earlier run finished.
+    resolved = [progress[k] if k in saved else next(fresh)
+                for k in (funder_key(c["name"], args.country) for c in todo)]
+    # Funders a Tavily call gave up on (too many requests, or the plan or
+    # credits used up) are not finished, merged or not.
+    limited = sum(1 for r in resolved if retry_later(r))
+    if by_site or known_shared:
+        # A funding page found on a known funder's site is that funder's. On
+        # a shared host, only when it is that funder by the stricter test.
         kept = []
         for r in resolved:
             site = _site_of(r.get("url"))
+            on_known = (same_funder(settings, known_shared.get(site, []), r, by_page=True,
+                                    shared=True) if site in known_shared else None)
             if site in by_site:
                 merge(by_site[site], r, f"funding page on {site}")
+            elif on_known:
+                why = "same page" if same_page(on_known["url"], r["url"]) else "same name"
+                merge(on_known, r, f"funding page on {site}, shared host, {why}")
             else:
                 kept.append(r)
+        resolved = kept
+    if merge_new:
+        # Two new funders whose pages are on one site, checked again now the
+        # page is known: most were listed with no site, or different ones.
+        kept, pages_by_site = [], {}
+        for r in resolved:
+            site = _site_of(r.get("url"))
+            shared = site in settings["shared_hosts"]
+            twin = (same_funder(settings, pages_by_site.get(site, []), r, by_page=True,
+                                shared=shared) if site else None)
+            if twin:
+                why = "same page" if same_page(twin["url"], r["url"]) else "same name"
+                absorb(twin, r, f"funding page on {site}, {'shared host, ' if shared else ''}{why}")
+            else:
+                kept.append(r)
+                if site:
+                    pages_by_site.setdefault(site, []).append(r)
         resolved = kept
     if not args.only_category:
         resolved = list(known.values()) + resolved
@@ -717,9 +1218,10 @@ def main(argv=None) -> int:
                    "error": r["error"]} for r in resolved if not r.get("url")]
     funders.sort(key=lambda f: (f["tier"], f["category"], f["name"]))
     stopped = sum(1 for r in unresolved if r["error"] == BUDGET_REACHED)
-    # A register short of funders the budget cut off is not written: once it
-    # exists, its tier 1 becomes the country's must-appear list.
-    written = None if (args.limit or args.only_category or stopped) else path
+    # A register short of funders the budget or Tavily cut off is not
+    # written: once it exists, its tier 1 becomes the country's must-appear
+    # list. The progress file stays, so a re-run pays only for those.
+    written = None if (args.limit or args.only_category or stopped or limited) else path
     if written:
         write_json(path, {"country": args.country, "funders": funders, "unresolved": unresolved})
         if os.path.exists(progress_path):
@@ -727,10 +1229,14 @@ def main(argv=None) -> int:
     by = {}
     for f in funders:
         by.setdefault(f["category"], [0, 0])[f["tier"] - 1] += 1
+    if limited:
+        print(f"[register] {limited} funders hit Tavily limits; re-run to resolve them "
+              f"(the rest are saved in {progress_path}). If Tavily said the plan or "
+              f"credits are used up, add credits first.")
     tavily_usd = (budget.searches + budget.extracts) * TAVILY_PRICE
     print(json.dumps({
         "candidates": len(candidates), "resolved": len(funders), "unresolved": len(unresolved),
-        "stopped_by_budget": stopped,
+        "stopped_by_budget": stopped, "stopped_by_tavily": limited,
         "resolved_by": {k: sum(1 for f in funders if f["resolved_by"] == k)
                         for k in ("known", "model", "link", "search", "site-search", "home")},
         "tier_1": sum(1 for f in funders if f["tier"] == 1),
@@ -742,7 +1248,7 @@ def main(argv=None) -> int:
         "written": written,
         "unresolved_sample": unresolved[:12],
     }, indent=2, ensure_ascii=False))
-    return 0 if not stopped else 1
+    return 0 if not (stopped or limited) else 1
 
 
 if __name__ == "__main__":

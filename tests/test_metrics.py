@@ -67,6 +67,32 @@ def test_classify_agent(ua, expected):
     assert metrics.classify_agent(ua) == expected
 
 
+# --- classify_role ---
+
+@pytest.mark.parametrize("ua, expected", [
+    (GPTBOT_UA, "training"),
+    ("Mozilla/5.0 (compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)", "search"),
+    ("Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot)", "fetch"),
+    ("Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)", "training"),
+    ("Claude-User/1.0", "fetch"),
+    ("Claude-SearchBot/1.0", "search"),
+    ("anthropic-ai", "training"),
+    ("Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)", "search"),
+    ("Mozilla/5.0 (compatible; Perplexity-User/1.0)", "fetch"),
+    ("Google-Extended", "training"),
+    ("CCBot/2.0 (https://commoncrawl.org/faq/)", "training"),
+    ("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "search"),
+    ("Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)", "search"),
+    ("Mozilla/5.0 (compatible; YandexBot/3.0)", None),
+    ("curl/8.4.0", None),
+    ("", None),
+    (None, None),
+    (HUMAN_UA, None),
+])
+def test_classify_role(ua, expected):
+    assert metrics.classify_role(ua) == expected
+
+
 # --- classify_referrer ---
 
 @pytest.mark.parametrize("ref, expected", [
@@ -228,6 +254,55 @@ def test_counters_missing_file(data_dir):
     assert c["top_clickout_grants"] == []
 
 
+def test_bot_hit_stores_role(data_dir):
+    metrics.record_hit("/grants/OPP-1", "ChatGPT-User/1.0", None, surface="page", now=NOW)
+    metrics.record_hit("/grants/OPP-1", "curl/8", None, surface="page", now=NOW)
+    metrics.record_hit("/grants/OPP-1", HUMAN_UA, None, surface="page", now=NOW)
+    fetch, script, person = _lines(data_dir)
+    assert fetch["agent"] == "gptbot" and fetch["role"] == "fetch"
+    assert script["agent"] == "other-bot" and "role" not in script
+    assert "role" not in person
+
+
+@pytest.mark.parametrize("path, referrer, ref, host", [
+    ("/grants/OPP-1?utm_source=chatgpt.com", None, "assistant", "chatgpt.com"),
+    ("/grants/OPP-1?utm_source=ChatGPT.com", "https://example.org/", "assistant", "chatgpt.com"),
+    ("/grants/OPP-1?utm_source=www.perplexity.ai", None, "assistant", "www.perplexity.ai"),
+    # A referrer that names a source wins over the tag.
+    ("/grants/OPP-1?utm_source=chatgpt.com", "https://www.google.com/", "search", "www.google.com"),
+    ("/grants/OPP-1?utm_source=chatgpt.com", "https://claude.ai/chat/1", "assistant", "claude.ai"),
+    ("/grants/OPP-1?utm_source=chatgpt.com&utm_medium=email", None, "email", None),
+    # Only the fixed assistant hosts; nothing a client chose is stored.
+    ("/grants/OPP-1?utm_source=newsletter", None, "direct", None),
+    ("/grants/OPP-1?utm_source=chatgpt.com.evil.example", None, "direct", None),
+    ("/grants/OPP-1?q=chatgpt.com", None, "direct", None),
+])
+def test_assistant_utm_source(data_dir, path, referrer, ref, host):
+    metrics.record_hit(path, HUMAN_UA, referrer, surface="page", now=NOW)
+    [line] = _lines(data_dir)
+    assert line["path"] == "/grants/OPP-1"
+    assert line["ref"] == ref
+    assert line.get("ref_host") == host
+
+
+def test_counters_role_from_old_lines(data_dir):
+    """Lines written before roles were recorded are classed from their UA."""
+    path = data_dir / "platform" / "metrics" / "nz"
+    path.mkdir(parents=True)
+    old = {"kind": "hit", "surface": "page", "ts": NOW.isoformat(), "path": "/grants/OPP-1",
+           "agent": "gptbot", "ref": "direct"}
+    (path / "2026-09.jsonl").write_text("".join(json.dumps(l) + "\n" for l in (
+        {**old, "ua": GPTBOT_UA},
+        {**old, "ua": "OAI-SearchBot/1.0"},
+        {**old, "ua": "ChatGPT-User/1.0", "role": "bogus"},
+        {**old, "ua": 5},
+        {**old, "agent": "other-bot", "ua": "curl/8"},
+    )))
+    c = metrics.monthly_counters("nz", "2026-09")
+    assert c["hits_by_agent"] == {"gptbot": 4, "other-bot": 1}
+    assert c["hits_by_agent_role"] == {"gptbot": {"training": 1, "search": 1, "fetch": 1}}
+
+
 def test_counters_empty_file(data_dir):
     path = data_dir / "platform" / "metrics" / "nz"
     path.mkdir(parents=True)
@@ -272,6 +347,8 @@ def test_counters_aggregate(data_dir):
     assert c["country"] == "nz" and c["month"] == "2026-09"
     assert c["hits_by_surface"] == {"page": 2, "api": 4, "mcp": 4}
     assert c["hits_by_agent"] == {"gptbot": 1, "human": 3, "claudebot": 5, "other-bot": 1}
+    assert c["hits_by_agent_role"] == {"gptbot": {"training": 1},
+                                       "claudebot": {"training": 1, "fetch": 4}}
     assert c["hits_by_referrer"] == {"direct": 8, "assistant": 1, "search": 1}
     assert c["clickouts_total"] == 3
     assert c["clickouts_by_referrer"] == {"assistant": 1, "direct": 1, "search": 1}

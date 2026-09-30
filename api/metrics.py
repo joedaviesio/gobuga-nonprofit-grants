@@ -6,8 +6,9 @@ Storage is append-only JSONL, one file per country per month:
     <platform_dir>/metrics/<country>/<YYYY-MM>.jsonl
 
 What a line holds: the path (query string dropped), the agent class, the raw
-user agent only when the class is a bot, the referrer class, the referrer host
-only when the class is `assistant` or `search`, and the timestamp. Click-out
+user agent and the role (training, search or fetch) only when the class is a
+bot, the referrer class, the referrer host only when the class is `assistant`
+or `search`, and the timestamp. Click-out
 lines add the grant ID and funder name. Never the IP address, never a cookie,
 never the raw user agent of a human.
 
@@ -32,6 +33,7 @@ AGENT_CLASSES: tuple[str, ...] = (
     "gptbot", "claudebot", "perplexitybot", "google-extended", "ccbot",
     "googlebot", "bingbot", "other-bot", "human",
 )
+AGENT_ROLES: tuple[str, ...] = ("training", "search", "fetch")
 REFERRER_CLASSES: tuple[str, ...] = ("assistant", "search", "email", "direct", "other")
 
 # Caps on what one line may carry, so a hostile client cannot bloat the log.
@@ -73,6 +75,15 @@ _AGENT_TOKENS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("bingbot", ("bingbot",)),
 )
 
+# What a named bot is doing, by the same substring match. `fetch` is a page
+# read on behalf of a person asking an assistant, `search` builds an index
+# that answers cite from, `training` collects text for a future model.
+_ROLE_TOKENS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("fetch", ("chatgpt-user", "claude-user", "perplexity-user")),
+    ("search", ("oai-searchbot", "claude-searchbot", "perplexitybot", "googlebot", "bingbot")),
+    ("training", ("gptbot", "claudebot", "anthropic-ai", "google-extended", "ccbot")),
+)
+
 # Generic fallback: self-declared bots, plus the HTTP libraries that scripts
 # and agent fetch tools send by default. None of these is a person's browser.
 _GENERIC_BOT_RE = re.compile(
@@ -97,6 +108,15 @@ def classify_agent(user_agent: str) -> str:
     if _GENERIC_BOT_RE.search(ua):
         return "other-bot"
     return "human"
+
+
+def classify_role(user_agent: str) -> str | None:
+    """training, search or fetch for a named bot; None for anything else."""
+    ua = (user_agent or "").strip().lower()
+    for role, tokens in _ROLE_TOKENS:
+        if any(t in ua for t in tokens):
+            return role
+    return None
 
 
 def _is_bot(agent_class: str) -> bool:
@@ -169,6 +189,20 @@ def _has_email_utm(url: str) -> bool:
     return any(v.strip().lower() == "email" for v in values)
 
 
+def _assistant_utm_host(url: str) -> str | None:
+    """The assistant named by `utm_source` on a landing URL, which is how
+    ChatGPT tags the links it cites. Only a host from _ASSISTANT_HOSTS."""
+    try:
+        query = urlsplit(url).query
+    except ValueError:
+        return None
+    for value in parse_qs(query).get("utm_source", []):
+        host = value.strip().lower().rstrip(".")
+        if _host_in(host, _ASSISTANT_HOSTS):
+            return host
+    return None
+
+
 def classify_referrer(referrer: str | None) -> str:
     """assistant, search, email, direct or other. Matches on the parsed host only."""
     referrer = (referrer or "").strip()
@@ -201,6 +235,12 @@ def _base_line(path: str, user_agent: str, referrer: str | None, now: datetime) 
     # A page reached from an email link usually has no referrer; the campaign
     # tag on the landing URL is the only signal, so it wins.
     ref = "email" if _has_email_utm(path) else classify_referrer(referrer)
+    ref_host = _referrer_host(referrer or "")
+    # A cited link often arrives with no referrer; the tag is then the only
+    # sign of where it came from. A referrer that names a source wins.
+    utm_host = _assistant_utm_host(path) if ref in ("direct", "other") else None
+    if utm_host:
+        ref, ref_host = "assistant", utm_host
     line = {
         "ts": now.isoformat(),
         "path": path.split("?", 1)[0].split("#", 1)[0][:MAX_PATH_CHARS],
@@ -209,8 +249,11 @@ def _base_line(path: str, user_agent: str, referrer: str | None, now: datetime) 
     }
     if _is_bot(agent):
         line["ua"] = (user_agent or "")[:MAX_UA_CHARS]
+        role = classify_role(user_agent)
+        if role:
+            line["role"] = role
     if ref in ("assistant", "search"):
-        line["ref_host"] = _referrer_host(referrer or "")
+        line["ref_host"] = ref_host
     return line
 
 
@@ -308,6 +351,7 @@ def monthly_counters(country=None, month=None) -> dict:
     hits_by_surface: Counter = Counter()
     hits_by_agent: Counter = Counter()
     hits_by_referrer: Counter = Counter()
+    hits_by_agent_role: dict[str, Counter] = {}
     clickouts_by_referrer: Counter = Counter()
     clickouts_by_agent: Counter = Counter()
     clickout_grants: Counter = Counter()
@@ -322,7 +366,15 @@ def monthly_counters(country=None, month=None) -> dict:
         if kind == "hit":
             surface = _field(row, "surface")
             hits_by_surface[surface] += 1
-            hits_by_agent[_field(row, "agent")] += 1
+            agent = _field(row, "agent")
+            hits_by_agent[agent] += 1
+            # Lines written before roles were recorded still carry the UA.
+            role = row.get("role")
+            if role not in AGENT_ROLES:
+                ua = row.get("ua")
+                role = classify_role(ua) if isinstance(ua, str) else None
+            if role:
+                hits_by_agent_role.setdefault(agent, Counter())[role] += 1
             hits_by_referrer[_field(row, "ref")] += 1
             if surface == "api":
                 api_by_prefix[_api_prefix(path_)] += 1
@@ -340,6 +392,7 @@ def monthly_counters(country=None, month=None) -> dict:
         "month": month,
         "hits_by_surface": dict(hits_by_surface),
         "hits_by_agent": dict(hits_by_agent),
+        "hits_by_agent_role": {a: dict(r) for a, r in hits_by_agent_role.items()},
         "hits_by_referrer": dict(hits_by_referrer),
         "clickouts_total": clickouts,
         "clickouts_by_referrer": dict(clickouts_by_referrer),

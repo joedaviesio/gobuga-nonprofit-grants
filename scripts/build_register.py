@@ -15,7 +15,8 @@ model or Tavily, counts toward the one `--budget`.
 
 The funder categories, the tier 1 threshold and the words that mark a funding
 page come from the `register` block of the country's config
-(`platform/sources/<country>.json`). Optional keys in that block:
+(`platform/sources/<country>.json`), read by orchestrator/register_words.py,
+which the sweep shares. Optional keys in that block:
 
   skip_link_words        more words that mark a link not worth following
   name_stopwords         words too common to show a page names the funder
@@ -68,6 +69,18 @@ page come from the `register` block of the country's config
                          find that are never a funder's own
   host_generic_words     with strict_pages: name words too common to show a
                          host is the funder's ("development", "women")
+  keep_known_categories  a funder already known (the manifest's) keeps its
+                         category when a listed candidate merges into it
+  dated_path_words       with strict_pages: words that, in a path part before
+                         a year, make it a round and not a dated news folder
+                         (/concursuri/2026/...), as a programme word does
+  about_path_words       with strict_pages: not_funding_path_words that name
+                         a section of the site, excused when a later part is
+                         a strong word (/despre-noi/granturi)
+  trusted_hosts          with strict_pages: hosts a search may find that are
+                         a funder's own though their labels are too short to
+                         carry its name (or.md, a raion council); the page
+                         must still name the funder
 
 Usage:
     python scripts/build_register.py nz --confirm [--budget 3] [--only-category council]
@@ -97,17 +110,20 @@ load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 from api.country_config import get_country_config  # noqa: E402
 from api.funders import _to_ascii, canonicalise_funder  # noqa: E402
 from api.sources import register_path  # noqa: E402
-from api.tenant import platform_sources_dir, platform_sources_path  # noqa: E402
 from orchestrator import register_sweep as rs  # noqa: E402
+# The country's words and the page rules live beside the sweep, which uses
+# them too; they are importable from here under their old names.
+from orchestrator.register_words import (  # noqa: E402, F401
+    COUNTRY_SLUG, DOCUMENT, HEADLINE_WORDS, LONG_SLUG_WORDS, MONTH, REQUIRED, YEAR,
+    _check_country, _config_error, _pattern, _skipped, _strings, funding_links, has_grant_words,
+    page_problem, register_settings, strong_path, strong_text)
+from orchestrator.register_words import country_pick_links as pick_links  # noqa: E402, F401
 
 LIST_MODEL = "claude-sonnet-5"
 LIST_PRICE_IN, LIST_PRICE_OUT = 3.00, 15.00
 TAVILY_PRICE = 0.008            # USD per credit: one search, or one page extract
 ASKS = 2                        # the model's list differs a little each time
 BUDGET_REACHED = "budget reached"
-
-COUNTRY_SLUG = re.compile(r"[a-z]{2,8}")  # as api/metrics.py
-REQUIRED = ("categories", "tier_one", "grant_words", "search_terms")
 
 # Tavily answers HTTP 429 both for too many requests a minute and for a plan
 # out of credits; its SDK raises UsageLimitExceededError for either. The
@@ -132,161 +148,6 @@ class TavilyStopped(Exception):
     """Raised in place of a Tavily call once Tavily has said the plan or
     credits are used up: the call would fail, so it is not made."""
 
-# A register URL that is a file, not a page: it has no links to follow and
-# goes stale with the call it was written for.
-DOCUMENT = re.compile(r"\.(pdf|docx?|xlsx?|pptx?|odt|ods|rtf|zip|rar)$|/wp-content/uploads/|"
-                      r"/sites/default/files/", re.IGNORECASE)
-YEAR = re.compile(r"(19|20)\d\d")
-MONTH = re.compile(r"0?[1-9]|1[0-2]")
-HEADLINE_WORDS = 10             # a slug this long is a headline, whatever it says
-LONG_SLUG_WORDS = 7             # this long, a headline unless it names funding
-
-
-def _config_error(country: str, message: str) -> SystemExit:
-    return SystemExit(f"[register] {platform_sources_path(country)}: {message}")
-
-
-def _check_country(country: str) -> None:
-    """A slug, and a config file of exactly that name. On a case-blind disk
-    `MD` would read md.json and then write over another country's files."""
-    if not isinstance(country, str) or not COUNTRY_SLUG.fullmatch(country):
-        raise SystemExit(f"[register] {country!r} is not a country slug (2 to 8 lowercase letters)")
-    if f"{country}.json" not in os.listdir(platform_sources_dir()):
-        raise SystemExit(f"[register] no {country}.json in {platform_sources_dir()}")
-
-
-def _strings(reg: dict, key: str, country: str) -> list[str]:
-    value = reg.get(key, [])
-    if not isinstance(value, list) or not all(isinstance(w, str) and w.strip() for w in value):
-        raise _config_error(country, f"register.{key} must be a list of non-empty strings")
-    return value
-
-
-def _pattern(words: list[str], fold) -> str:
-    """One alternation of the words. Folded words match only at the start of
-    a word ("grant" not in "migrant"), and a space or hyphen in one matches
-    a space, hyphen or underscore, as in an address."""
-    if not fold:
-        return "|".join(map(re.escape, words))
-    parts = [r"[\s_-]+".join(map(re.escape, re.split(r"[\s_-]+", fold(w).strip())))
-             for w in words]
-    if not all(parts):
-        raise ValueError("a word folds to nothing")
-    return r"(?<![^\W_])(?:" + "|".join(parts) + ")"
-
-
-def register_settings(country: str) -> dict:
-    """The country's `register` block, checked and ready to use. Stops with a
-    message naming what is wrong, before any call is paid for."""
-    _check_country(country)
-    cfg = get_country_config(country)
-    reg = cfg.register or {}
-    if not isinstance(reg, dict):
-        raise _config_error(country, "register must be an object")
-    missing = [k for k in REQUIRED if not reg.get(k)]
-    if missing:
-        raise SystemExit(f"[register] no register {', '.join(missing)} for {country!r}: add them "
-                         f"to the \"register\" block of {platform_sources_path(country)}")
-    categories = reg["categories"]
-    if not isinstance(categories, dict) or not all(
-            isinstance(k, str) and k.strip() and isinstance(v, str) and v.strip()
-            for k, v in categories.items()):
-        raise _config_error(country, "register.categories must map names to descriptions")
-    for key in ("tier_one", "search_terms"):
-        if not isinstance(reg[key], str) or not reg[key].strip():
-            raise _config_error(country, f"register.{key} must be a non-empty string")
-    for key in ("fold_words", "dedupe_known_by_site", "tier_one_from_manifest",
-                "merge_new_by_site", "strict_pages"):
-        if not isinstance(reg.get(key, False), bool):
-            raise _config_error(country, f"register.{key} must be true or false")
-    grant_words = _strings(reg, "grant_words", country)
-    skip_words = _strings(reg, "skip_link_words", country)
-    weak_words = _strings(reg, "weak_skip_link_words", country)
-    stopwords = _strings(reg, "name_stopwords", country)
-    excluded = _strings(reg, "exclude", country)
-    shared_hosts = _strings(reg, "shared_hosts", country)
-    merge_stopwords = _strings(reg, "merge_name_stopwords", country)
-    strong_words = _strings(reg, "strong_grant_words", country)
-    path_words = _strings(reg, "strong_path_words", country)
-    not_funding = _strings(reg, "not_funding_path_words", country)
-    not_funding_parts = _strings(reg, "not_funding_path_parts", country)
-    programme_words = _strings(reg, "programme_path_words", country)
-    kind_words = _strings(reg, "merge_kind_words", country)
-    aggregators = _strings(reg, "aggregator_hosts", country)
-    host_generic = _strings(reg, "host_generic_words", country)
-    fold = _to_ascii if reg.get("fold_words") else None
-    if weak_words and not fold:
-        raise _config_error(country, "register.weak_skip_link_words needs fold_words")
-    strict = reg.get("strict_pages", False)
-    if strict and not (fold and strong_words):
-        raise _config_error(country,
-                            "register.strict_pages needs fold_words and strong_grant_words")
-    own_skip = weak_skip = strong = path_strong = not_funding_part = None
-    not_funding_whole = programme = None
-    try:
-        words = re.compile(_pattern(grant_words, fold), re.IGNORECASE)
-        skip = rs.SKIP_LINK
-        if skip_words and fold:
-            # Kept apart from the English list: in fold mode a link's text is
-            # checked too, and "Contact us to apply" is not a contact page.
-            own_skip = re.compile(_pattern(skip_words, fold), re.IGNORECASE)
-        elif skip_words:
-            skip = re.compile(skip.pattern + "|" + _pattern(skip_words, fold), re.IGNORECASE)
-        if weak_words:
-            weak_skip = re.compile(_pattern(weak_words, fold), re.IGNORECASE)
-        # Whole words only, at both ends: "Sida" is not in "Sidanova".
-        exclude = (re.compile(_pattern(excluded, _to_ascii) + r"(?![^\W_])", re.IGNORECASE)
-                   if excluded else None)
-        if strict:
-            strong = re.compile(_pattern(strong_words, fold), re.IGNORECASE)
-            path_strong = re.compile(_pattern(strong_words + path_words, fold), re.IGNORECASE)
-            if not_funding:
-                # A whole path part, or its first words: "news", "news-and-events",
-                # "press-releases", but not "newsletter".
-                not_funding_part = re.compile(
-                    "^" + _pattern(not_funding, fold) + r"(?![^\W_])", re.IGNORECASE)
-            if not_funding_parts:
-                # Words with a funding sense too ("media-grants", "contact-grants"):
-                # only a path part that is the word and nothing else.
-                not_funding_whole = re.compile(
-                    "^" + _pattern(not_funding_parts, fold) + "$", re.IGNORECASE)
-            if programme_words:
-                programme = re.compile(_pattern(programme_words, fold), re.IGNORECASE)
-    except ValueError as exc:
-        raise _config_error(country, f"register words: {exc}") from exc
-    return {
-        "country": cfg.country_label,
-        "categories": dict(categories),
-        "tier_one": reg["tier_one"],
-        "grant_words": words,
-        "skip_link": skip,
-        "own_skip": own_skip,
-        "weak_skip": weak_skip,
-        "fold": fold,
-        "search_terms": reg["search_terms"],
-        # Folded like the names they are checked against, so "Fundația" and
-        # "Fundatia" are one word.
-        "name_stopwords": {_to_ascii(w) for w in stopwords},
-        "dedupe_known_by_site": reg.get("dedupe_known_by_site", False),
-        "shared_hosts": {rs._site(h) for h in shared_hosts},
-        "exclude": exclude,
-        "tier_one_from_manifest": reg.get("tier_one_from_manifest", False),
-        "merge_new_by_site": reg.get("merge_new_by_site", False),
-        # Words naming a kind of body ("primăria", "raional") are not set
-        # aside: a town hall and a raion council of one town are two funders.
-        "merge_stopwords": ({_to_ascii(w) for w in stopwords + merge_stopwords}
-                            - {_to_ascii(w) for w in kind_words}),
-        "merge_kind_words": {_to_ascii(w) for w in kind_words},
-        "strict_pages": strict,
-        "strong_words": strong,
-        "path_strong_words": path_strong,
-        "not_funding_part": not_funding_part,
-        "not_funding_whole": not_funding_whole,
-        "programme_path": programme,
-        "aggregator_hosts": {rs._site(h) for h in aggregators},
-        "host_generic_words": {_to_ascii(w) for w in stopwords + host_generic},
-    }
-
 
 def is_excluded(settings: dict, name: str, country: str) -> bool:
     """The candidate names a funder the owner ruled out, by its own name or
@@ -298,140 +159,123 @@ def is_excluded(settings: dict, name: str, country: str) -> bool:
     return any(exclude.search(_to_ascii(n)) for n in names)
 
 
-def has_grant_words(settings: dict, text: str) -> bool:
-    fold = settings["fold"]
-    return bool(settings["grant_words"].search(fold(text) if fold else text))
+# A host under one of these is a news or hobby site more often than a
+# funder's: ungheni.info is a town's news portal, not its council.
+NEWS_TLDS = {"info", "news", "online", "press", "media", "tv", "live", "today", "blog", "site"}
+# A funder's site may add one of these to a word of its name: civilspace.eu.
+# Not "express", "info", "news" or "fans": cahulexpress.md is a newspaper.
+LABEL_SUFFIXES = ("space", "hub", "fund", "fond", "ngo")
+# Words that join a name's other words and give no initial: "Bureau of ...".
+_CONNECTORS = {"of", "for", "and", "the", "de", "din", "si", "pentru", "la", "in", "a", "al",
+               "dlya", "i", "po"}
+_GERMAN = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
 
 
-def _skipped(settings: dict, href: str, text: str) -> bool:
-    """The country's own skip words, in the link's address or its text. A
-    weak one gives way when the text names a grant. A strong one does not:
-    "Concursul pentru ocuparea funcției publice" has a grant word, concurs."""
-    fold = settings["fold"]
-    address, label = fold(rs.decode(href)), fold(text)
-    own, weak = settings["own_skip"], settings["weak_skip"]
-    if own and (own.search(address) or own.search(label)):
-        return True
-    if weak and (weak.search(address) or weak.search(label)):
-        return not settings["grant_words"].search(label)
-    return False
+def _name_forms(name: str) -> list[str]:
+    """The name folded to plain Latin letters, and also German-style when
+    that differs: "Böll" is "boll" and "boell"."""
+    forms = [name]
+    german = name.lower().translate(_GERMAN)
+    if _to_ascii(german) != _to_ascii(name):
+        forms.append(german)
+    return forms
 
 
-def pick_links(page: dict, home: str, settings: dict) -> list[str]:
-    """rs.pick_links with the country's words. A country without fold_words
-    gets exactly the sweep's rule."""
-    seen = {home.rstrip("/")}
-    if not settings["fold"]:
-        return rs.pick_links(page, home, seen, settings["grant_words"], settings["skip_link"])
-    links = [(h, t) for h, t in page.get("links", []) if not _skipped(settings, h, t)]
-    return rs.pick_links({**page, "links": links}, home, seen, settings["grant_words"],
-                         settings["skip_link"], settings["fold"])
-
-
-def page_problem(settings: dict, url: str) -> str | None:
-    """Why `url` cannot be a funding page, judged by its address alone, or
-    None. Only with strict_pages; otherwise every address may be one.
-
-    A document. A dated folder: a year followed by a month (/2026/02/), or
-    a year with no funding word before it (/topics/2025/...), but not
-    /granturi/2026/apel-deschis. A path part naming news, stories or the
-    like, unless the part names funding itself; the ambiguous words (media,
-    events, resources, press, contact) only as a whole part, and not after
-    or before a part naming funding or a programme (/programmes/media,
-    /resources/grants). A last part as long as a headline, counting words
-    of three letters or more, so "de", "a" and "si" do not make a call's
-    title a headline; seven such words stand only when one names funding."""
-    if not settings["strict_pages"]:
-        return None
-    fold = settings["fold"]
-    path = fold(rs.decode(urlsplit(url).path))
-    if DOCUMENT.search(path):
-        return "a document"
-    parts = [p for p in path.split("/") if p]
-    strong = settings["path_strong_words"]
-    programme = settings["programme_path"]
-
-    def funding_part(p: str) -> bool:
-        return bool(strong.search(p) or (programme and programme.search(p)))
-    for i, p in enumerate(parts[:-1]):
-        if YEAR.fullmatch(p) and (MONTH.fullmatch(parts[i + 1]) or not any(
-                strong.search(q) for q in parts[:i])):
-            return "a dated path"
-    marker, whole = settings["not_funding_part"], settings["not_funding_whole"]
-    for i, p in enumerate(parts):
-        if strong.search(p):
-            continue
-        if marker and marker.search(p):
-            return "a news or other non-funding path"
-        if whole and whole.search(p) and not any(
-                funding_part(q) for j, q in enumerate(parts) if j != i):
-            return "a news or other non-funding path"
-    slug = re.sub(r"\.(html?|aspx?|php)$", "", parts[-1]) if parts else ""
-    words = re.findall(r"[^\W\d_]{3,}", slug)
-    if len(words) >= HEADLINE_WORDS or (
-            len(words) >= LONG_SLUG_WORDS and not strong.search(slug)):
-        return "an article slug"
-    return None
-
-
-def strong_text(settings: dict, text: str) -> bool:
-    """Words that show a page is about applying for funding, not about
-    money in general: "finanțare", not "Direcția finanțe"."""
-    return bool(settings["strong_words"].search(settings["fold"](text or "")))
-
-
-def strong_path(settings: dict, url: str) -> bool:
-    fold = settings["fold"]
-    return bool(settings["path_strong_words"].search(fold(rs.decode(urlsplit(url).path))))
-
-
-def funding_links(settings: dict, home: dict) -> list[str]:
-    """pick_links, keeping under strict_pages only a link whose address is
-    not refused and whose text or path names funding in strong words. One
-    grant stem in a news slug no longer ties with a real "Granturi" page,
-    and "Apply for an emergency travel document" is not a call."""
-    links = pick_links(home, home["url"], settings)
-    if not settings["strict_pages"]:
-        return links
-    texts: dict[str, list[str]] = {}
-    for href, text in home.get("links", []):
-        texts.setdefault(href.rstrip("/"), []).append(text)
-    return [h for h in links if not page_problem(settings, h) and (
-        strong_path(settings, h) or any(strong_text(settings, t)
-                                        for t in texts.get(h.rstrip("/"), [])))]
+def _acronyms(name: str) -> set[str]:
+    """Acronyms a host may use for the funder: one the name gives in
+    capitals (FEE, UNICEF), and the initials of a bracketed name of three
+    words or more, Romanian or English, connectors left out."""
+    found = {a.lower() for a in re.findall(r"\b[A-Z]{3,}\b", name)}
+    for inner in re.findall(r"\(([^)]*)\)", name):
+        words = [w for w in re.findall(r"[^\W\d_]+", _to_ascii(inner)) if w not in _CONNECTORS]
+        if len(words) >= 3:
+            found.add("".join(w[0] for w in words))
+    return found
 
 
 def site_is_funders(settings: dict, url: str, funder: dict) -> bool:
     """A site found by search belongs to the funder when it is the site the
-    listing gave; never when it is a grants aggregator; otherwise when its
-    host carries the funder's name, as one of:
+    listing gave, or a host the country trusts (`trusted_hosts`: or.md, a
+    council whose label is too short to carry its name); never when it is a
+    grants aggregator; otherwise when one of its host labels, the top-level
+    domain aside, is the funder's name, as one of:
 
-      the acronym as a host label or the start of one: fee.md for the
-        Energy Efficiency Fund (FEE), but not coffee.md
-      a distinctive name word starting or ending a host label: cahul.md for
-        Consiliul Raional Cahul, crungheni.md for Ungheni, civilspace.eu
-        for the Civil Society Development Foundation
-      two distinctive name words anywhere in the host
+      an acronym, as the whole label: fee.md for the Energy Efficiency Fund
+        (FEE), but not feedback.md or coffee.md; unicef.org
+      a distinctive name word, as the whole label: cahul.md for Consiliul
+        Raional Cahul, md.boell.org for Heinrich Böll (German fold too), but
+        not cahulexpress.md, orheiinfo.md or soros-news.md; "Boll" is
+        boell.org too
+      that word after the initials of the name's other words, or before a
+        short suffix a funder's site may add: crungheni.md ("Consiliul
+        Raional"), civilspace.eu
+      two or more name words run together, one of them distinctive:
+        stefanvoda.md or stefan-voda.md, democracyendowment.eu
+      the whole name run together, generic words and all: unwomen.org for
+        UN Women (the country's name aside)
 
     A distinctive word is not one of name_stopwords or host_generic_words:
     "development" alone does not make developmentaid.org UNDP's, nor
-    "women" womenfund.org UN Women's. A place name is distinctive, so a
-    council whose only other words are generic is found by its town."""
+    "women" womenfund.org UN Women's. A bare two-letter acronym is never
+    enough ("un" would give UN Women every un.org page). A host under a
+    news-like top-level domain (ungheni.info) counts only as the listed or
+    a trusted site."""
     site = _site_of(url)
     if site and site == _site_of(funder.get("website")):
         return True
+    if site and site in settings.get("trusted_hosts", set()):
+        return True
     if not site or site in settings["aggregator_hosts"]:
         return False
-    labels = [lab for lab in re.split(r"[.-]", site) if lab and lab != "www"]
-    words = [w for w in _name_words(funder["name"]) if w not in settings["host_generic_words"]]
-    acronyms = [a.lower() for a in re.findall(r"\b[A-Z]{3,}\b", funder["name"])]
+    parts = site.split(".")
+    if parts[-1] in NEWS_TLDS:
+        return False
+    labels = [lab.replace("-", "") for lab in parts[:-1] if lab and lab != "www"]
+    # And each label read back from German spelling: boell.org for "Heinrich
+    # Boll", written without its umlaut.
+    labels += [g for g in (re.sub(r"(?<=[aou])e", "", lab) for lab in labels) if g not in labels]
+    generic = settings["host_generic_words"]
+    acronyms = _acronyms(funder["name"])
+    for form in _name_forms(funder["name"]):
+        tokens = re.findall(r"[^\W\d_]+", _to_ascii(re.sub(r"\([^)]*\)", " ", form)))
+        words = [w for w in tokens if len(w) >= 4]
+        distinct = [w for w in words if w not in generic]
+        whole = "".join(t for t in tokens if t not in settings["name_stopwords"]
+                        and t not in _CONNECTORS)
+        for lab in labels:
+            if lab in acronyms or lab in distinct or (len(whole) >= 5 and lab == whole):
+                return True
+            for w in distinct:
+                if lab.endswith(w) and lab[:-len(w)] and _initials_of(lab[:-len(w)], tokens, w):
+                    return True
+                if lab.startswith(w) and lab[len(w):] in LABEL_SUFFIXES:
+                    return True
+            if any(w in distinct for w in _run_of(lab, words)):
+                return True
+    return False
 
-    def at_edge(w: str) -> bool:
-        return any(lab.startswith(w) or lab.endswith(w) for lab in labels)
-    host = "".join(labels)
-    return (any(lab.startswith(a) for a in acronyms for lab in labels)
-            or any(at_edge(w) for w in words)
-            or sum(1 for w in set(words) if w in host) >= 2)
+
+def _initials_of(prefix: str, tokens: list[str], word: str) -> bool:
+    """`prefix` is the initials of the name's words before `word`, in order:
+    "cr" in crungheni.md for Consiliul Raional Ungheni."""
+    before = tokens[:tokens.index(word)] if word in tokens else []
+    initials = "".join(t[0] for t in before if t not in _CONNECTORS)
+    return len(prefix) >= 2 and prefix == initials
+
+
+def _run_of(label: str, words: list[str]) -> list[str]:
+    """The name words that, two or more run together in any order, make up
+    the whole label, or [] when they do not."""
+    def split(rest: str, used: list[str]) -> list[str]:
+        if not rest:
+            return used if len(used) >= 2 else []
+        for w in words:
+            if rest.startswith(w) and w not in used:
+                found = split(rest[len(w):], used + [w])
+                if found:
+                    return found
+        return []
+    return split(label, [])
 
 
 class Budget(rs.Budget):
@@ -484,16 +328,33 @@ def _too_fast(exc: Exception) -> bool:
     """A 429 worth waiting out. One whose message says the credits or the
     plan are used up is not, nor a ForbiddenError (432, 433); after either
     no other call is made."""
-    if type(exc).__name__ == PLAN_LIMIT:
+    return _limit_wait(type(exc).__name__, str(exc))
+
+
+def _limit_wait(name: str, message: str) -> bool:
+    """_too_fast by the error's class name and message, which is all an
+    extract's error keeps."""
+    if name == PLAN_LIMIT:
         _out_of_credits.set()
         return False
-    if type(exc).__name__ != RATE_LIMITED:
+    if name != RATE_LIMITED:
         return False
-    message = str(exc)
     if OUT_OF_CREDITS.search(message) and not TOO_FAST.search(message):
         _out_of_credits.set()
         return False
     return True
+
+
+def gave_up(exc: Exception, failed: list[str], what: str, name: str) -> None:
+    """A search that raised. Tavily's limits (too many requests, the plan
+    or credits used up) are not an answer: the funder is left for a re-run.
+    Anything else (a query Tavily rejects, a model pick that cannot be
+    read) would fail the same way again, so it counts as nothing found."""
+    if type(exc).__name__ in LIMIT_ERRORS:
+        failed.append(what)
+        print(f"[register] {what} failed for {name}: {_describe(exc)}; a re-run tries again")
+    else:
+        print(f"[register] {what} failed for {name}: {_describe(exc)}; taken as nothing found")
 
 
 def tavily_call(call, *args, **kwargs):
@@ -521,21 +382,27 @@ def fetch(url: str, budget: Budget, failed: list | None = None) -> dict:
     brought the page back: Tavily bills only a successful extraction, and
     an attempt that failed (a 429, or nothing returned) costs nothing.
 
-    The sweep's fetch keeps only the error's class name, so an extract
-    turned away as too many requests is told by that name; the page is
-    fetched again after a wait, as a search is. Callers check the budget
+    The sweep's fetch keeps the error's class name in `error` and its
+    message in `extract_message`, so an extract turned away as too many
+    requests is fetched again after a wait, as a search is, and one whose
+    message says the credits are used up stops Tavily for the run. Callers check the budget
     first. An extract Tavily turned away for good is added to `failed`, so
     the funder is tried again on a re-run."""
     waited = 0.0
     for attempt in range(TAVILY_TRIES):
-        page = rs.fetch_page(url)
+        # Once Tavily has said the plan or credits are used up, a page that
+        # refuses a plain fetch stays refused: no extract is tried.
+        page = (rs.fetch_page(url, use_tavily=False) if _out_of_credits.is_set()
+                else rs.fetch_page(url))
         if page.get("via") == "tavily":
             budget.add_extract()
         why = page.get("extract_error") or page.get("error") or ""
         if f"extract failed: {PLAN_LIMIT}" in why:
             _out_of_credits.set()
         limited = any(f"extract failed: {e}" in why for e in LIMIT_ERRORS)
-        wait = _wait(attempt, waited) if f"extract failed: {RATE_LIMITED}" in why else 0.0
+        too_fast = f"extract failed: {RATE_LIMITED}" in why and _limit_wait(
+            RATE_LIMITED, page.get("extract_message", ""))
+        wait = _wait(attempt, waited) if too_fast else 0.0
         if wait <= 0:
             if limited and failed is not None:
                 failed.append("extract")
@@ -951,8 +818,7 @@ def _resolve(funder: dict, use_search: bool, settings: dict, budget: Budget,
             found = tavily_site(funder["name"], settings["country"], budget)
         except Exception as exc:  # noqa: BLE001
             found = None
-            failed.append("site search")
-            print(f"[register] site search failed for {funder['name']}: {_describe(exc)}")
+            gave_up(exc, failed, "site search", funder["name"])
         if found and strict and not site_is_funders(settings, found, funder):
             # A page that happens to mention the funder, on someone else's
             # site: a tyre dealer's article is not the Energy Efficiency Fund.
@@ -1000,8 +866,7 @@ def _resolve(funder: dict, use_search: bool, settings: dict, budget: Budget,
             found = tavily_find(funder["name"], site, settings["search_terms"], budget, accept)
         except Exception as exc:  # noqa: BLE001
             found = None
-            failed.append("search")
-            print(f"[register] search failed for {funder['name']}: {_describe(exc)}")
+            gave_up(exc, failed, "search", funder["name"])
         if found:
             return {**funder, "url": found, "resolved_by": "search"}
     if has_grant_words(settings, home.get("text", "")) and not page_problem(settings, home["url"]):
@@ -1087,8 +952,17 @@ def main(argv=None) -> int:
                 if site in settings["shared_hosts"]:
                     known_shared.setdefault(site, []).append(k)
 
+    # With keep_known_categories a known funder keeps its own category when
+    # it is one of this country's register categories (Delegația Uniunii
+    # Europene stays "international" whatever a candidate merged into it
+    # says). Otherwise, and for a pool funder ("other"), the candidate's
+    # category is taken, as it always was.
+    own_category = ({id(k) for k in known.values() if k["category"] in settings["categories"]}
+                    if settings["keep_known_categories"] else set())
+
     def merge(match: dict, c: dict, why: str | None = None) -> None:
-        match["category"] = c["category"]
+        if id(match) not in own_category:
+            match["category"] = c["category"]
         if not from_manifest:
             match["tier"] = min(match["tier"], c["tier"])
         match["regions"] = match["regions"] or c["regions"]
@@ -1117,8 +991,10 @@ def main(argv=None) -> int:
                             shared=shared, page="website") if merge_new and site else None)
         if match:
             merge(match, c)
-        elif site in by_site:
-            # Merged before any resolve spend: its listed site is a known one.
+        elif site in by_site and not kinds_differ(settings, by_site[site]["name"], c["name"]):
+            # Merged before any resolve spend: its listed site is a known one,
+            # unless the two say they are different kinds of body: a raion
+            # council and the town hall on its town's site.
             merge(by_site[site], c, f"listed site {site}")
         elif on_known:
             why = "same page" if same_page(on_known["website"], c["website"]) else "same name"
@@ -1180,7 +1056,7 @@ def main(argv=None) -> int:
             site = _site_of(r.get("url"))
             on_known = (same_funder(settings, known_shared.get(site, []), r, by_page=True,
                                     shared=True) if site in known_shared else None)
-            if site in by_site:
+            if site in by_site and not kinds_differ(settings, by_site[site]["name"], r["name"]):
                 merge(by_site[site], r, f"funding page on {site}")
             elif on_known:
                 why = "same page" if same_page(on_known["url"], r["url"]) else "same name"

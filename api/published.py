@@ -35,7 +35,7 @@ from zoneinfo import ZoneInfo
 
 from api import sources, tenant
 from api.country_config import get_country, get_country_config
-from api.funders import slugify_funder
+from api.funders import slugify_funder, transliterate_cyrillic
 
 
 SWEEP_INTERVAL_MONTHS = 2
@@ -305,8 +305,10 @@ def load_held(country: str | None = None) -> dict:
 # --- Normalisation for dedupe ---------------------------------------------------
 
 def normalise_title(title: str | None) -> str:
-    """Lowercase, fold accents, `&` -> `and`, punctuation to spaces."""
-    text = unicodedata.normalize("NFKD", title or "")
+    """Lowercase, fold accents, `&` -> `and`, punctuation to spaces.
+    Cyrillic is transliterated first, so a Russian title keeps its words
+    (without, every one normalised to "" and all counted as compatible)."""
+    text = unicodedata.normalize("NFKD", transliterate_cyrillic(title or ""))
     text = "".join(c for c in text if not unicodedata.combining(c)).lower()
     text = text.replace("&", " and ")
     text = re.sub(r"[^a-z0-9]+", " ", text)

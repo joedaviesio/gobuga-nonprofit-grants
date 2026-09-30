@@ -45,6 +45,7 @@
     "cantemir",
     "dubasari",
     "gagauzia",
+    "calarasi",
     "national"
   ],
   "tags": [
@@ -229,6 +230,7 @@
       "gov.uk", "ec.europa.eu"
     ],
     "merge_new_by_site": true,
+    "keep_known_categories": true,
     "merge_name_stopwords": [
       "stiftung", "republic", "republicii", "chisinau", "chișinău",
       "grant", "grants", "granturi", "program", "programs", "programme", "programul",
@@ -266,6 +268,9 @@
       "eufundingportal.eu", "grantwatch.com", "instrumentl.com", "candid.org",
       "globalgiving.org", "civic.md", "wikipedia.org", "facebook.com", "linkedin.com"
     ],
+    "dated_path_words": ["concurs", "конкурс"],
+    "about_path_words": ["about us", "despre noi"],
+    "trusted_hosts": ["or.md", "il.md", "bri.gov.md", "msmps.gov.md"],
     "host_generic_words": [
       "development", "international", "european", "europe", "fund", "funds", "foundation",
       "grant", "grants", "moldova", "rural", "women", "national", "agency", "community",
@@ -320,6 +325,118 @@
       "фонд", "ассоциация", "министерство", "агентство", "национальный", "посольство",
       "молдова", "республика"
     ]
+  },
+  "sweep": {
+    "country_words": true,
+    "skip_link_words": [
+      "proiecte finanțate", "proiectele finanțate", "финансированные проекты", "vacant",
+      "admiterea candidaților", "regulament", "raport", "în derulare", "proiecte în curs",
+      "anunț - concurs", "informații despre concurs", "fondul de fonduri", "ordine de finanțare",
+      "câștigătoare", "finaliz", "rezultate", "inactive", "colectarea propunerilor", "colectăm propuneri",
+      "rezultatele proiectelor", "sumarul rezultatelor", "rapoarte anuale", "monitorizarea",
+      "prima casă", "реализуемые проекты", "завершенные проекты", "garantare", "acces la finanțare",
+      "graficul verificărilor", "lista de interdicții", "lista solicitanților",
+      "materiale de vizibilitate"
+    ],
+    "link_words": [
+      "proiecte culturale", "proiecte editoriale", "voucher", "programul național",
+      "postdoctorat", "stimularea excelenței", "proiecte inovaționale", "antreprenoriat",
+      "competitivitate", "программа"
+    ],
+    "stale_years": 2,
+    "rank_strong_links": true,
+    "language_paths": [
+      "ro", "ru", "en", "uk", "ua", "fr", "de", "es", "pt", "it", "ar", "bg", "hu", "el", "pl",
+      "cs", "sk", "sl", "hr", "sr", "tr", "az", "hy", "ka", "lt", "lv", "et", "nl", "sv",
+      "da", "fi", "zh", "ja", "ko", "fa", "vi", "th", "ur", "mt", "ga"
+    ],
+    "language_names": [
+      "Русский", "Русская версия", "English", "Română", "Romana", "Română (RO)", "Français",
+      "Español", "Português", "Deutsch", "Italiano", "العربية", "Українська", "Български",
+      "Magyar", "Ελληνικά", "Polski", "Türkçe", "Հայերեն", "ქართული", "Azərbaycan"
+    ],
+    "default_language": "ro",
+    "default_language_tlds": ["md"],
+    "link_order": "page",
+    "links_per_page": 8,
+    "content_links_first": true,
+    "fold_letters": true,
+    "number_format": "ro",
+    "currencies": {
+      "MDL": {"label": "lei", "max": 50000000,
+              "markers": ["lei", "leu", "MDL", "леев", "лей", "лея", "леи"]},
+      "EUR": {"label": "euro, €", "max": 2500000, "markers": ["€", "EUR", "euro", "евро"]},
+      "USD": {"label": "dolari SUA, $", "max": 2500000,
+              "markers": ["$", "US$", "USD", "dolar", "долл"]}
+    },
+    "other_dollar_words": ["CAD", "C$", "CA$", "canad", "канад", "AUD", "A$", "NZD", "NZ$"],
+    "other_dollar_tlds": ["ca", "nz", "au"],
+    "general_title": "Granturi {funder}",
+    "join_translations": true,
+    "prefer_dedicated_pages": true,
+    "title_stopwords": [
+      "programul", "program", "de", "a", "al", "ai", "ale", "și", "în", "pentru", "la", "din",
+      "susținere", "sprijin", "the", "of", "for", "and", "программа", "поддержки", "для", "и", "в",
+      "granturi", "grant", "grants", "finanțare", "concurs", "concursul", "apel", "apeluri",
+      "гранты", "грантов", "конкурс"
+    ],
+    "not_a_grant_words": [
+      "credit", "împrumut", "garant", "leasing", "licitați", "achiziții publice",
+      "achiziție publică", "achiziția publică", "achizițiilor publice", "кредит", "заём", "заем", "займ", "гарант",
+      "лизинг", "тендер", "госзакуп", "государственные закупки", "государственных закупок"
+    ],
+    "grant_title_words": ["grant", "subvenți", "nerambursabil", "грант", "субсиди", "безвозмезд"],
+    "loan_text_words": [
+      "credit", "împrumut", "dobând", "rambursabil", "leasing", "microcredit", "microfinanț",
+      "returnabil", "restituir",
+      "кредит", "заём", "заем", "займ", "процентн", "возвратн", "лизинг"
+    ],
+    "reject_kinds": ["loan", "guarantee", "other"],
+    "mixed_kind": "keep",
+    "rolling_words": [
+      "pe tot parcursul anului", "permanent", "în orice moment", "oricând",
+      "fără termen limită", "постоянно", "в любое время", "в течение всего года", "круглый год"
+    ],
+    "not_covered_region": "transnistria",
+    "covered_with_words": ["inclusiv", "including", "включая", "в том числе"],
+    "both_banks_words": [
+      "ambele maluri", "both banks", "malul drept", "right bank", "toată țara", "întreaga țară",
+      "Moldova și", "Moldova and", "обоих берег", "обеих берег", "правого берег", "всей стран",
+      "Молдовы и", "Молдова и"
+    ],
+    "deadline_words": [
+      "termen", "data limită", "până la", "până pe", "pînă la", "depune", "depunerii", "depun",
+      "aplicare", "aplica", "prelungit", "închis", "încheiat", "încheier", "recepționa", "до", "срок", "крайний", "подач",
+      "принима", "deadline", "closes", "closing", "closed", "by", "until", "apply", "submission",
+      "cel târziu", "nu mai târziu", "expiră", "ora", "până în", "pînă", "înscrieri",
+      "прием заявок", "приём", "applications close", "due", "closing date",
+      "не позднее", "включительно"
+    ],
+    "not_covered_words": [
+      "transnistr", "tighina", "bender", "tiraspol", "stânga nistrului", "malul stâng",
+      "left bank", "приднестров", "бендер", "тирасп", "левобереж", "левом берегу",
+      "левого берег", "левый берег"
+    ],
+    "region_names": {
+      "chisinau": "Chișinău", "balti": "Bălți", "cahul": "Cahul", "comrat": "Comrat",
+      "ungheni": "Ungheni", "orhei": "Orhei", "soroca": "Soroca", "edinet": "Edineț",
+      "causeni": "Căușeni", "stefan-voda": "Ștefan Vodă", "criuleni": "Criuleni",
+      "ialoveni": "Ialoveni", "straseni": "Strășeni", "anenii-noi": "Anenii Noi",
+      "cimislia": "Cimișlia", "hincesti": "Hîncești", "leova": "Leova", "nisporeni": "Nisporeni",
+      "rezina": "Rezina", "soldanesti": "Șoldănești", "telenesti": "Telenești",
+      "floresti": "Florești", "glodeni": "Glodeni", "falesti": "Fălești", "drochia": "Drochia",
+      "riscani": "Rîșcani", "briceni": "Briceni", "ocnita": "Ocnița", "donduseni": "Dondușeni",
+      "singerei": "Sîngerei", "taraclia": "Taraclia", "basarabeasca": "Basarabeasca",
+      "cantemir": "Cantemir", "dubasari": "Dubăsari", "gagauzia": "UTA Găgăuzia",
+      "calarasi": "Călărași", "national": "toată Republica Moldova"
+    },
+    "prompt": {
+      "funder_site": "a Moldovan funder's website",
+      "language": "Romanian",
+      "not_funding": "Subsidies count as grants (subvenții, субсидии). Not loans, credit lines, loan guarantees, leasing, tenders, public procurement, jobs or awards already given.",
+      "amounts": "Read figures as a Moldovan page means them: 200.000 lei and 200 000 lei are 200000; 1,5 mil. lei is 1500000; 50 тыс. леев is 50000.",
+      "region_rule": "If the programme is for one or a few raions, give their slugs. If it is only for Transnistria or Bender (Tighina), give [\"transnistria\"]."
+    }
   },
   "must_appear_funders": [
     {

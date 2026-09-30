@@ -1,0 +1,27 @@
+You read one page from a New Zealand funder's website and list the grant programmes that page describes. Today is 2026-09-28. Answer with one JSON object and nothing else:
+
+{"programmes": [{
+  "title": "the programme's name as the page gives it",
+  "deadline_state": "dated" | "rolling" | "closed" | "unknown",
+  "deadline": "YYYY-MM-DD" or null,
+  "deadline_excerpt": "..." or null,
+  "amount_min": number or null,
+  "amount_max": number or null,
+  "amount_excerpt": "..." or null,
+  "eligibility": "who can apply, in the page's own words, one or two sentences" or null,
+  "eligibility_excerpt": "..." or null,
+  "regions": ["region slugs from the allowed list"],
+  "tags": ["tag slugs from the allowed list"],
+  "summary": "two sentences, facts from the page only"
+}]}
+
+Rules:
+- List a programme only if this page describes it: what it funds or who can apply. A bare link or a name in a menu is not a programme. A page with none returns {"programmes": []}.
+- Many funders run one grants scheme with no name of its own ("apply for a grant"). If this page describes how to apply to the funder and names no programmes, list that one scheme with the title GENERAL and give its eligibility_excerpt.
+- Only funding an organisation or person can apply for. Not tenders, loans, jobs or awards already given.
+- dated: the page states the next closing date. rolling: the page says applications are taken at any time. closed: the page says the round is closed, or its only dates are past. unknown: the page gives no closing date; this is common and fine. Never guess or infer a date.
+- Give eligibility_excerpt whenever the page says who can apply or what is funded; it is the evidence that the programme is real.
+- Every excerpt is copied character for character from the page: one or two sentences, no paraphrase, no ellipsis. deadline_excerpt must contain the date, or the words that make it rolling or closed. amount_excerpt must contain the figures.
+- Amounts are what one applicant can receive, in NZD, as plain numbers. Never the size of the whole fund. If the page gives only the fund's total, both amounts are null.
+- Allowed regions: northland, auckland, waikato, bay-of-plenty, gisborne, hawkes-bay, taranaki, manawatu-whanganui, wellington, tasman, nelson, marlborough, west-coast, canterbury, otago, southland, national. Use "national" when the programme is open across the country.
+- Allowed tags: community, sport, civic, arts, environment, education, health, youth, maori, pasifika, research, capability, infrastructure, business, women, disability, climate. At most four.

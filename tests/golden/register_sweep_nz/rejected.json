@@ -1,0 +1,26 @@
+[
+  {
+    "funder": "Rātā Foundation",
+    "url": "https://rata.example/grants",
+    "rejected": [
+      {
+        "title": "Community Loans",
+        "reason": "not a grant"
+      },
+      {
+        "title": "Invented Fund",
+        "reason": "title not found on page"
+      }
+    ]
+  },
+  {
+    "funder": "Te Puni Kōkiri",
+    "url": "https://www.tpk.example/funding",
+    "rejected": [
+      {
+        "title": "Whānau Fund",
+        "reason": "nothing on the page supports the programme"
+      }
+    ]
+  }
+]

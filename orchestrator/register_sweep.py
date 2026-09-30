@@ -17,9 +17,51 @@ A row is born verified or not at all, so there is no separate verify pass.
 Spend is counted as it goes and the run stops at `--budget` (USD), keeping
 what it has. Nothing is published unless `--publish` is given.
 
+`--crawl-only` stops after stage 2: it lists the pages each funder's crawl
+chose, how each was reached and whether it passed the page filter, and makes
+no model call and no Tavily call. It is free.
+
+A country whose sites are not in English sets a `sweep` block in its config
+(`platform/sources/<country>.json`). Every key is optional; without the
+block the sweep is New Zealand's, unchanged:
+
+  country_words    crawl by the `register` block's words (the page filter,
+                   the links followed and the skip words) instead of the
+                   English defaults; see orchestrator/register_words.py
+  skip_link_words  with country_words: more words that mark a link not
+                   worth following, beside the register's own
+  strict_links     with country_words: a followed link must also pass the
+                   register's strict page rules (not a document, dated or
+                   news path, or headline slug)
+  fold_letters     ş/ș, ţ/ț and typographic quotes are one letter when an
+                   excerpt or title is looked for on the page (the stored
+                   text keeps the page's own letters), and title keys are
+                   folded to plain Latin letters
+  number_format    "ro": 200.000 and 200 000 are thousands, 1,5 is a
+                   decimal, and mii, mil., milioane, тыс., млн multiply
+  currencies       {"MDL": {"max": ..., "markers": [...]}, ...}: the model
+                   names each amount's currency, and it is kept only when
+                   one of its markers stands beside a stated figure in the
+                   amount excerpt; otherwise the amount is left blank
+  other_dollar_words  with currencies: words that make a bare "$" not USD
+  general_title    the title of a funder's unnamed scheme, "{funder}" filled
+  not_a_grant_words   more title words that mark a loan or tender, unless
+                   a grant_title_words word is in the title too
+  grant_title_words   with not_a_grant_words: words that keep such a title
+  rolling_words    more words that make a deadline rolling
+  not_covered_region  a region slug the model may give for a programme
+                   limited to an area not yet covered; such a row is
+                   rejected, as is one whose title or eligibility excerpt
+                   names a not_covered_words word
+  not_covered_words   with not_covered_region
+  region_names     {slug: name}, shown to the model beside each slug
+  prompt           the country's prompt wording: funder_site, language,
+                   not_funding, amounts, region_rule
+
 CLI:
     python -m orchestrator.register_sweep nz --tier 1 --limit 20 --budget 2
     python -m orchestrator.register_sweep nz --budget 40 --publish
+    python -m orchestrator.register_sweep md --only "Ministerul Culturii" --crawl-only
 """
 
 import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy
@@ -34,16 +76,19 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from html.parser import HTMLParser
-from urllib.parse import unquote, urldefrag, urljoin, urlsplit
+from urllib.parse import urldefrag, urljoin, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
 
 from api import tenant
 from api.country_config import get_country_config
-from api.funders import slugify_funder
+from api.funders import _to_ascii, slugify_funder, transliterate_cyrillic
+from orchestrator import register_words as rw
+from orchestrator.register_words import GRANT_WORDS, SKIP_LINK, _site, decode, pick_links  # noqa: F401
 from orchestrator.tools import MAX_FETCH_REDIRECTS, UnsafeUrlError, assert_public_url
-from orchestrator.verify_pass import _day_in, _plausible_date, _verbatim, _year_conflicts, _norm
+from orchestrator.verify_pass import (MIN_EXCERPT_CHARS, _day_in, _norm, _plausible_date, _verbatim,
+                                      _year_conflicts)
 
 MODEL = "claude-haiku-4-5-20251001"
 # USD per million tokens. Deliberately the published Haiku 4.5 price, not the
@@ -61,16 +106,8 @@ EXTRACT_CONCURRENCY = 6
 CRAWL_CONCURRENCY = 12
 MAX_AMOUNT = 5_000_000          # above this a figure is a fund total, not a grant
 USER_AGENT = "GoBuga-GrantBot/0.2 (+https://gobuga.org/llms.txt)"
-
-GRANT_WORDS = re.compile(
-    r"grant|fund|funding|apply|application|scholarship|sponsorship|putea|pūtea|tahua|contestable",
-    re.IGNORECASE)
-SKIP_LINK = re.compile(
-    r"login|sign-?in|news|media-release|annual-report|careers|vacanc|privacy|terms|contact|"
-    r"recipient|approved|declined|successful|past-grant|grants-made|who-we.?ve-funded|"
-    r"facebook|twitter|linkedin|instagram|youtube|mailto:|tel:|\.(jpg|jpeg|png|gif|zip|docx?|xlsx?)$",
-    re.IGNORECASE)
-
+ESTIMATE_PROMPT_TOKENS = 1500   # --crawl-only's cost guide: the prompt, per page
+ESTIMATE_ANSWER_TOKENS = 1500   # and a long answer, per page
 
 # --- Register ------------------------------------------------------------------
 
@@ -168,9 +205,10 @@ def _wait_for_host(host: str) -> None:
         _host_last[host] = time.monotonic()
 
 
-def fetch_page(url: str) -> dict:
+def fetch_page(url: str, use_tavily: bool = True) -> dict:
     """{"url", "text", "links"} or {"url", "error"}. Follows redirects by hand
-    so every hop is checked against the public-address guard."""
+    so every hop is checked against the public-address guard. Without
+    `use_tavily` a page that refuses a plain fetch stays refused."""
     try:
         current = url
         with httpx.Client(timeout=FETCH_TIMEOUT_S, follow_redirects=False,
@@ -196,7 +234,7 @@ def fetch_page(url: str) -> dict:
         text = html_to_text(html)
         if len(text) < MIN_PAGE_CHARS:
             # Built in the browser by script: the plain fetch sees an empty shell.
-            rendered = fetch_blocked(current, "page has no text without scripts")
+            rendered = fetch_blocked(current, "page has no text without scripts", use_tavily)
             if not rendered.get("error"):
                 rendered["links"] = rendered["links"] or links
                 return rendered
@@ -208,7 +246,7 @@ def fetch_page(url: str) -> dict:
         return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links}
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (401, 403, 406, 429, 503):
-            return fetch_blocked(url, f"HTTP {exc.response.status_code}")
+            return fetch_blocked(url, f"HTTP {exc.response.status_code}", use_tavily)
         return {"url": url, "error": f"HTTP {exc.response.status_code}"}
     except Exception as exc:  # noqa: BLE001 — one bad site must not stop the crawl
         return {"url": url, "error": f"{type(exc).__name__}: {exc}"[:200]}
@@ -218,11 +256,12 @@ SEARCH_CREDITS = {"extract": 0}
 MARKDOWN_LINK = re.compile(r"\[([^\]]{1,200})\]\((https?://[^)\s]+)\)")
 
 
-def fetch_blocked(url: str, why: str) -> dict:
+def fetch_blocked(url: str, why: str, use_tavily: bool = True) -> dict:
     """A page that refuses a plain fetch, read through Tavily's extract
-    (one credit per five pages). Without a key, the refusal stands.
-    `extract_tried` marks every answer from an attempt, failed or not."""
-    if not os.getenv("TAVILY_API_KEY"):
+    (one credit per five pages). Without a key, or without `use_tavily`,
+    the refusal stands. `extract_tried` marks every answer from an
+    attempt, failed or not."""
+    if not use_tavily or not os.getenv("TAVILY_API_KEY"):
         return {"url": url, "error": why}
     try:
         from tavily import TavilyClient
@@ -240,55 +279,20 @@ def fetch_blocked(url: str, why: str) -> dict:
             "extract_tried": True}
 
 
-def _site(host: str) -> str:
-    host = (host or "").lower()
-    return host[4:] if host.startswith("www.") else host
+def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
+                 strict_links: bool = False) -> dict:
+    """Pages worth reading for one funder, breadth first from its funding page.
 
-
-def decode(address: str) -> str:
-    """Percent-decoded until it stops changing: some sites encode twice."""
-    for _ in range(3):
-        plain = unquote(address)
-        if plain == address:
-            break
-        address = plain
-    return address
-
-
-def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SKIP_LINK,
-               fold=None) -> list[str]:
-    """Same-site links whose text or address looks like a grant programme,
-    best first. Pure: decided by rule, not by a model. `words`, `skip` and
-    `fold` let a country whose sites are not in English bring its own."""
-    site = _site(urlsplit(home).hostname)
-    scored = []
-    for href, text in page.get("links", []):
-        parts = urlsplit(href)
-        if parts.scheme not in ("http", "https") or _site(parts.hostname) != site:
-            continue
-        key = href.rstrip("/")
-        address, path = href, parts.path
-        if fold:
-            # Decoded and folded to plain Latin letters, so a Cyrillic or
-            # percent-encoded address reads like any other.
-            address, path, text = fold(decode(href)), fold(decode(parts.path)), fold(text)
-        if key in seen or skip.search(address):
-            continue
-        score = 2 * len(words.findall(text)) + len(words.findall(path))
-        if score:
-            scored.append((-score, len(href), href))
-    out, picked = [], set()
-    for _, _, href in sorted(scored):
-        if href.rstrip("/") not in picked:
-            picked.add(href.rstrip("/"))
-            out.append(href)
-    return out
-
-
-def crawl_funder(funder: dict, fetch=fetch_page) -> dict:
-    """Pages worth reading for one funder, breadth first from its funding page."""
-    seen, pages, errors = {funder["url"].rstrip("/")}, [], []
-    frontier = [(funder["url"], 0)]
+    `words`, the country's register settings (register_words.register_settings),
+    choose pages and links by the country's words instead of the English
+    defaults; with `strict_links` a link must also pass its page rules.
+    With `words`, a page is read once however it is reached: "www." or not,
+    a redirect, a closing slash. `visits` records every address fetched,
+    how it was reached and whether it passed the page filter, for
+    --crawl-only."""
+    seen, pages, errors, visits = {funder["url"].rstrip("/")}, [], [], []
+    read: set[str] = set()
+    frontier = [(funder["url"], 0, "registered page")]
     # Funding pages move. If the registered one is gone, or is a file or a
     # bot check rather than a page with links, start again from the home page.
     home = "{0.scheme}://{0.netloc}/".format(urlsplit(funder["url"]))
@@ -299,21 +303,42 @@ def crawl_funder(funder: dict, fetch=fetch_page) -> dict:
                 break
             tried_home = True
             seen.add(home.rstrip("/"))
-            frontier.append((home, 0))
-        url, depth = frontier.pop(0)
+            frontier.append((home, 0, "home page, after the registered page gave nothing"))
+        url, depth, via = frontier.pop(0)
         page = fetch(url)
         if page.get("error"):
             errors.append({"url": url, "error": page["error"]})
+            visits.append({"url": url, "reached_by": via, "error": page["error"]})
             continue
         text = page["text"]
-        if len(text) >= MIN_PAGE_CHARS and GRANT_WORDS.search(text):
+        grant_words = rw.has_grant_words(words, text) if words else GRANT_WORDS.search(text)
+        kept = len(text) >= MIN_PAGE_CHARS and bool(grant_words)
+        why_not = "too short" if len(text) < MIN_PAGE_CHARS else "no grant words"
+        if words:
+            parts = urlsplit(page["url"])
+            address = f"{_site(parts.hostname)}{parts.path.rstrip('/')}?{parts.query}"
+            if kept and address in read:
+                kept, why_not = False, "already read"
+            read.add(address)
+        if kept:
             pages.append({"url": page["url"], "text": text})
+        visits.append({"url": page["url"], "reached_by": via, "kept": kept, "chars": len(text),
+                       **({} if kept else {"why_not": why_not}),
+                       **({"through": "tavily"} if page.get("via") == "tavily" else {})})
         if depth < MAX_DEPTH:
             room = MAX_PAGES_PER_FUNDER * 2 - len(seen)
-            for href in pick_links(page, funder["url"], seen)[:max(room, 0)]:
+            if words:
+                links = rw.country_pick_links(page, funder["url"], words, seen)
+                if strict_links:
+                    links = [h for h in links if not rw.page_problem(words, h)]
+            else:
+                links = pick_links(page, funder["url"], seen)
+            labels = {h: t for h, t in page.get("links", [])}
+            for href in links[:max(room, 0)]:
                 seen.add(href.rstrip("/"))
-                frontier.append((href, depth + 1))
-    return {"funder": funder, "pages": pages, "errors": errors}
+                frontier.append((href, depth + 1,
+                                 f"link \"{labels.get(href, '')[:80]}\" on {page['url']}"))
+    return {"funder": funder, "pages": pages, "errors": errors, "visits": visits}
 
 
 # --- Extract ---------------------------------------------------------------------
@@ -356,6 +381,77 @@ rolling or closed. amount_excerpt must contain the figures.
 the whole fund. If the page gives only the fund's total, both amounts are null.
 - Allowed regions: {regions}. Use "national" when the programme is open across the country.
 - Allowed tags: {tags}. At most four."""
+
+# For a country with a `sweep.prompt` block. New Zealand's is the one above,
+# word for word; this one adds a currency per programme and asks for the
+# summary and eligibility in the country's language.
+COUNTRY_PROMPT = """You read one page from {funder_site} and list the grant \
+programmes that page describes. Today is {today}. Answer with one JSON object and nothing else:
+
+{{"programmes": [{{
+  "title": "the programme's name exactly as the page gives it, in the page's language",
+  "deadline_state": "dated" | "rolling" | "closed" | "unknown",
+  "deadline": "YYYY-MM-DD" or null,
+  "deadline_excerpt": "..." or null,
+  "amount_min": number or null,
+  "amount_max": number or null,
+  "currency": {currency_codes} or null,
+  "amount_excerpt": "..." or null,
+  "eligibility": "who can apply, one or two sentences in {language}" or null,
+  "eligibility_excerpt": "..." or null,
+  "regions": ["region slugs from the allowed list"],
+  "tags": ["tag slugs from the allowed list"],
+  "summary": "two sentences in {language}, facts from the page only"
+}}]}}
+
+Rules:
+- List a programme only if this page describes it: what it funds or who can apply. A bare \
+link or a name in a menu is not a programme. A page with none returns {{"programmes": []}}.
+- Many funders run one grants scheme with no name of its own ("apply for a grant"). If \
+this page describes how to apply to the funder and names no programmes, list that one \
+scheme with the title GENERAL and give its eligibility_excerpt.
+- Only funding an organisation or person can apply for. {not_funding}
+- dated: the page states the next closing date. rolling: the page says applications are \
+taken at any time. closed: the page says the round is closed, or its only dates are past. \
+unknown: the page gives no closing date; this is common and fine. Never guess or infer a date.
+- Give eligibility_excerpt whenever the page says who can apply or what is funded; it is \
+the evidence that the programme is real.
+- Every excerpt is copied character for character from the page, in the page's own \
+language: one or two sentences, no paraphrase, no translation, no ellipsis. deadline_excerpt \
+must contain the date, or the words that make it rolling or closed. amount_excerpt must \
+contain the figures and the currency beside them.
+- summary and eligibility are always written in {language}, whatever the language of the \
+page. The title and every excerpt stay exactly as the page writes them.
+- Amounts are what one applicant can receive, as plain numbers in the currency the page \
+names beside them. Never the size of the whole fund. If the page gives only the fund's \
+total, both amounts are null. {amounts}
+- currency is the one the page names beside the amount: {currency_names}. If the page names \
+no currency beside the amount, or another currency, give null for currency and both \
+amounts. Never convert or guess a currency.
+- Allowed regions: {regions}. Use "national" when the programme is open across the country. \
+{region_rule}
+- Allowed tags: {tags}. At most four."""
+
+
+def system_prompt(cfg, today) -> str:
+    """The prompt for `cfg`'s country: New Zealand's unless the country has
+    a `sweep.prompt` block."""
+    sweep = cfg.sweep or {}
+    wording = sweep.get("prompt")
+    if not wording:
+        return SYSTEM_PROMPT.format(today=today.isoformat(), regions=", ".join(cfg.regions),
+                                    tags=", ".join(cfg.tags))
+    names = sweep.get("region_names") or {}
+    currencies = sweep.get("currencies") or {}
+    return COUNTRY_PROMPT.format(
+        today=today.isoformat(), funder_site=wording["funder_site"], language=wording["language"],
+        not_funding=wording.get("not_funding", ""), amounts=wording.get("amounts", ""),
+        region_rule=wording.get("region_rule", ""),
+        currency_codes=" | ".join(f'"{c}"' for c in currencies),
+        currency_names=", ".join(f"{c} ({v['label']})" if v.get("label") else c
+                                 for c, v in currencies.items()),
+        regions=", ".join(f"{r} ({names[r]})" if r in names else r for r in cfg.regions),
+        tags=", ".join(cfg.tags))
 
 
 class Budget:
@@ -446,39 +542,246 @@ def title_on_page(title: str, page_norm: str) -> bool:
     return found / len(words) >= 0.8
 
 
+# --- A country's own rules (the `sweep` block) --------------------------------------
+
+# Romanian pages write ş or ș, ţ or ț, and quote marks as they come. One
+# character for one character, so a place on the folded page is the same
+# place on the page.
+_LETTER_VARIANTS = str.maketrans({"ş": "ș", "Ş": "Ș", "ţ": "ț", "Ţ": "Ț", "„": '"', "“": '"',
+                                  "”": '"', "«": '"', "»": '"', "’": "'", "‘": "'", "‚": "'"})
+
+
+def fold_letters(text: str) -> str:
+    return text.translate(_LETTER_VARIANTS)
+
+
+_rules_cache: dict[int, tuple] = {}
+
+
+def country_rules(cfg) -> dict:
+    """`cfg.sweep`, compiled once per loaded config. Empty for a country
+    without the block, which then gets New Zealand's rules."""
+    hit = _rules_cache.get(id(cfg))
+    if hit and hit[0] is cfg:
+        return hit[1]
+    sweep = cfg.sweep or {}
+
+    def words(key: str):
+        found = sweep.get(key) or []
+        return re.compile(rw._pattern(found, _to_ascii), re.IGNORECASE) if found else None
+
+    def markers(found: list[str]) -> str:
+        # A marker that starts with a letter starts a word: "lei", not "salei".
+        return "|".join(("(?<![a-z])" if _to_ascii(m)[:1].isalpha() else "") + re.escape(_to_ascii(m))
+                        for m in sorted(found, key=len, reverse=True))
+    currencies = {}
+    for code, spec in (sweep.get("currencies") or {}).items():
+        alt = markers(spec["markers"])
+        currencies[code.upper()] = {"max": spec["max"],
+                                    "before": re.compile(rf"(?:{alt})\s*$"),
+                                    "after": re.compile(rf"\s*(?:de\s+)?(?:{alt})")}
+    rules = {
+        "fold_letters": bool(sweep.get("fold_letters")),
+        "number_format": sweep.get("number_format"),
+        "currencies": currencies,
+        "other_dollar": words("other_dollar_words"),
+        "general_title": sweep.get("general_title"),
+        "not_a_grant": words("not_a_grant_words"),
+        "grant_title": words("grant_title_words"),
+        "rolling": words("rolling_words"),
+        "not_covered_region": sweep.get("not_covered_region"),
+        "not_covered": words("not_covered_words"),
+    } if sweep else {}
+    _rules_cache[id(cfg)] = (cfg, rules)
+    return rules
+
+
+def title_key(title: str, fold: bool = False) -> str:
+    """A title as the words of its dedupe key. Cyrillic is transliterated,
+    so two Russian titles do not both become "". With `fold` (a country's
+    fold_letters) Latin letters lose their diacritics too, so "finanțare"
+    and "finantare" are one word; without, text with no Cyrillic keys
+    exactly as it always has (NZ's "Kōkiri" is still "k kiri")."""
+    text = _to_ascii(title) if fold else transliterate_cyrillic(title).lower()
+    return re.sub(r"[^a-z0-9]+", " ", text).strip()
+
+
+class _OnPage:
+    """Finds excerpts and titles on one page. Without fold_letters this is
+    the verify pass's check, unchanged. With it, ş/ș, ţ/ț and quote marks
+    are one letter, and what is kept is spelled as the page spells it."""
+
+    def __init__(self, text: str, fold: bool):
+        self.norm = _norm(text)
+        self.fold = fold
+        if fold:
+            tidy = re.sub(r"\s+", " ", text).strip()
+            lower = tidy.casefold()
+            # Only where casefolding keeps every letter in its place (it
+            # does for Romanian and Russian) can the page's own letters be
+            # read back; elsewhere the model's spelling is kept.
+            self.page = tidy if len(lower) == len(tidy) else None
+            self.key = fold_letters(lower)
+
+    def _as_on_page(self, text: str, at: int) -> str:
+        if self.page is None:
+            return text
+        page = self.page[at:at + len(text)]
+        return "".join(p if m.casefold() != p.casefold() else m for m, p in zip(text, page))
+
+    def verbatim(self, excerpt) -> str | None:
+        if not self.fold:
+            return _verbatim(excerpt, self.norm)
+        if not isinstance(excerpt, str):
+            return None
+        tidy = re.sub(r"\s+", " ", excerpt).strip()
+        at = self.key.find(fold_letters(tidy.casefold())) if len(tidy) >= MIN_EXCERPT_CHARS else -1
+        return None if at < 0 else self._as_on_page(tidy, at)
+
+    def title(self, title: str) -> str | None:
+        """The title, spelled as on the page where the page has it whole,
+        or None when it is not on the page."""
+        if not self.fold:
+            return title if title_on_page(title, self.norm) else None
+        if not title_on_page(fold_letters(title), self.key):
+            return None
+        at = self.key.find(fold_letters(title.casefold()))
+        return title if at < 0 else self._as_on_page(title, at)
+
+
+# A figure as a Moldovan page writes it: 200.000, 200 000 or 20,000 (thousands),
+# 1,5 or 1.5 (a decimal), then perhaps a word that multiplies it. Matched on
+# text folded to plain Latin letters, where "тыс." is "tys." and a
+# non-breaking space is a space.
+_FIGURE_RO = re.compile(
+    r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?"
+    r"|\d{1,3}(?: \d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)(?!\d|[.,]\d)"
+    r"(?:\s*(milioane|milion|million\w*|mil\.?|mln\.?|mii|mie|thousand|tysyach\w*|tys\.?|k)"
+    r"(?![a-z]))?")
+_MULTIPLIER = {"mii": 1e3, "mie": 1e3, "thousand": 1e3, "tys": 1e3, "tysyach": 1e3, "k": 1e3,
+               "milioane": 1e6, "milion": 1e6, "million": 1e6, "mil": 1e6, "mln": 1e6}
+
+
+def figures_ro(folded: str) -> list[tuple[float, int, int]]:
+    """(value, start, end) of every figure in folded text: "1.500" is fifteen
+    hundred, "1,5 mil." one and a half million."""
+    out = []
+    for m in _FIGURE_RO.finditer(folded):
+        num = m.group(1).replace(" ", "")
+        if re.fullmatch(r"\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?", num):
+            num = num.replace(".", "").replace(",", ".")
+        elif re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?", num):
+            num = num.replace(",", "")
+        else:
+            num = num.replace(",", ".")
+        word = re.sub(r"\W", "", m.group(2) or "")
+        mult = next((v for k, v in _MULTIPLIER.items() if word.startswith(k)), 1) if word else 1
+        out.append((round(float(num) * mult, 2), m.start(), m.end()))
+    return out
+
+
+def _amount(value) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value if value > 0 else None
+
+
+def country_amounts(item: dict, amount_excerpt: str | None, rules: dict) -> tuple:
+    """(lo, hi, currency) for a country with `currencies`, or all None. The
+    model names the currency; it is kept only when one of its markers stands
+    beside a stated figure in the excerpt and no other currency's does. A
+    figure the excerpt does not state, a bare "$" where the excerpt names
+    another dollar, or an amount over the currency's cap leaves all blank.
+    Nothing is converted or relabelled."""
+    lo, hi = _amount(item.get("amount_min")), _amount(item.get("amount_max"))
+    code = item.get("currency")
+    code = code.strip().upper() if isinstance(code, str) else None
+    spec = rules["currencies"].get(code)
+    stated = [a for a in (lo, hi) if a is not None]
+    if not (stated and spec and amount_excerpt) or (lo is not None and hi is not None and lo > hi):
+        return None, None, None
+    folded = _to_ascii(amount_excerpt)
+    if rules["number_format"] == "ro":
+        figures = figures_ro(folded)
+        if not all(any(abs(v - a) < 0.5 for v, _, _ in figures) for a in stated):
+            return None, None, None
+    else:
+        if not _figures_in(amount_excerpt, lo, hi):
+            return None, None, None
+        figures = [(float(re.sub(r"[^\d]", "", m.group())), m.start(), m.end())
+                   for m in re.finditer(r"\d[\d,]*", folded)]
+    beside = False
+    for value, start, end in figures:
+        if not any(abs(value - a) < 0.5 for a in stated):
+            continue
+        for other, s in rules["currencies"].items():
+            if s["before"].search(folded[:start]) or s["after"].match(folded[end:]):
+                if other != code:
+                    return None, None, None
+                beside = True
+    if not beside or any(a > spec["max"] for a in stated):
+        return None, None, None
+    if code == "USD" and rules["other_dollar"] and rules["other_dollar"].search(folded):
+        return None, None, None
+    return lo, hi, code
+
+
+def not_covered(item: dict, title: str, eligibility_excerpt: str | None, rules: dict) -> bool:
+    """The programme is limited to an area the country does not cover yet:
+    the model said so with the not-covered region, or its title or who can
+    apply names the area. Such a row is not published, as national or at all."""
+    if not rules.get("not_covered_region"):
+        return False
+    if rules["not_covered_region"] in (item.get("regions") or []):
+        return True
+    names = rules["not_covered"]
+    return bool(names and any(names.search(_to_ascii(t)) for t in (title, eligibility_excerpt or "")))
+
+
 def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: str) -> tuple[dict | None, str]:
     """A publishable row, or (None, reason). Code decides; the model only proposed."""
     if not isinstance(item, dict):
         return None, "not an object"
+    rules = country_rules(cfg)
     title = " ".join(str(item.get("title") or "").split())
-    page_norm = _norm(page["text"])
+    on_page = _OnPage(page["text"], rules.get("fold_letters", False))
     if NOT_A_GRANT.search(title):
+        return None, "not a grant"
+    if rules.get("not_a_grant") and rules["not_a_grant"].search(_to_ascii(title)) and not (
+            rules["grant_title"] and rules["grant_title"].search(_to_ascii(title))):
+        # "Linia de credit" and "Garanții de credit" are not grants; a
+        # subsidy is, and "Granturi și credite" names a grant.
         return None, "not a grant"
     general = title.upper() == "GENERAL"
     if general:
         # The funder's one unnamed scheme. It has no title to find, so it
         # must be supported by who can apply.
-        title = f"{funder['name']} grants"
-        if _verbatim(item.get("eligibility_excerpt"), page_norm) is None:
+        title = (rules["general_title"].format(funder=funder["name"]) if rules.get("general_title")
+                 else f"{funder['name']} grants")
+        if on_page.verbatim(item.get("eligibility_excerpt")) is None:
             return None, "nothing on the page supports the programme"
-    elif len(title) < 4 or not title_on_page(title, page_norm):
-        return None, "title not found on page"
+    else:
+        found = on_page.title(title) if len(title) >= 4 else None
+        if found is None:
+            return None, "title not found on page"
+        title = found
     state = item.get("deadline_state")
     if state not in ("dated", "rolling", "closed"):
         state = "unknown"
-    excerpt = _verbatim(item.get("deadline_excerpt"), page_norm)
+    excerpt = on_page.verbatim(item.get("deadline_excerpt"))
     if excerpt is None:
         if state == "closed":
             return None, "deadline excerpt not found on page"
         # No date the page supports. The programme is still kept if the page
         # supports the programme itself: who can apply, or what it pays.
         state = "unknown"
-        excerpt = (_verbatim(item.get("eligibility_excerpt"), page_norm)
-                   or _verbatim(item.get("amount_excerpt"), page_norm))
+        excerpt = (on_page.verbatim(item.get("eligibility_excerpt"))
+                   or on_page.verbatim(item.get("amount_excerpt")))
         if excerpt is None:
             return None, "nothing on the page supports the programme"
 
-    if state == "rolling" and not ROLLING_WORDS.search(excerpt):
+    if state == "rolling" and not ROLLING_WORDS.search(excerpt) and not (
+            rules.get("rolling") and rules["rolling"].search(_to_ascii(excerpt))):
         # "Closes on the 10th of every month" is a repeating date, not an open
         # door. Without the words, no deadline is claimed; the sentence stays
         # on the row as its evidence.
@@ -500,29 +803,38 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
     url = page["url"]
     provenance = ({} if state == "unknown" else
                   {"deadline": {"source_url": url, "verified_at": now_iso, "excerpt": excerpt}})
-    lo, hi = _number(item.get("amount_min")), _number(item.get("amount_max"))
-    amount_excerpt = _verbatim(item.get("amount_excerpt"), page_norm)
-    if lo is not None and hi is not None and lo > hi:
-        lo = hi = None
-    if amount_excerpt is None or not _figures_in(amount_excerpt, lo, hi):
-        lo = hi = None   # an amount the page does not support is not published
-    elif lo is not None or hi is not None:
-        provenance["amount"] = {"source_url": url, "verified_at": now_iso, "excerpt": amount_excerpt}
-    eligibility_excerpt = _verbatim(item.get("eligibility_excerpt"), page_norm)
+    amount_excerpt = on_page.verbatim(item.get("amount_excerpt"))
+    if rules.get("currencies"):
+        lo, hi, currency = country_amounts(item, amount_excerpt, rules)
+        if lo is not None or hi is not None:
+            provenance["amount"] = {"source_url": url, "verified_at": now_iso,
+                                    "excerpt": amount_excerpt}
+    else:
+        currency = cfg.currency
+        lo, hi = _number(item.get("amount_min")), _number(item.get("amount_max"))
+        if lo is not None and hi is not None and lo > hi:
+            lo = hi = None
+        if amount_excerpt is None or not _figures_in(amount_excerpt, lo, hi):
+            lo = hi = None   # an amount the page does not support is not published
+        elif lo is not None or hi is not None:
+            provenance["amount"] = {"source_url": url, "verified_at": now_iso, "excerpt": amount_excerpt}
+    eligibility_excerpt = on_page.verbatim(item.get("eligibility_excerpt"))
     if eligibility_excerpt:
         provenance["eligibility"] = {"source_url": url, "verified_at": now_iso,
                                      "excerpt": eligibility_excerpt}
+    if not_covered(item, title, eligibility_excerpt, rules):
+        return None, "only for an area not yet covered"
 
     regions = [r for r in (item.get("regions") or []) if r in cfg.regions] or funder["regions"]
     tags = [t for t in (item.get("tags") or []) if t in cfg.tags][:4]
     slug = slugify_funder(funder["name"], cfg.slug)
-    title_slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    title_slug = title_key(title, rules.get("fold_letters", False)).replace(" ", "-")
     return {
         "country": cfg.slug, "title": title, "funder": funder["name"],
         "deadline": deadline_text,
         "deadline_state": {"dated": "dated", "rolling": "rolling-confirmed", "closed": "closed",
                            "unknown": "not-stated"}[state],
-        "amount_min": lo, "amount_max": hi, "currency": cfg.currency,
+        "amount_min": lo, "amount_max": hi, "currency": currency,
         "region": regions, "tags": tags,
         "eligibility": (item.get("eligibility") or "").strip()[:600],
         "summary": (item.get("summary") or "").strip()[:900],
@@ -538,8 +850,7 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
 def extract_page(page: dict, funder: dict, cfg, budget: Budget, ask, today, now_iso: str) -> dict:
     if budget.exhausted:
         return {"url": page["url"], "skipped": "budget reached", "rows": [], "rejected": []}
-    system = SYSTEM_PROMPT.format(today=today.isoformat(), regions=", ".join(cfg.regions),
-                                  tags=", ".join(cfg.tags))
+    system = system_prompt(cfg, today)
     user = f"Funder: {funder['name']}\nPage address: {page['url']}\n\nPage text:\n{page['text']}"
     try:
         raw, tin, tout = ask(system, user)
@@ -569,11 +880,41 @@ def dedupe_rows(rows: list[dict]) -> list[dict]:
     best: dict[tuple, dict] = {}
     rank = {"dated": 4, "rolling-confirmed": 3, "closed": 2, "not-stated": 1}
     for row in rows:
-        key = (row["funder"].lower(), re.sub(r"[^a-z0-9]+", " ", row["title"].lower()).strip())
+        fold = country_rules(get_country_config(row.get("country"))).get("fold_letters", False)
+        key = (row["funder"].lower(), title_key(row["title"], fold))
         score = (rank[row["deadline_state"]], len(row["provenance"]))
         if key not in best or score > best[key][0]:
             best[key] = (score, row)
     return [row for _, row in best.values()]
+
+
+def select_funders(country: str, tier: int | None = None, limit: int | None = None,
+                   only: list[str] | None = None) -> list[dict]:
+    funders = load_register(country)
+    if tier:
+        funders = [f for f in funders if f["tier"] == tier]
+    if only:
+        wanted = {o.lower() for o in only}
+        funders = [f for f in funders if f["name"].lower() in wanted]
+    if limit:
+        funders = funders[:limit]
+    return funders
+
+
+def crawl_all(country: str, cfg, funders: list[dict], fetch) -> list[dict]:
+    """Every funder crawled, by the country's words when its sweep block asks."""
+    sweep = cfg.sweep or {}
+    words = rw.register_settings(country) if sweep.get("country_words") else None
+    strict = bool(words and sweep.get("strict_links"))
+    if words and sweep.get("skip_link_words"):
+        # The sweep's own additions ("proiecte finanțate": past recipients),
+        # beside the register's skip words, checked the same way.
+        extra = rw._pattern(sweep["skip_link_words"], words["fold"])
+        own = words["own_skip"]
+        words = {**words, "own_skip": re.compile(
+            f"{own.pattern}|{extra}" if own else extra, re.IGNORECASE)}
+    with ThreadPoolExecutor(max_workers=CRAWL_CONCURRENCY) as pool:
+        return list(pool.map(lambda f: crawl_funder(f, fetch, words, strict), funders))
 
 
 def run(country: str, *, tier: int | None = None, limit: int | None = None, budget_usd: float = 5.0,
@@ -586,20 +927,12 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
     month = today.strftime("%Y-%m")
     run_ts = now.strftime("%Y%m%dT%H%M%S")
 
-    funders = load_register(country)
-    if tier:
-        funders = [f for f in funders if f["tier"] == tier]
-    if only:
-        wanted = {o.lower() for o in only}
-        funders = [f for f in funders if f["name"].lower() in wanted]
-    if limit:
-        funders = funders[:limit]
+    funders = select_funders(country, tier, limit, only)
     budget = Budget(budget_usd)
     print(f"[register_sweep] {country} {month}: {len(funders)} funders, budget ${budget_usd:.2f}")
 
     started = time.monotonic()
-    with ThreadPoolExecutor(max_workers=CRAWL_CONCURRENCY) as pool:
-        crawled = list(pool.map(lambda f: crawl_funder(f, fetch), funders))
+    crawled = crawl_all(country, cfg, funders, fetch)
     crawl_s = time.monotonic() - started
     jobs = [(c["funder"], p) for c in crawled for p in c["pages"]]
     print(f"[register_sweep] crawled {sum(len(c['pages']) for c in crawled)} pages "
@@ -673,6 +1006,45 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
     return report
 
 
+def crawl_only(country: str, *, tier: int | None = None, limit: int | None = None,
+               only: list[str] | None = None, fetch=None, now=None) -> dict:
+    """Stage 2 alone: the pages each funder's crawl chose, how each was
+    reached and whether it passed the page filter. No model is called, and
+    Tavily is not used even with a key: a page that refuses a plain fetch is
+    listed as refused. Written to `crawl-<ts>/crawl.json` beside the runs."""
+    cfg = get_country_config(country)
+    now = now or datetime.now(timezone.utc)
+    month = now.astimezone(ZoneInfo(cfg.timezone)).date().strftime("%Y-%m")
+    run_ts = now.strftime("%Y%m%dT%H%M%S")
+    fetch = fetch or (lambda url: fetch_page(url, use_tavily=False))
+    funders = select_funders(country, tier, limit, only)
+    print(f"[register_sweep] {country} {month}: crawl only, {len(funders)} funders, "
+          f"no model and no Tavily")
+    crawled = crawl_all(country, cfg, funders, fetch)
+    # A rough guide to what the paid run would cost: about 2.5 characters a
+    # token (Romanian and Russian cost more than English), the prompt, and
+    # a generous answer for each page.
+    chars = sum(len(p["text"]) for c in crawled for p in c["pages"])
+    pages = sum(len(c["pages"]) for c in crawled)
+    estimate = ((chars / 2.5 + pages * ESTIMATE_PROMPT_TOKENS) / 1e6 * PRICE_IN
+                + pages * ESTIMATE_ANSWER_TOKENS / 1e6 * PRICE_OUT)
+    report = {
+        "country": country, "month": month, "run_ts": run_ts, "crawl_only": True,
+        "estimated_model_usd": round(estimate, 3),
+        "funders": [{"name": c["funder"]["name"], "url": c["funder"]["url"],
+                     "pages_to_read": [p["url"] for p in c["pages"]],
+                     "visits": c["visits"]} for c in crawled],
+        "pages_to_read": sum(len(c["pages"]) for c in crawled),
+        "funders_with_no_page": sorted(c["funder"]["name"] for c in crawled if not c["pages"]),
+    }
+    out = os.path.join(tenant.platform_cycles_dir(country, month), f"crawl-{run_ts}")
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "crawl.json"), "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False)
+    report["crawl_dir"] = out
+    return report
+
+
 def merge_runs(country: str, first: str, second: str) -> dict:
     """Write a third run directory holding both runs' rows, deduped and
     renumbered, with coverage counted against the whole register."""
@@ -725,12 +1097,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--publish", action="store_true", help="publish the verified rows")
     ap.add_argument("--force", action="store_true", help="publish even if a tier 1 funder is missing")
     ap.add_argument("--by", help="who forced the publish")
+    ap.add_argument("--crawl-only", action="store_true",
+                    help="list the pages each funder's crawl chooses; no model, no Tavily, free")
     args = ap.parse_args(argv)
     only = args.only
     if args.missing_from:
         with open(os.path.join(args.missing_from, "verified.json"), encoding="utf-8") as f:
             have = {r["funder"] for r in json.load(f)["opportunities"]}
         only = [f["name"] for f in load_register(args.country) if f["name"] not in have]
+    if args.crawl_only:
+        if args.publish or args.merge_into:
+            ap.error("--crawl-only reads no programmes, so it cannot --publish or --merge-into")
+        report = crawl_only(args.country, tier=args.tier, limit=args.limit, only=only)
+        for f in report["funders"]:
+            print(f"\n{f['name']}  ({f['url']})")
+            for v in f["visits"]:
+                mark = ("READ " if v.get("kept") else "skip ") if "error" not in v else "ERROR"
+                why = v.get("error") or v.get("why_not") or ""
+                print(f"  {mark} {v['url']}\n        via {v['reached_by']}" + (f"; {why}" if why else ""))
+        print(f"\n{report['pages_to_read']} pages would be read, for about "
+              f"${report['estimated_model_usd']:.2f} of model time; no page for: "
+              f"{', '.join(report['funders_with_no_page']) or 'none'}. Written to {report['crawl_dir']}")
+        return 0
     report = run(args.country, tier=args.tier, limit=args.limit, only=only,
                  budget_usd=args.budget, publish=args.publish, force=args.force, forced_by=args.by)
     if args.merge_into:

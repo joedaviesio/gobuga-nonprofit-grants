@@ -45,6 +45,7 @@
     "cantemir",
     "dubasari",
     "gagauzia",
+    "calarasi",
     "national"
   ],
   "tags": [
@@ -320,6 +321,58 @@
       "фонд", "ассоциация", "министерство", "агентство", "национальный", "посольство",
       "молдова", "республика"
     ]
+  },
+  "sweep": {
+    "country_words": true,
+    "skip_link_words": [
+      "proiecte finanțate", "proiectele finanțate", "финансированные проекты", "vacant",
+      "admiterea candidaților"
+    ],
+    "fold_letters": true,
+    "number_format": "ro",
+    "currencies": {
+      "MDL": {"label": "lei", "max": 50000000,
+              "markers": ["lei", "leu", "MDL", "леев", "лей", "лея", "леи"]},
+      "EUR": {"label": "euro, €", "max": 2500000, "markers": ["€", "EUR", "euro", "евро"]},
+      "USD": {"label": "dolari SUA, $", "max": 2500000,
+              "markers": ["$", "USD", "dolar", "долл"]}
+    },
+    "other_dollar_words": ["CAD", "C$", "CA$", "canad", "канад", "AUD", "A$", "NZD", "NZ$"],
+    "general_title": "Granturi {funder}",
+    "not_a_grant_words": [
+      "credit", "împrumut", "garant", "leasing", "licitați", "achiziți",
+      "кредит", "заём", "заем", "займ", "гарант", "лизинг", "тендер", "закупк"
+    ],
+    "grant_title_words": ["grant", "subvenți", "nerambursabil", "грант", "субсиди", "безвозмезд"],
+    "rolling_words": [
+      "pe tot parcursul anului", "permanent", "în orice moment", "oricând",
+      "fără termen limită", "постоянно", "в любое время", "в течение всего года", "круглый год"
+    ],
+    "not_covered_region": "transnistria",
+    "not_covered_words": [
+      "transnistr", "tighina", "bender", "tiraspol", "stânga nistrului", "malul stâng",
+      "left bank", "приднестров", "бендер", "тирасп", "левобереж", "левом берегу"
+    ],
+    "region_names": {
+      "chisinau": "Chișinău", "balti": "Bălți", "cahul": "Cahul", "comrat": "Comrat",
+      "ungheni": "Ungheni", "orhei": "Orhei", "soroca": "Soroca", "edinet": "Edineț",
+      "causeni": "Căușeni", "stefan-voda": "Ștefan Vodă", "criuleni": "Criuleni",
+      "ialoveni": "Ialoveni", "straseni": "Strășeni", "anenii-noi": "Anenii Noi",
+      "cimislia": "Cimișlia", "hincesti": "Hîncești", "leova": "Leova", "nisporeni": "Nisporeni",
+      "rezina": "Rezina", "soldanesti": "Șoldănești", "telenesti": "Telenești",
+      "floresti": "Florești", "glodeni": "Glodeni", "falesti": "Fălești", "drochia": "Drochia",
+      "riscani": "Rîșcani", "briceni": "Briceni", "ocnita": "Ocnița", "donduseni": "Dondușeni",
+      "singerei": "Sîngerei", "taraclia": "Taraclia", "basarabeasca": "Basarabeasca",
+      "cantemir": "Cantemir", "dubasari": "Dubăsari", "gagauzia": "UTA Găgăuzia",
+      "calarasi": "Călărași", "national": "toată Republica Moldova"
+    },
+    "prompt": {
+      "funder_site": "a Moldovan funder's website",
+      "language": "Romanian",
+      "not_funding": "Subsidies count as grants (subvenții, субсидии). Not loans, credit lines, loan guarantees, leasing, tenders, public procurement, jobs or awards already given.",
+      "amounts": "Read figures as a Moldovan page means them: 200.000 lei and 200 000 lei are 200000; 1,5 mil. lei is 1500000; 50 тыс. леев is 50000.",
+      "region_rule": "If the programme is for one or a few raions, give their slugs. If it is only for Transnistria or Bender (Tighina), give [\"transnistria\"]."
+    }
   },
   "must_appear_funders": [
     {

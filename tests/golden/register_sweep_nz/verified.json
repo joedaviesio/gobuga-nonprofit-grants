@@ -1,0 +1,255 @@
+{
+  "opportunities": [
+    {
+      "country": "nz",
+      "title": "Community Grants",
+      "funder": "Rātā Foundation",
+      "deadline": "2026-11-30",
+      "deadline_state": "dated",
+      "amount_min": null,
+      "amount_max": 20000,
+      "currency": "NZD",
+      "region": [
+        "canterbury"
+      ],
+      "tags": [
+        "community"
+      ],
+      "eligibility": "Incorporated societies and charitable trusts in Canterbury.",
+      "summary": "Local grants.",
+      "source_url": "https://rata.example/grants",
+      "evidence_ids": [],
+      "notes": "",
+      "first_seen": "2026-09-28T02:00:00+00:00",
+      "last_seen": "2026-09-28T02:00:00+00:00",
+      "dedupe_key": "rata-foundation|community-grants|2026-11-30",
+      "verified_at": "2026-09-28T02:00:00+00:00",
+      "verified_by": "register-sweep/claude-haiku-4-5-20251001",
+      "source_excerpt": "Applications close 30 November 2026 at 5pm.",
+      "provenance": {
+        "deadline": {
+          "source_url": "https://rata.example/grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Applications close 30 November 2026 at 5pm."
+        },
+        "amount": {
+          "source_url": "https://rata.example/grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Grants of up to $20,000 are available."
+        },
+        "eligibility": {
+          "source_url": "https://rata.example/grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Open to incorporated societies and charitable trusts in Canterbury."
+        }
+      },
+      "funder_tier": 1,
+      "funder_category": "community-trust",
+      "id": "OPP-NZ-2026-09-0002"
+    },
+    {
+      "country": "nz",
+      "title": "Kōkiri Fund",
+      "funder": "Rātā Foundation",
+      "deadline": "rolling",
+      "deadline_state": "rolling-confirmed",
+      "amount_min": 5000,
+      "amount_max": 15000,
+      "currency": "NZD",
+      "region": [
+        "national"
+      ],
+      "tags": [
+        "maori",
+        "community"
+      ],
+      "eligibility": "Māori-led groups.",
+      "summary": "Kaupapa Māori projects.",
+      "source_url": "https://rata.example/grants",
+      "evidence_ids": [],
+      "notes": "",
+      "first_seen": "2026-09-28T02:00:00+00:00",
+      "last_seen": "2026-09-28T02:00:00+00:00",
+      "dedupe_key": "rata-foundation|k-kiri-fund|rolling",
+      "verified_at": "2026-09-28T02:00:00+00:00",
+      "verified_by": "register-sweep/claude-haiku-4-5-20251001",
+      "source_excerpt": "Applications are welcome at any time of the year.",
+      "provenance": {
+        "deadline": {
+          "source_url": "https://rata.example/grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Applications are welcome at any time of the year."
+        },
+        "amount": {
+          "source_url": "https://rata.example/grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Grants of $5,000 to $15,000 are offered to Māori-led groups."
+        }
+      },
+      "funder_tier": 1,
+      "funder_category": "community-trust",
+      "id": "OPP-NZ-2026-09-0004"
+    },
+    {
+      "country": "nz",
+      "title": "Heritage Fund",
+      "funder": "Rātā Foundation",
+      "deadline": "TBC",
+      "deadline_state": "closed",
+      "amount_min": null,
+      "amount_max": null,
+      "currency": "NZD",
+      "region": [
+        "canterbury"
+      ],
+      "tags": [
+        "arts"
+      ],
+      "eligibility": "",
+      "summary": "",
+      "source_url": "https://rata.example/grants/heritage",
+      "evidence_ids": [],
+      "notes": "",
+      "first_seen": "2026-09-28T02:00:00+00:00",
+      "last_seen": "2026-09-28T02:00:00+00:00",
+      "dedupe_key": "rata-foundation|heritage-fund|tbc",
+      "verified_at": "2026-09-28T02:00:00+00:00",
+      "verified_by": "register-sweep/claude-haiku-4-5-20251001",
+      "source_excerpt": "Applications for this round are now closed.",
+      "provenance": {
+        "deadline": {
+          "source_url": "https://rata.example/grants/heritage",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Applications for this round are now closed."
+        },
+        "eligibility": {
+          "source_url": "https://rata.example/grants/heritage",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Open to owners of listed buildings."
+        }
+      },
+      "funder_tier": 1,
+      "funder_category": "community-trust",
+      "id": "OPP-NZ-2026-09-0003"
+    },
+    {
+      "country": "nz",
+      "title": "Whānau Development Fund",
+      "funder": "Te Puni Kōkiri",
+      "deadline": "2026-06-30",
+      "deadline_state": "closed",
+      "amount_min": null,
+      "amount_max": null,
+      "currency": "NZD",
+      "region": [
+        "national"
+      ],
+      "tags": [
+        "maori"
+      ],
+      "eligibility": "",
+      "summary": "",
+      "source_url": "https://www.tpk.example/funding",
+      "evidence_ids": [],
+      "notes": "",
+      "first_seen": "2026-09-28T02:00:00+00:00",
+      "last_seen": "2026-09-28T02:00:00+00:00",
+      "dedupe_key": "te-puni-kokiri|wh-nau-development-fund|2026-06-30",
+      "verified_at": "2026-09-28T02:00:00+00:00",
+      "verified_by": "register-sweep/claude-haiku-4-5-20251001",
+      "source_excerpt": "The 2025 round closed on 30 June 2026.",
+      "provenance": {
+        "deadline": {
+          "source_url": "https://www.tpk.example/funding",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "The 2025 round closed on 30 June 2026."
+        }
+      },
+      "funder_tier": 1,
+      "funder_category": "government",
+      "id": "OPP-NZ-2026-09-0006"
+    },
+    {
+      "country": "nz",
+      "title": "Te Puni Kōkiri grants",
+      "funder": "Te Puni Kōkiri",
+      "deadline": "TBC",
+      "deadline_state": "not-stated",
+      "amount_min": null,
+      "amount_max": null,
+      "currency": "NZD",
+      "region": [
+        "national"
+      ],
+      "tags": [],
+      "eligibility": "",
+      "summary": "Te Puni Kōkiri funds Māori organisations.",
+      "source_url": "https://www.tpk.example/funding",
+      "evidence_ids": [],
+      "notes": "",
+      "first_seen": "2026-09-28T02:00:00+00:00",
+      "last_seen": "2026-09-28T02:00:00+00:00",
+      "dedupe_key": "te-puni-kokiri|te-puni-k-kiri-grants|tbc",
+      "verified_at": "2026-09-28T02:00:00+00:00",
+      "verified_by": "register-sweep/claude-haiku-4-5-20251001",
+      "source_excerpt": "we fund iwi, hapū and Māori organisations working for whānau wellbeing.",
+      "provenance": {
+        "eligibility": {
+          "source_url": "https://www.tpk.example/funding",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "we fund iwi, hapū and Māori organisations working for whānau wellbeing."
+        }
+      },
+      "funder_tier": 1,
+      "funder_category": "government",
+      "id": "OPP-NZ-2026-09-0005"
+    },
+    {
+      "country": "nz",
+      "title": "Youth Grants",
+      "funder": "Otago Youth Trust",
+      "deadline": "2027-03-15",
+      "deadline_state": "dated",
+      "amount_min": null,
+      "amount_max": 3000,
+      "currency": "NZD",
+      "region": [
+        "otago"
+      ],
+      "tags": [
+        "youth"
+      ],
+      "eligibility": "",
+      "summary": "",
+      "source_url": "https://youth.example/youth-grants",
+      "evidence_ids": [],
+      "notes": "",
+      "first_seen": "2026-09-28T02:00:00+00:00",
+      "last_seen": "2026-09-28T02:00:00+00:00",
+      "dedupe_key": "otago-youth-trust|youth-grants|2027-03-15",
+      "verified_at": "2026-09-28T02:00:00+00:00",
+      "verified_by": "register-sweep/claude-haiku-4-5-20251001",
+      "source_excerpt": "Applications close 15 March 2027.",
+      "provenance": {
+        "deadline": {
+          "source_url": "https://youth.example/youth-grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Applications close 15 March 2027."
+        },
+        "amount": {
+          "source_url": "https://youth.example/youth-grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Up to $3,000 each."
+        },
+        "eligibility": {
+          "source_url": "https://youth.example/youth-grants",
+          "verified_at": "2026-09-28T02:00:00+00:00",
+          "excerpt": "Open to youth groups and schools in Otago."
+        }
+      },
+      "funder_tier": 2,
+      "funder_category": "philanthropic",
+      "id": "OPP-NZ-2026-09-0001"
+    }
+  ]
+}

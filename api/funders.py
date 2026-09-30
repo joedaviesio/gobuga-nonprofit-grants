@@ -68,6 +68,17 @@ _CYRILLIC = str.maketrans({
 })
 
 
+_CYRILLIC_RUN = re.compile(r"[\u0400-\u04ff]+")  # the Cyrillic block
+
+
+def transliterate_cyrillic(text: str) -> str:
+    """Cyrillic letters to lowercase Latin, everything else untouched, so a
+    title key keeps a Russian title's words instead of dropping them all.
+    Text with no Cyrillic comes back exactly as it went in: New Zealand's
+    keys, macrons and all, do not change."""
+    return _CYRILLIC_RUN.sub(lambda m: m.group().lower().translate(_CYRILLIC), text)
+
+
 def _to_ascii(text: str) -> str:
     """Lowercase Latin letters and digits for a slug: diacritics folded
     ("Fundația" -> "fundatia", "Kōkiri" -> "kokiri"), Cyrillic transliterated.

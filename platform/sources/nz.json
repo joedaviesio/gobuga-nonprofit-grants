@@ -283,6 +283,31 @@
       "model": "claude-sonnet-5"
     }
   },
+  "register": {
+    "tier_one": "a funder that distributes more than about NZD 5 million a year, or is the main funder for its region",
+    "categories": {
+      "government": "central government departments, ministries and Crown entities that run contestable funds open to community organisations, iwi, schools or clubs (list each funder once, not each fund)",
+      "council": "every territorial authority and regional council: all 67 city and district councils and all 11 regional councils",
+      "community-trust": "the 12 community trusts formed from the trust banks",
+      "community-foundation": "community foundations (members of Community Foundations of Aotearoa New Zealand)",
+      "energy-trust": "energy, power and lines consumer trusts that make community grants",
+      "gaming": "class 4 gaming societies that distribute grants to the community",
+      "sports-trust": "regional sports trusts, and national sport funders",
+      "licensing-trust": "licensing trusts and their charitable foundations",
+      "philanthropic": "private, family and statutory philanthropic trusts and foundations that accept applications, including funds administered by Perpetual Guardian and Public Trust (list the fund, with the administrator's site if it has no site of its own)",
+      "corporate": "corporate foundations and company community-grant programmes",
+      "maori": "iwi, rūnanga, Māori trusts and Māori-focused funders that make grants"
+    },
+    "grant_words": [
+      "grant", "fund", "funding", "apply", "application", "scholarship", "sponsorship",
+      "putea", "pūtea", "tahua", "contestable"
+    ],
+    "search_terms": "grants funding how to apply",
+    "name_stopwords": [
+      "trust", "the", "limited", "foundation", "community", "council", "zealand",
+      "charitable", "fund", "society", "incorporated"
+    ]
+  },
   "must_appear_funders": [
     {
       "name": "Department of Internal Affairs",

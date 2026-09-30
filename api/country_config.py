@@ -177,6 +177,9 @@ class CountryConfig:
     sector_label_to_tag: dict[str, str]
     funder_aliases: dict[str, list[str]]
     tiers: dict = field(default_factory=dict)
+    # How scripts/build_register.py asks for this country's funders. No NZ
+    # default: a country without one must not be listed as if it were NZ.
+    register: dict = field(default_factory=dict)
 
 
 @lru_cache(maxsize=8)
@@ -208,6 +211,7 @@ def get_country_config(country: str | None = None) -> CountryConfig:
         sector_label_to_tag=raw.get("sector_label_to_tag", _DEFAULT_SECTOR_LABEL_TO_TAG),
         funder_aliases=raw.get("funder_aliases", _DEFAULT_FUNDER_ALIASES),
         tiers=raw.get("tiers", _DEFAULT_TIERS),
+        register=raw.get("register", {}),
     )
 
 

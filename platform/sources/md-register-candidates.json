@@ -1,0 +1,2284 @@
+{
+  "country": "md",
+  "asked": {
+    "international": 2,
+    "embassy": 2,
+    "foundation": 2,
+    "government": 2,
+    "council": 2,
+    "cross-border": 2,
+    "corporate": 2
+  },
+  "candidates": [
+    {
+      "name": "European Union (Delegation to Moldova)",
+      "category": "international",
+      "website": "https://www.eeas.europa.eu/delegations/moldova_en",
+      "funding_url": "https://www.eeas.europa.eu/moldova/eu-moldova_en",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "United Nations Development Programme (UNDP) Moldova",
+      "category": "international",
+      "website": "https://www.undp.org/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "United States Agency for International Development (USAID) Moldova",
+      "category": "international",
+      "website": "https://www.usaid.gov/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "German Agency for International Cooperation (GIZ) Moldova",
+      "category": "international",
+      "website": "https://www.giz.de/en/worldwide/335.html",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Swedish International Development Cooperation Agency (Sida)",
+      "category": "international",
+      "website": "https://www.sida.se",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Swiss Agency for Development and Cooperation (SDC) Moldova",
+      "category": "international",
+      "website": "https://www.eda.admin.ch/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "United Nations Children's Fund (UNICEF) Moldova",
+      "category": "international",
+      "website": "https://www.unicef.org/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "United Nations Population Fund (UNFPA) Moldova",
+      "category": "international",
+      "website": "https://moldova.unfpa.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "UN Women Moldova",
+      "category": "international",
+      "website": "https://moldova.unwomen.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Food and Agriculture Organization (FAO) Moldova",
+      "category": "international",
+      "website": "https://www.fao.org/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "International Organization for Migration (IOM) Moldova",
+      "category": "international",
+      "website": "https://moldova.iom.int",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "United Nations High Commissioner for Refugees (UNHCR) Moldova",
+      "category": "international",
+      "website": "https://www.unhcr.org/moldova.html",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "World Bank Moldova",
+      "category": "international",
+      "website": "https://www.worldbank.org/en/country/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Council of Europe Office in Chisinau",
+      "category": "international",
+      "website": "https://www.coe.int/en/web/chisinau",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Konrad Adenauer Stiftung Moldova",
+      "category": "international",
+      "website": "https://www.kas.de/en/web/moldawien",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Friedrich Ebert Stiftung Moldova",
+      "category": "international",
+      "website": "https://moldova.fes.de",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Friedrich Naumann Foundation for Freedom Moldova",
+      "category": "international",
+      "website": "https://www.freiheit.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Endowment for Democracy (NED)",
+      "category": "international",
+      "website": "https://www.ned.org",
+      "funding_url": "https://www.ned.org/apply-for-grant/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Open Society Foundations",
+      "category": "international",
+      "website": "https://www.opensocietyfoundations.org",
+      "funding_url": "https://www.opensocietyfoundations.org/grants",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Soros Foundation Moldova",
+      "category": "international",
+      "website": "https://www.soros.md",
+      "funding_url": "https://www.soros.md/en/grants",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Black Sea Trust for Regional Cooperation",
+      "category": "international",
+      "website": "https://www.gmfus.org/black-sea-trust",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Eastern Europe Foundation",
+      "category": "international",
+      "website": "https://www.eef.md",
+      "funding_url": "https://www.eef.md/finantari",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Czech Development Agency",
+      "category": "international",
+      "website": "https://www.czda.cz/en",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Polish Aid (Polish Ministry of Foreign Affairs Development Cooperation)",
+      "category": "international",
+      "website": "https://www.gov.pl/web/polishaid",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Romanian Agency for International Development Cooperation (RoAid)",
+      "category": "international",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Austrian Development Agency",
+      "category": "international",
+      "website": "https://www.entwicklung.at/en/",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Norwegian Ministry of Foreign Affairs / Norad",
+      "category": "international",
+      "website": "https://www.norad.no/en/",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of the Netherlands in Moldova (Human Rights Fund / MATRA)",
+      "category": "international",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "British Embassy Chisinau (UK Government Bilateral Programme)",
+      "category": "international",
+      "website": "https://www.gov.uk/world/organisations/british-embassy-chisinau",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "United States Embassy in Moldova (Democracy Commission Small Grants Program)",
+      "category": "international",
+      "website": "https://md.usembassy.gov",
+      "funding_url": "https://md.usembassy.gov/education-culture/grants/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Japan International Cooperation Agency (JICA) Moldova",
+      "category": "international",
+      "website": "https://www.jica.go.jp/english/",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Global Environment Facility (GEF) Small Grants Programme Moldova",
+      "category": "international",
+      "website": "https://www.thegef.org/what-we-do/topics/small-grants-programme",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "European Bank for Reconstruction and Development (EBRD)",
+      "category": "international",
+      "website": "https://www.ebrd.com",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "International Renaissance Foundation (Ukraine, regional grants)",
+      "category": "international",
+      "website": "https://www.irf.ua/en/",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Democratic Institute (NDI) Moldova",
+      "category": "international",
+      "website": "https://www.ndi.org/eurasia/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "International Republican Institute (IRI) Moldova",
+      "category": "international",
+      "website": "https://www.iri.org/where-we-work/eurasia/moldova/",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Robert Bosch Stiftung",
+      "category": "international",
+      "website": "https://www.bosch-stiftung.de/en",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Visegrad Fund",
+      "category": "international",
+      "website": "https://www.visegradfund.org",
+      "funding_url": "https://www.visegradfund.org/apply/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "European Endowment for Democracy (EED)",
+      "category": "international",
+      "website": "https://www.europeanendowment.foundation",
+      "funding_url": "https://www.europeanendowment.foundation/apply-for-support/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "United Nations Entity for Gender Equality and the Empowerment of Women (UN Women) Moldova",
+      "category": "international",
+      "website": "https://moldova.unwomen.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "World Health Organization (WHO) Moldova",
+      "category": "international",
+      "website": "https://www.who.int/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of the United States in Chisinau (Public Affairs Section grants)",
+      "category": "international",
+      "website": "https://md.usembassy.gov",
+      "funding_url": "https://md.usembassy.gov/education-culture/grants",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of the Netherlands in Chisinau (Human Rights Fund / MATRA)",
+      "category": "international",
+      "website": "https://www.netherlandsworldwide.nl/countries/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Sweden in Chisinau",
+      "category": "international",
+      "website": "https://www.swedenabroad.se/en/embassies/moldova-chisinau",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Switzerland / Swiss Agency for Development and Cooperation (SDC) Moldova",
+      "category": "international",
+      "website": "https://www.eda.admin.ch/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Norwegian Embassy / Norway Grants",
+      "category": "international",
+      "website": "https://www.norway.no/en/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Konrad Adenauer Foundation Moldova",
+      "category": "international",
+      "website": "https://www.kas.de/en/web/moldawien",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Friedrich Ebert Foundation Moldova",
+      "category": "international",
+      "website": "https://moldova.fes.de",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Hanns Seidel Foundation Moldova",
+      "category": "international",
+      "website": "https://www.hss.de/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Council of Europe (Office in Chisinau)",
+      "category": "international",
+      "website": "https://www.coe.int/en/web/chisinau",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "European Bank for Reconstruction and Development (EBRD) Moldova",
+      "category": "international",
+      "website": "https://www.ebrd.com/moldova.html",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Eurasia Foundation",
+      "category": "international",
+      "website": "https://www.eurasia.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "East Europe Foundation Moldova",
+      "category": "international",
+      "website": "https://eef.md",
+      "funding_url": "https://eef.md/granturi",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Chevening / British Embassy Chisinau Small Grants",
+      "category": "international",
+      "website": "https://www.gov.uk/world/organisations/british-embassy-chisinau",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fondation de France",
+      "category": "international",
+      "website": "https://www.fondationdefrance.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "French Development Agency (AFD) Moldova",
+      "category": "international",
+      "website": "https://www.afd.fr/en/page-region-pays/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "United Nations Office on Drugs and Crime (UNODC) Moldova",
+      "category": "international",
+      "website": "https://www.unodc.org/",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Kingdom of the Netherlands - Voice programme",
+      "category": "international",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "U.S. Embassy Chisinau Democracy Commission Small Grants Program",
+      "category": "embassy",
+      "website": "https://md.usembassy.gov",
+      "funding_url": "https://md.usembassy.gov/embassy/grants/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "U.S. Embassy Chisinau Public Affairs Section Small Grants",
+      "category": "embassy",
+      "website": "https://md.usembassy.gov",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Japan in Moldova Grassroots Human Security Grant Assistance",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "British Embassy Chisinau Small Grants Scheme",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "German Embassy Chisinau Small Grants Fund (Kleinstprojektefonds)",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Dutch Embassy Chisinau Small Embassy Projects Fund",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Switzerland in Moldova Small Grants",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Sweden Chisinau Small Grants",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Romania in Chisinau Small Grants Program",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Poland in Chisinau Small Grants Scheme",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of the Czech Republic Chisinau Small Grants (Transition Promotion Program)",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Turkey in Chisinau Small Grants",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Japan in Moldova - Grant Assistance for Grassroots Human Security Projects (GGP)",
+      "category": "embassy",
+      "website": "https://www.md.emb-japan.go.jp",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of the Netherlands in Chisinau - Small Embassy Projects / MATRA Programme",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Germany in Chisinau - Small-Scale Grant Fund (Kleinstprojektefonds)",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Romania in Chisinau - Official Development Assistance Grants",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Poland in Chisinau - Polish Aid Small Grants (Polska Pomoc)",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of France in Moldova - Fonds de solidarité pour les projets innovants (FSPI)",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Sweden - Small Grants (via Swedish Development Cooperation)",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Turkey in Chisinau - TIKA Small Grants",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Canada Fund for Local Initiatives Moldova",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Estonia in Chisinau - Estonian Development Cooperation Small Grants",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Embassy of Czech Republic - Czech Development Agency Small Grants Moldova",
+      "category": "embassy",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "East Europe Foundation",
+      "category": "foundation",
+      "website": "https://eef.md",
+      "funding_url": "https://eef.md/finantare",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Heinrich Boll Stiftung Moldova",
+      "category": "foundation",
+      "website": "https://md.boell.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Civil Society Development Foundation Moldova",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldova Community Foundation (Fundatia Comunitara)",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Global Fund for Community Foundations",
+      "category": "foundation",
+      "website": "https://globalfundcommunityfoundations.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Charles Stewart Mott Foundation",
+      "category": "foundation",
+      "website": "https://www.mott.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Rockefeller Brothers Fund",
+      "category": "foundation",
+      "website": "https://www.rbf.org",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "USAID Moldova",
+      "category": "foundation",
+      "website": "https://www.usaid.gov/moldova",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Fundatia pentru Dezvoltare (FDR)",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fundatia Soros Moldova - Youth Program",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Terre des hommes Moldova",
+      "category": "foundation",
+      "website": "https://moldova.tdh.ch",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Keystone Moldova",
+      "category": "foundation",
+      "website": "https://www.keystonemoldova.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Foundation for the Development of Civil Society (FDCS Romania - Moldova program)",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fondul de Investitii Sociale din Moldova (FISM)",
+      "category": "foundation",
+      "website": "https://fism.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Elveția Acasă (Swiss Cooperation Office Moldova grants)",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fundatia Terra-1530",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fundația pentru o Societate Deschisă (FOSIM)",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fund for Regional and Local Initiatives (FRIL) - Moldova",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Global Greengrants Fund",
+      "category": "foundation",
+      "website": "https://www.greengrants.org",
+      "funding_url": "https://www.greengrants.org/grantseekers/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Community Foundation Moldova",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fondul pentru Copii al Republicii Moldova (Children's Fund Moldova)",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Sida (Swedish International Development Cooperation Agency) Moldova",
+      "category": "foundation",
+      "website": "https://www.sida.se",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Fundatia Soros pentru o Societate Deschisa - Programul Femei",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Slovak-Czech-Polish-Moldovan Fund",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "European Union Delegation to Moldova (EU grants)",
+      "category": "foundation",
+      "website": "https://www.eeas.europa.eu/delegations/moldova_en",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Fundatia Novateca",
+      "category": "foundation",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Youth Council / National Bureau for Youth and Sport - youth grant programs",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Education and Research of Moldova",
+      "category": "government",
+      "website": "https://mecc.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Culture of Moldova",
+      "category": "government",
+      "website": "https://mc.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Environment of Moldova",
+      "category": "government",
+      "website": "https://mediu.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Agriculture and Food Industry of Moldova",
+      "category": "government",
+      "website": "https://maia.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Ministry of Labour and Social Protection of Moldova",
+      "category": "government",
+      "website": "https://msmps.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Agency for Rural Development (AIPA)",
+      "category": "government",
+      "website": "https://aipa.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Ecological Fund",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Cultural Fund",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Agency for Energy Regulation (energy efficiency fund support)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Energy Efficiency Fund of Moldova (FEE)",
+      "category": "government",
+      "website": "https://fee.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Fund for Regional and Local Development (FNDR)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Agency for Scientific Research and Development (ANCD)",
+      "category": "government",
+      "website": "https://ancd.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Bureau of Statistics grants (not applicable)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Chamber of Commerce and Industry of Moldova (business support grants)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Organization for the Development of Entrepreneurship (ODA)",
+      "category": "government",
+      "website": "https://oda.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Social Insurance House (CNAS) - social project grants",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Health Insurance Company (CNAM)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Bureau of Interethnic Relations",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Bureau for Diaspora Relations (BRD)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "State Chancellery of the Republic of Moldova - civil society support grants",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Youth Development Program Fund",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Agency for Innovation and Technology Transfer",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Agency for Research and Development (Agenția Națională pentru Cercetare și Dezvoltare, ANCD)",
+      "category": "government",
+      "website": "https://ancd.gov.md",
+      "funding_url": "https://ancd.gov.md",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Ministry of Culture of the Republic of Moldova",
+      "category": "government",
+      "website": "https://mc.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Education and Research of the Republic of Moldova",
+      "category": "government",
+      "website": "https://mecc.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Environment of the Republic of Moldova",
+      "category": "government",
+      "website": "https://mediu.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Ministry of Agriculture and Food Industry of the Republic of Moldova",
+      "category": "government",
+      "website": "https://maia.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Youth Council Fund / Agency for Youth Programmes (Agenția Națională pentru Programe pentru Tineret, ANPT)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "National Bureau for Diaspora / Bureau for Relations with Diaspora (Biroul pentru Diaspora)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Agency for Interethnic Relations (Agenția Relații Interetnice)",
+      "category": "government",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Organizația pentru Dezvoltarea Sectorului Întreprinderilor Mici și Mijlocii (ODIMM)",
+      "category": "government",
+      "website": "https://odimm.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Employment Agency (Agenția Națională pentru Ocuparea Forței de Muncă, ANOFM)",
+      "category": "government",
+      "website": "https://anofm.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "National Social Insurance House / Ministry of Labour and Social Protection",
+      "category": "government",
+      "website": "https://msmps.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Agency for Rural Investments and Development (Agenția de Intervenție și Plăți pentru Agricultură, AIPA)",
+      "category": "government",
+      "website": "https://aipa.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Ministry of Internal Affairs of the Republic of Moldova (Civic Society/NGO grant programmes)",
+      "category": "government",
+      "website": "https://mai.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "State Chancellery of the Republic of Moldova (NGO support fund)",
+      "category": "government",
+      "website": "https://cancelaria.gov.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Municipiului Chișinău",
+      "category": "council",
+      "website": "https://www.chisinau.md",
+      "funding_url": null,
+      "regions": [
+        "chisinau"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Municipal Chișinău",
+      "category": "council",
+      "website": "https://www.chisinau.md",
+      "funding_url": null,
+      "regions": [
+        "chisinau"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Municipiului Bălți",
+      "category": "council",
+      "website": "https://www.primariabalti.md",
+      "funding_url": null,
+      "regions": [
+        "balti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Local Bălți",
+      "category": "council",
+      "website": "https://www.primariabalti.md",
+      "funding_url": null,
+      "regions": [
+        "balti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Cahul",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "cahul"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Municipiului Comrat",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "comrat"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Ungheni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "ungheni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Orhei",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "orhei"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Soroca",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "soroca"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Edineț",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "edinet"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Căușeni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "causeni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Ștefan Vodă",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "stefan-voda"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Criuleni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "criuleni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Ialoveni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "ialoveni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Strășeni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "straseni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Anenii Noi",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "anenii-noi"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Cimișlia",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "cimislia"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Hîncești",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "hincesti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Leova",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "leova"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Nisporeni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "nisporeni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Rezina",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "rezina"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Șoldănești",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "soldanesti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Telenești",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "telenesti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Florești",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "floresti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Glodeni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "glodeni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Fălești",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "falesti"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Drochia",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "drochia"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Rîșcani",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "riscani"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Briceni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "briceni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Ocnița",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "ocnita"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Dondușeni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "donduseni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Sîngerei",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "singerei"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Taraclia",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "taraclia"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Basarabeasca",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "basarabeasca"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Cantemir",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "cantemir"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Consiliul Raional Dubăsari",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "dubasari"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Cahul",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "cahul"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Ungheni",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "ungheni"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Orhei",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "orhei"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Primăria Soroca",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "soroca"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Comitetul Executiv al Găgăuziei",
+      "category": "council",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "gagauzia"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Interreg NEXT Romania-Moldova",
+      "category": "cross-border",
+      "website": "https://ro-md.net",
+      "funding_url": "https://ro-md.net/apeluri-de-proiecte/",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Interreg NEXT Danube Region Programme",
+      "category": "cross-border",
+      "website": "https://interreg-danube.eu",
+      "funding_url": "https://interreg-danube.eu/calls",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Interreg NEXT Black Sea Basin Programme",
+      "category": "cross-border",
+      "website": "https://blacksea-cbc.net",
+      "funding_url": "https://blacksea-cbc.net/calls-for-proposals/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "EU4Business",
+      "category": "cross-border",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Eastern Partnership Territorial Cooperation Programme",
+      "category": "cross-border",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "EU Neighbours East",
+      "category": "cross-border",
+      "website": "https://euneighbourseast.eu",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Erasmus+",
+      "category": "cross-border",
+      "website": "https://erasmus-plus.ec.europa.eu",
+      "funding_url": "https://erasmus-plus.ec.europa.eu/opportunities/opportunities-for-individuals",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Creative Europe",
+      "category": "cross-border",
+      "website": "https://culture.ec.europa.eu/creative-europe",
+      "funding_url": "https://culture.ec.europa.eu/creative-europe/creative-europe-calls-for-proposals",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Horizon Europe",
+      "category": "cross-border",
+      "website": "https://research-and-innovation.ec.europa.eu/funding/funding-opportunities/funding-programmes-and-open-calls/horizon-europe_en",
+      "funding_url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-search",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "EU4Youth",
+      "category": "cross-border",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Interreg NEXT Black Sea Basin",
+      "category": "cross-border",
+      "website": "https://blacksea-cbc.net",
+      "funding_url": "https://blacksea-cbc.net/calls-for-proposals/",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Danube Transnational Programme",
+      "category": "cross-border",
+      "website": "https://www.interreg-danube.eu",
+      "funding_url": "https://www.interreg-danube.eu/calls",
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Erasmus+ Moldova",
+      "category": "cross-border",
+      "website": "https://erasmusplus.md",
+      "funding_url": "https://erasmusplus.md/apeluri/",
+      "regions": [
+        "national"
+      ],
+      "tier": 1
+    },
+    {
+      "name": "Creative Europe Moldova",
+      "category": "cross-border",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "EU4Environment",
+      "category": "cross-border",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldcell Foundation",
+      "category": "corporate",
+      "website": "https://moldcell.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Orange Moldova Foundation",
+      "category": "corporate",
+      "website": "https://www.orange.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Victoriabank Community Program",
+      "category": "corporate",
+      "website": "https://www.victoriabank.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldova Agroindbank (MAIB) Community Grants",
+      "category": "corporate",
+      "website": "https://www.maib.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Purcari Wineries Community Fund",
+      "category": "corporate",
+      "website": "https://www.purcari.wine",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Lukoil Moldova Charity Program",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Tirex Petrol Community Program",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Franzeluta Community Program",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldova Diaspora Fund (Patria Moldovenilor de Pretutindeni)",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Diaspora Engagement Hub Moldova",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldovan American Foundation for Democracy",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "IDIS Viitorul Diaspora Investment Fund",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "PACT Moldova Diaspora Grants (Home for Every Story)",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fundatia Solidaritate si Speranta (diaspora-linked)",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Banca Nationala a Moldovei Community Fund",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fundația Filip",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldindconbank Community Program",
+      "category": "corporate",
+      "website": "https://micb.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Victoriabank Community Fund",
+      "category": "corporate",
+      "website": "https://victoriabank.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "MAIB Foundation",
+      "category": "corporate",
+      "website": "https://maib.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Lukoil Moldova Community Program",
+      "category": "corporate",
+      "website": "https://lukoil.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Purcari Wineries Community Program",
+      "category": "corporate",
+      "website": "https://purcari.wine",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "PARE 1+1 Diaspora Investment Program",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Moldovan Diaspora Fund for Development",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Fundația Comunitară din Moldova",
+      "category": "corporate",
+      "website": "https://fundatiacomunitara.md",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Coca-Cola Moldova Community Investment Program",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Efes Moldova Community Program",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    },
+    {
+      "name": "Vodafone Moldova Foundation",
+      "category": "corporate",
+      "website": "",
+      "funding_url": null,
+      "regions": [
+        "national"
+      ],
+      "tier": 2
+    }
+  ]
+}

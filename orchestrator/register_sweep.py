@@ -34,7 +34,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from html.parser import HTMLParser
-from urllib.parse import urldefrag, urljoin, urlsplit
+from urllib.parse import unquote, urldefrag, urljoin, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -200,6 +200,11 @@ def fetch_page(url: str) -> dict:
             if not rendered.get("error"):
                 rendered["links"] = rendered["links"] or links
                 return rendered
+            if rendered.get("extract_tried"):
+                # The short page stands, but a caller counting spend must
+                # still see that an extract was paid for.
+                return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links,
+                        "extract_tried": True, "extract_error": rendered["error"]}
         return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links}
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (401, 403, 406, 429, 503):
@@ -215,7 +220,8 @@ MARKDOWN_LINK = re.compile(r"\[([^\]]{1,200})\]\((https?://[^)\s]+)\)")
 
 def fetch_blocked(url: str, why: str) -> dict:
     """A page that refuses a plain fetch, read through Tavily's extract
-    (one credit per five pages). Without a key, the refusal stands."""
+    (one credit per five pages). Without a key, the refusal stands.
+    `extract_tried` marks every answer from an attempt, failed or not."""
     if not os.getenv("TAVILY_API_KEY"):
         return {"url": url, "error": why}
     try:
@@ -223,13 +229,15 @@ def fetch_blocked(url: str, why: str) -> dict:
         res = TavilyClient(api_key=os.environ["TAVILY_API_KEY"]).extract(urls=[url])
         raw = (res.get("results") or [{}])[0].get("raw_content") or ""
     except Exception as exc:  # noqa: BLE001
-        return {"url": url, "error": f"{why}; extract failed: {type(exc).__name__}"}
+        return {"url": url, "error": f"{why}; extract failed: {type(exc).__name__}",
+                "extract_tried": True}
     SEARCH_CREDITS["extract"] += 1
     if not raw.strip():
-        return {"url": url, "error": f"{why}; extract returned nothing"}
+        return {"url": url, "error": f"{why}; extract returned nothing", "extract_tried": True}
     links = [(urldefrag(urljoin(url, h))[0], t) for t, h in MARKDOWN_LINK.findall(raw)]
     text = re.sub(r"[ \t]+", " ", MARKDOWN_LINK.sub(r"\1", raw))
-    return {"url": url, "text": text[:MAX_PAGE_CHARS], "links": links, "via": "tavily"}
+    return {"url": url, "text": text[:MAX_PAGE_CHARS], "links": links, "via": "tavily",
+            "extract_tried": True}
 
 
 def _site(host: str) -> str:
@@ -237,9 +245,21 @@ def _site(host: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
-def pick_links(page: dict, home: str, seen: set[str]) -> list[str]:
+def decode(address: str) -> str:
+    """Percent-decoded until it stops changing: some sites encode twice."""
+    for _ in range(3):
+        plain = unquote(address)
+        if plain == address:
+            break
+        address = plain
+    return address
+
+
+def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SKIP_LINK,
+               fold=None) -> list[str]:
     """Same-site links whose text or address looks like a grant programme,
-    best first. Pure: decided by rule, not by a model."""
+    best first. Pure: decided by rule, not by a model. `words`, `skip` and
+    `fold` let a country whose sites are not in English bring its own."""
     site = _site(urlsplit(home).hostname)
     scored = []
     for href, text in page.get("links", []):
@@ -247,9 +267,14 @@ def pick_links(page: dict, home: str, seen: set[str]) -> list[str]:
         if parts.scheme not in ("http", "https") or _site(parts.hostname) != site:
             continue
         key = href.rstrip("/")
-        if key in seen or SKIP_LINK.search(href):
+        address, path = href, parts.path
+        if fold:
+            # Decoded and folded to plain Latin letters, so a Cyrillic or
+            # percent-encoded address reads like any other.
+            address, path, text = fold(decode(href)), fold(decode(parts.path)), fold(text)
+        if key in seen or skip.search(address):
             continue
-        score = 2 * len(GRANT_WORDS.findall(text)) + len(GRANT_WORDS.findall(parts.path))
+        score = 2 * len(words.findall(text)) + len(words.findall(path))
         if score:
             scored.append((-score, len(href), href))
     out, picked = [], set()

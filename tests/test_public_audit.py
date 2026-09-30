@@ -52,14 +52,22 @@ def clickouts(tmp_path_platform):
 @pytest.mark.parametrize("name, slug", [
     ("Foundation North", "foundation-north"),                 # ASCII is unchanged
     ("Te Puni Kōkiri", "te-puni-kokiri"),
-    ("Fundația Soros Moldova", "fundatia-soros-moldova"),
-    ("Agenția Națională pentru Cercetare și Dezvoltare",
-     "agentia-nationala-pentru-cercetare-si-dezvoltare"),
-    ("Фонд Сорос Молдова", "fond-soros-moldova"),
+    # Names with no alias in md.json, so the letters are what is tested.
+    ("Fundația Comunitară Moldova", "fundatia-comunitara-moldova"),
+    ("Agenția Națională pentru Ocuparea Forței de Muncă",
+     "agentia-nationala-pentru-ocuparea-fortei-de-munca"),
+    ("Фонд Развития Молдова", "fond-razvitiya-moldova"),
     ("Швейцарское агентство", "shveitsarskoe-agentstvo"),
 ])
 def test_funder_slugs_keep_their_letters(name, slug):
     assert slugify_funder(name, "md") == slug
+
+
+@pytest.mark.parametrize("name", [
+    "Fundația Soros Moldova", "Fundatia Soros Moldova", "Фонд Сорос Молдова",
+])
+def test_a_funders_romanian_and_russian_names_share_its_slug(name):
+    assert slugify_funder(name, "md") == "fundatia-soros-moldova"
 
 
 def test_two_cyrillic_funders_do_not_share_a_slug():

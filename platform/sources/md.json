@@ -409,7 +409,8 @@
       "aplicare", "aplica", "prelungit", "închis", "încheiat", "încheier", "recepționa", "до", "срок", "крайний", "подач",
       "принима", "deadline", "closes", "closing", "closed", "by", "until", "apply", "submission",
       "cel târziu", "nu mai târziu", "expiră", "ora", "până în", "pînă", "înscrieri",
-      "прием заявок", "приём", "applications close", "due", "closing date"
+      "прием заявок", "приём", "applications close", "due", "closing date",
+      "не позднее", "включительно"
     ],
     "not_covered_words": [
       "transnistr", "tighina", "bender", "tiraspol", "stânga nistrului", "malul stâng",

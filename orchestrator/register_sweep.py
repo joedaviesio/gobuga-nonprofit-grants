@@ -63,6 +63,12 @@ block the sweep is New Zealand's, unchanged:
   not_a_grant_words   more title words that mark a loan or tender, unless
                    a grant_title_words word is in the title too
   grant_title_words   with not_a_grant_words: words that keep such a title
+                   (and such a summary, for loan_text_words)
+  loan_text_words  words that, in the model's summary or eligibility with
+                   no grant_title_words word, mark a loan
+  reject_kinds     kinds of money the model names (with the country prompt's
+                   "kind") that are not published: loan, guarantee, other
+  mixed_kind       "keep" (the default) or "reject": part grant, part loan
   rolling_words    more words that make a deadline rolling
   not_covered_region  a region slug the model may give for a programme
                    limited to an area not yet covered; a row given only
@@ -72,6 +78,11 @@ block the sweep is New Zealand's, unchanged:
   not_covered_words   with not_covered_region
   covered_with_words  with not_covered_region: words that take the area in
                    beside the rest of the country ("inclusiv", "включая")
+  prefer_dedicated_pages  a row from a page linking to another is dropped
+                   when that page's row names the same programme (see
+                   prefer_dedicated_pages)
+  title_stopwords  with prefer_dedicated_pages: title words that do not
+                   tell programmes apart ("programul", "susținere")
   join_translations  one funder's Cyrillic-titled and Latin-titled rows with
                    the same closing date and amounts are one programme, kept
                    once under the Latin title (see join_translations)
@@ -354,7 +365,7 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
     --crawl-only."""
     seen, pages, errors, visits = {funder["url"].rstrip("/")}, [], [], []
     read: set[str] = set()
-    frontier = [(funder["url"], 0, "registered page")]
+    frontier = [(funder["url"], 0, "registered page", None)]
     # Funding pages move. If the registered one is gone, or is a file or a
     # bot check rather than a page with links, start again from the home page.
     home = "{0.scheme}://{0.netloc}/".format(urlsplit(funder["url"]))
@@ -365,8 +376,8 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
                 break
             tried_home = True
             seen.add(home.rstrip("/"))
-            frontier.append((home, 0, "home page, after the registered page gave nothing"))
-        url, depth, via = frontier.pop(0)
+            frontier.append((home, 0, "home page, after the registered page gave nothing", None))
+        url, depth, via, parent = frontier.pop(0)
         page = fetch(url)
         if page.get("error"):
             errors.append({"url": url, "error": page["error"]})
@@ -383,7 +394,8 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
                 kept, why_not = False, "already read"
             read.add(address)
         if kept:
-            pages.append({"url": page["url"], "text": text})
+            # `from`: the page whose link led here, for prefer_dedicated_pages.
+            pages.append({"url": page["url"], "text": text, "from": parent})
         visits.append({"url": page["url"], "reached_by": via, "kept": kept, "chars": len(text),
                        **({} if kept else {"why_not": why_not}),
                        **({"through": "tavily"} if page.get("via") == "tavily" else {})})
@@ -406,7 +418,8 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
             for href in links[:max(room, 0)]:
                 seen.add(href.rstrip("/"))
                 frontier.append((href, depth + 1,
-                                 f"link \"{labels.get(href, '')[:80]}\" on {page['url']}"))
+                                 f"link \"{labels.get(href, '')[:80]}\" on {page['url']}",
+                                 page["url"]))
     return {"funder": funder, "pages": pages, "errors": errors, "visits": visits}
 
 
@@ -470,7 +483,9 @@ programmes that page describes. Today is {today}. Answer with one JSON object an
   "eligibility_excerpt": "..." or null,
   "regions": ["region slugs from the allowed list"],
   "tags": ["tag slugs from the allowed list"],
-  "summary": "two sentences in {language}, facts from the page only"
+  "summary": "two sentences in {language}, facts from the page only",
+  "kind": "grant" | "subsidy" | "loan" | "guarantee" | "mixed" | "other",
+  "kind_excerpt": "the sentence that shows what kind of money it is" or null
 }}]}}
 
 Rules:
@@ -480,6 +495,10 @@ link or a name in a menu is not a programme. A page with none returns {{"program
 this page describes how to apply to the funder and names no programmes, list that one \
 scheme with the title GENERAL and give its eligibility_excerpt.
 - Only funding an organisation or person can apply for. {not_funding}
+- kind: grant or subsidy is money that is not repaid; loan is credit repaid, usually with \
+interest; guarantee backs someone's loan; mixed is part grant and part repayable; other is \
+anything else (equity, prizes, services). Judge by what the page says, not by the \
+programme's name. kind_excerpt is copied from the page.
 - dated: the page states the next closing date. rolling: the page says applications are \
 taken at any time. closed: the page says the round is closed, or its only dates are past. \
 unknown: the page gives no closing date; this is common and fine. Never guess or infer a date.
@@ -674,6 +693,11 @@ def country_rules(cfg) -> dict:
         "join_translations": bool(sweep.get("join_translations")),
         "not_a_grant": words("not_a_grant_words"),
         "grant_title": words("grant_title_words"),
+        "loan_text": words("loan_text_words"),
+        # Kinds of money the model may name that are not published. "mixed"
+        # (part grant, part repayable) is the owner's call: mixed_kind.
+        "reject_kinds": set(sweep.get("reject_kinds") or [])
+        | ({"mixed"} if sweep.get("mixed_kind") == "reject" else set()),
         "rolling": words("rolling_words"),
         "not_covered_region": sweep.get("not_covered_region"),
         "not_covered": words("not_covered_words"),
@@ -864,6 +888,16 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         # "Linia de credit" and "Garanții de credit" are not grants; a
         # subsidy is, and "Granturi și credite" names a grant.
         return None, "not a grant"
+    kind = str(item.get("kind") or "").strip().lower()
+    if kind in rules.get("reject_kinds", ()):
+        # "FACEM Impact" names no loan; its page offers credit at 4-6%.
+        return None, f"not a grant ({kind})"
+    said = _to_ascii(f"{item.get('summary') or ''} {item.get('eligibility') or ''}")
+    if rules.get("loan_text") and rules["loan_text"].search(said) and not (
+            rules["grant_title"] and rules["grant_title"].search(said)):
+        # The summary or who can apply speaks of credit, interest or
+        # repayment and never of a grant or subsidy.
+        return None, "not a grant (loan)"
     general = title.upper() == "GENERAL"
     if general:
         # The funder's one unnamed scheme. It has no title to find, so it
@@ -1036,6 +1070,58 @@ def join_translations(rows: list[dict]) -> list[dict]:
     return [r for r in rows if id(r) not in dropped]
 
 
+def _title_stems(title: str, stop: set[str]) -> set[str]:
+    """A title's words, folded, hyphens closed up ("startup-urilor"), the
+    country's stopwords left out, each cut to six letters so "integrarea"
+    and "integrare", "lanțuri" and "lanțurile" are one word."""
+    words = re.findall(r"[a-z0-9]+", _to_ascii(title).replace("-", ""))
+    return {w[:6] for w in words if w not in stop}
+
+
+def prefer_dedicated_pages(rows: list[dict], parents: dict, cfg) -> list[dict]:
+    """With `sweep.prefer_dedicated_pages`: a row read from a page that
+    links to another of the funder's pages is dropped when a row read from
+    that linked page (or one further down) names the same programme: every
+    word of the dedicated page's title is in the index row's. ODA's grants
+    calendar lists "CREȘTEM IMM – tranziție digitală" and three more
+    measures; the CREȘTEM IMM page describes the programme in full.
+
+    The index row stands when it has what the dedicated row lacks: a
+    closing date or an amount of its own. A sub-measure with nothing of its
+    own ("Măsura 1", apply monthly) is the same call as the programme page,
+    listed again; one with its own date or amount is a call a reader could
+    miss if it were folded away."""
+    sweep = cfg.sweep or {}
+    if not sweep.get("prefer_dedicated_pages"):
+        return rows
+    stop = {_to_ascii(w) for w in sweep.get("title_stopwords") or []}
+
+    def below(child: str | None, index: str) -> bool:
+        seen = set()
+        while child and child not in seen:
+            seen.add(child)
+            child = parents.get(child)
+            if child == index:
+                return True
+        return False
+    dropped = set()
+    for row in rows:
+        mine = _title_stems(row["title"], stop)
+        for other in rows:
+            if other is row or other["funder"] != row["funder"]:
+                continue
+            if not below(other["source_url"], row["source_url"]):
+                continue
+            theirs = _title_stems(other["title"], stop)
+            own_date = row["deadline_state"] == "dated" and other["deadline_state"] != "dated"
+            own_amount = (row["amount_min"] or row["amount_max"]) and not (
+                other["amount_min"] or other["amount_max"])
+            if theirs and theirs <= mine and not (own_date or own_amount):
+                dropped.add(id(row))
+                break
+    return [r for r in rows if id(r) not in dropped]
+
+
 def select_funders(country: str, tier: int | None = None, limit: int | None = None,
                    only: list[str] | None = None) -> list[dict]:
     funders = load_register(country)
@@ -1108,6 +1194,8 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
     extract_s = time.monotonic() - started
 
     rows = dedupe_rows([row for r in results for row in r["rows"]])
+    rows = prefer_dedicated_pages(rows, {p["url"]: p.get("from") for c in crawled
+                                         for p in c["pages"]}, cfg)
     for n, row in enumerate(sorted(rows, key=lambda r: (r["funder"], r["title"])), 1):
         row["id"] = f"OPP-{country.upper()}-{month}-{n:04d}"
 

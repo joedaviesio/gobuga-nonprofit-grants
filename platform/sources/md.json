@@ -357,12 +357,23 @@
     "other_dollar_tlds": ["ca", "nz", "au"],
     "general_title": "Granturi {funder}",
     "join_translations": true,
+    "prefer_dedicated_pages": true,
+    "title_stopwords": [
+      "programul", "program", "de", "a", "al", "ai", "ale", "și", "în", "pentru", "la", "din",
+      "susținere", "sprijin", "the", "of", "for", "and", "программа", "поддержки", "для", "и", "в"
+    ],
     "not_a_grant_words": [
       "credit", "împrumut", "garant", "leasing", "licitați", "achiziții publice",
       "achiziție publică", "achiziția publică", "achizițiilor publice", "кредит", "заём", "заем", "займ", "гарант",
       "лизинг", "тендер", "госзакуп", "государственные закупки", "государственных закупок"
     ],
     "grant_title_words": ["grant", "subvenți", "nerambursabil", "грант", "субсиди", "безвозмезд"],
+    "loan_text_words": [
+      "credit", "împrumut", "dobând", "rambursabil", "garanți", "leasing",
+      "кредит", "заём", "заем", "займ", "процентн", "возвратн", "лизинг"
+    ],
+    "reject_kinds": ["loan", "guarantee", "other"],
+    "mixed_kind": "keep",
     "rolling_words": [
       "pe tot parcursul anului", "permanent", "în orice moment", "oricând",
       "fără termen limită", "постоянно", "в любое время", "в течение всего года", "круглый год"

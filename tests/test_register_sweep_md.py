@@ -821,3 +821,149 @@ def test_extract_page_holds_the_budget_before_asking():
     for t in threads:
         t.join()
     assert len(asked) == 2 and budget.reserved == pytest.approx(0)
+
+
+# --- Smoke test findings: loans by their terms, index pages, kinds -----------------
+
+# From https://oda.md/ro/acces-la-finantare/facem-impact, fetched 2026-09-30.
+FACEM_PAGE = (
+    "FACEM Impact\nCredit cu impact pentru afacerea ta\nODA susține IMM-urile din Moldova prin "
+    "FACEM Impact – finanțare accesibilă pentru dezvoltarea afacerii tale, cu dobândă fixă și "
+    "condiții avantajoase care te ajută să investești sustenabil pe termen lung și să creezi "
+    "locuri de muncă.\nSuma și termenul finanțării\nSuma minimă 200.000 lei\nSuma maximă "
+    "5.000.000 lei\nTermen până la 10 ani\nRată fixă a dobânzii\nAlte activități 6,0% / an\n"
+    "Perioada de Acordare a Finanțărilor Până la 31.03.2027\n" + FILLER)
+FACEM = dict(
+    title="FACEM Impact", deadline_state="dated", deadline="2027-03-31",
+    deadline_excerpt="Perioada de Acordare a Finanțărilor Până la 31.03.2027",
+    amount_min=200000, amount_max=5000000, currency="MDL",
+    amount_excerpt="Suma minimă 200.000 lei Suma maximă 5.000.000 lei",
+    summary="FACEM Impact oferă credite cu dobândă fixă (4%-6% anual) pentru IMM-uri din "
+            "Moldova, cu sume între 200.000 și 5.000.000 lei, pe termene până la 10 ani.",
+    eligibility="IMM-uri înregistrate în Republica Moldova.")
+
+
+def facem(**kw):
+    page = {"url": "https://oda.md/ro/acces-la-finantare/facem-impact", "text": FACEM_PAGE}
+    return rs.check_programme(item(**{**FACEM, **kw}), page, funder(), md(), TODAY, NOW.isoformat())
+
+
+def test_a_loan_whose_title_names_no_loan_is_not_a_grant():
+    # By the kind the model names ...
+    row, why = facem(kind="loan", kind_excerpt="Credit cu impact pentru afacerea ta")
+    assert row is None and why == "not a grant (loan)"
+    # ... and, if it names none or calls it a grant, by its own summary's words.
+    for kind in (None, "grant"):
+        row, why = facem(kind=kind)
+        assert row is None and why == "not a grant (loan)"
+    row, why = facem(kind="guarantee")
+    assert row is None and why == "not a grant (guarantee)"
+
+
+def test_a_grant_that_mentions_credit_in_passing_is_kept():
+    page = ("Programul de sprijin al micilor producători oferă granturi nerambursabile de până la "
+            "500.000 lei. Beneficiarii pot combina grantul cu un credit bancar. " + FILLER)
+    row, why = check(page, title="Programul de sprijin al micilor producători", kind="grant",
+                     summary="Granturi nerambursabile de până la 500.000 lei; beneficiarii pot "
+                             "combina grantul cu un credit bancar.",
+                     eligibility_excerpt="Beneficiarii pot combina grantul cu un credit bancar.")
+    assert why == "" and row is not None
+    # A subsidy that names interest is a subsidy.
+    row, why = check(page, title="Programul de sprijin al micilor producători", kind="subsidy",
+                     summary="Subvenții care compensează dobânda la creditele pentru utilaje.",
+                     eligibility_excerpt="Beneficiarii pot combina grantul cu un credit bancar.")
+    assert why == ""
+
+
+def test_mixed_instruments_are_the_owners_call():
+    page = ("Concurs de finanțare parțial rambursabilă pentru întreprinderi sociale. "
+            "Pot aplica întreprinderile sociale. " + FILLER)
+    kw = dict(title="Concurs de finanțare parțial rambursabilă pentru întreprinderi sociale",
+              kind="mixed", summary="Granturi nerambursabile și componente rambursabile.",
+              eligibility_excerpt="Pot aplica întreprinderile sociale.")
+    assert md().sweep["mixed_kind"] == "keep" and check(page, **kw)[0] is not None
+    from types import SimpleNamespace
+    strict = SimpleNamespace(**{k: getattr(md(), k) for k in ("slug", "regions", "tags", "currency")},
+                             sweep={**md().sweep, "mixed_kind": "reject"})
+    row, why = rs.check_programme(item(**kw), {"url": "https://x.md/", "text": page}, funder(),
+                                  strict, TODAY, NOW.isoformat())
+    assert row is None and why == "not a grant (mixed)"
+
+
+def test_the_md_prompt_asks_what_kind_of_money_it_is():
+    prompt = rs.system_prompt(md(), TODAY)
+    assert '"kind": "grant" | "subsidy" | "loan" | "guarantee" | "mixed" | "other"' in prompt
+    assert "kind" not in rs.system_prompt(get_country_config("nz"), TODAY)
+
+
+CAL = "https://oda.md/ro/granturi/calendar-granturi"
+
+
+def oda_row(title, url, deadline="TBC", amount=None):
+    return {"country": "md", "funder": "ODA", "title": title, "source_url": url,
+            "deadline": deadline, "deadline_state": "dated" if deadline[0].isdigit() else "not-stated",
+            "amount_min": None, "amount_max": amount, "currency": "MDL" if amount else None,
+            "provenance": {}}
+
+
+def test_an_index_pages_rows_give_way_to_the_programme_pages_own():
+    fem = "https://oda.md/ro/granturi/program-antreprenoriat-feminin"
+    crestem = "https://oda.md/ro/granturi/crestem-imm-main"
+    tech = "https://oda.md/ro/granturi/start-uri-tehnologice"
+    rows = [
+        oda_row("Programul de susținere a antreprenoriatului feminin – Măsura 1", CAL),
+        oda_row("CREȘTEM IMM – tranziție digitală", CAL),
+        oda_row("CREȘTEM IMM – susținere lansare afacere – MIGRANȚI", CAL),
+        oda_row("Programul de susținere a Inovațiilor digitale și startupurilor tehnologice – Măsura 2", CAL),
+        # A sub-measure with a closing date of its own stands.
+        oda_row("CREȘTEM IMM – eficiență energetică", CAL, deadline="2026-11-05"),
+        # A programme with no page of its own stands.
+        oda_row("Programul PARE 1+1", CAL),
+        oda_row("Programul de Susținere a Antreprenoriatului Feminin", fem, amount=600000),
+        oda_row("CREȘTEM IMM", crestem),
+        oda_row("Programul de susținere a inovațiilor digitale și startup-urilor tehnologice", tech),
+    ]
+    parents = {fem: CAL, crestem: CAL, tech: CAL, CAL: None}
+    kept = [r["title"] for r in rs.prefer_dedicated_pages(rows, parents, md())]
+    assert kept == ["CREȘTEM IMM – eficiență energetică", "Programul PARE 1+1",
+                    "Programul de Susținere a Antreprenoriatului Feminin", "CREȘTEM IMM",
+                    "Programul de susținere a inovațiilor digitale și startup-urilor tehnologice"]
+    # A page that does not link to the other is not its index.
+    assert len(rs.prefer_dedicated_pages(rows, {}, md())) == len(rows)
+    # Not for NZ.
+    assert len(rs.prefer_dedicated_pages(rows, parents, get_country_config("nz"))) == len(rows)
+
+
+def test_different_rounds_of_one_competition_stay_apart():
+    a = oda_row("Concursul de proiecte ”Tineri Cercetători”", "https://ancd.gov.md/ro/content/a",
+                deadline="2025-02-19")
+    b = oda_row("Concursul de proiecte ”Tineri Cercetători” pentru anii 2027-2028",
+                "https://ancd.gov.md/ro/press/b", amount=900000)
+    assert len(rs.dedupe_rows([a, b])) == 2
+    assert len(rs.prefer_dedicated_pages([a, b], {"https://ancd.gov.md/ro/press/b":
+                                                  "https://ancd.gov.md/ro/content/a"}, md())) == 2
+
+
+def test_a_run_folds_the_calendars_row_into_the_programme_page(isolated):
+    fem = "https://oda.md/ro/granturi/program-antreprenoriat-feminin"
+    (isolated / "md-register.json").write_text(json.dumps({"funders": [funder("ODA", CAL)]}))
+    pages = {CAL: ("Calendar granturi. Programul de susținere a antreprenoriatului feminin – "
+                   "Măsura 1. Apelurile se organizează lunar. " + FILLER,
+                   [(fem, "Antreprenoriat Feminin - granturi")]),
+             fem: ("Programul de Susținere a Antreprenoriatului Feminin: granturi. Pot aplica femeile "
+                   "antreprenoare. " + FILLER, [])}
+
+    def fetch(url):
+        text, links = pages[url]
+        return {"url": url, "text": text, "links": links}
+
+    def ask(system, user):
+        url = user.split("Page address: ", 1)[1].split("\n", 1)[0]
+        title = ("Programul de susținere a antreprenoriatului feminin – Măsura 1" if url == CAL
+                 else "Programul de Susținere a Antreprenoriatului Feminin")
+        excerpt = "Apelurile se organizează lunar." if url == CAL else "Pot aplica femeile antreprenoare."
+        return json.dumps({"programmes": [item(title=title, eligibility_excerpt=excerpt,
+                                               kind="grant")]}), 100, 10
+    report = rs.run("md", budget_usd=1.0, fetch=fetch, ask=ask, now=NOW)
+    rows = json.load(open(os.path.join(report["run_dir"], "verified.json")))["opportunities"]
+    assert [r["source_url"] for r in rows] == [fem], (report["rejected_reasons"], report["pages_read"])

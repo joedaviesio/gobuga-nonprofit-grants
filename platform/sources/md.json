@@ -332,9 +332,11 @@
       "proiecte finanțate", "proiectele finanțate", "финансированные проекты", "vacant",
       "admiterea candidaților", "regulament", "raport", "în derulare", "proiecte în curs",
       "anunț - concurs", "informații despre concurs", "fondul de fonduri", "ordine de finanțare",
-      "câștigătoare", "finalizat", "inactive", "colectarea propunerilor", "colectăm propuneri",
+      "câștigătoare", "finaliz", "rezultate", "inactive", "colectarea propunerilor", "colectăm propuneri",
       "rezultatele proiectelor", "sumarul rezultatelor", "rapoarte anuale", "monitorizarea",
-      "prima casă", "реализуемые проекты", "завершенные проекты"
+      "prima casă", "реализуемые проекты", "завершенные проекты", "garantare", "acces la finanțare",
+      "graficul verificărilor", "lista de interdicții", "lista solicitanților",
+      "materiale de vizibilitate"
     ],
     "link_words": [
       "proiecte culturale", "proiecte editoriale", "voucher", "programul național",
@@ -356,7 +358,7 @@
     "default_language": "ro",
     "default_language_tlds": ["md"],
     "link_order": "page",
-    "links_per_page": 4,
+    "links_per_page": 8,
     "content_links_first": true,
     "fold_letters": true,
     "number_format": "ro",
@@ -405,7 +407,9 @@
     "deadline_words": [
       "termen", "data limită", "până la", "până pe", "pînă la", "depune", "depunerii", "depun",
       "aplicare", "aplica", "prelungit", "închis", "încheiat", "încheier", "recepționa", "до", "срок", "крайний", "подач",
-      "принима", "deadline", "closes", "closing", "closed", "by", "until", "apply", "submission"
+      "принима", "deadline", "closes", "closing", "closed", "by", "until", "apply", "submission",
+      "cel târziu", "nu mai târziu", "expiră", "ora", "până în", "pînă", "înscrieri",
+      "прием заявок", "приём", "applications close", "due", "closing date"
     ],
     "not_covered_words": [
       "transnistr", "tighina", "bender", "tiraspol", "stânga nistrului", "malul stâng",

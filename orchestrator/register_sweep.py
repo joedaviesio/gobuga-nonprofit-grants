@@ -42,11 +42,12 @@ block the sweep is New Zealand's, unchanged:
   link_order       "page": links are followed in the page's order (a
                    listing, newest first), past years last; otherwise the
                    most grant words first
-  links_per_page   at most this many links are taken from any page below the
-                   funder's own, and pages of one depth take turns, so no one
-                   page uses the cap
+  links_per_page   the links of one depth are queued together, a page at a
+                   time in turn, and a page gives at most this many when
+                   another page of its depth has links too
   content_links_first  links in the page's content (menus, header and footer
-                   aside) are followed before the others
+                   aside) are followed before the others, where the content
+                   is under half the page's links
   link_words       with country_words: more words that make a link worth
                    following (not a page worth reading): "voucher",
                    "postdoctorat", names of programmes without a grant word
@@ -118,6 +119,7 @@ CLI:
 import tirith  # noqa: F401  — must come before anthropic; routes calls through local tirith proxy
 
 import argparse
+import itertools
 import json
 import os
 import re
@@ -349,17 +351,27 @@ def fetch_blocked(url: str, why: str, use_tavily: bool = True) -> dict:
 
 # A language named in a query ("?lang=eng", "?prefLang=hu"), three letters or two.
 _LANG_QUERY = re.compile(r"(?:^|&)(?:lang|preflang|language|locale)=([a-z]{2,3})", re.IGNORECASE)
+_LANG_QUERY_PARAM = re.compile(r"^(?:lang|preflang|language|locale)=", re.IGNORECASE)
 _LANG_3 = {"eng": "en", "fra": "fr", "fre": "fr", "rus": "ru", "ron": "ro", "rum": "ro",
            "deu": "de", "ger": "de", "spa": "es", "por": "pt", "ukr": "uk", "ita": "it"}
+# Two-part locales in a path. Not any "xx-xx": /de-la/ is Romanian for "from".
+_LOCALES = {"pt-pt", "pt-br", "zh-cn", "zh-tw", "en-gb", "en-us", "sr-latn", "es-es", "fr-fr",
+            "de-de"}
+_SUFFIX = re.compile(r"_([a-z]{2})((?:\.[a-z]+)?)$")
+
+
+def _path_code(part: str, languages) -> str | None:
+    code = part[:2] if part in _LOCALES else part
+    return code if code in languages else None
 
 
 def _language(url: str, languages) -> str | None:
     """The language an address names, or None: a lang= or prefLang= query
-    (it wins: "..._en?prefLang=hu" is shown in Hungarian), a path part that
-    is a language code (/ro/, /apply-for-grant/ru/, /pt-pt/), or a last part
-    ending in one after an underscore, as the European Commission's pages
-    do ("open-calls_lv"). Only a whole part or suffix counts, so
-    /ro-md-cooperare/ names none."""
+    (it wins: "..._en?prefLang=hu" is shown in Hungarian); a language code
+    as the first path part or the one after it (/ro/, /apply-for-grant/ru/,
+    /pt-pt/), not deeper, where "/grants/et/al" and "/programmes/hr/" are
+    words; or a last part ending in one after an underscore, as the
+    European Commission's pages do ("open-calls_lv")."""
     if not languages:
         return None
     parts = urlsplit(url)
@@ -369,12 +381,23 @@ def _language(url: str, languages) -> str | None:
         code = _LANG_3.get(code, code[:2])
         return code if code in languages else None
     path = [p for p in parts.path.lower().split("/") if p]
-    for p in path:
-        code = p[:2] if re.fullmatch(r"[a-z]{2}-[a-z]{2}", p) else p
-        if code in languages:
-            return code
-    suffix = re.search(r"_([a-z]{2})(?:\.[a-z]+)?$", path[-1]) if path else None
+    for p in path[:2]:
+        if _path_code(p, languages):
+            return _path_code(p, languages)
+    suffix = _SUFFIX.search(path[-1]) if path else None
     return suffix.group(1) if suffix and suffix.group(1) in languages else None
+
+
+def _language_key(url: str, languages) -> str:
+    """The address with its language marker taken out, so the /ro/ and /ru/
+    copies of one page (or "call_ro" and "call_en") have one key."""
+    parts = urlsplit(url)
+    path = [p for p in parts.path.lower().split("/") if p]
+    path = [p for i, p in enumerate(path) if not (i < 2 and _path_code(p, languages))]
+    if path:
+        path[-1] = _SUFFIX.sub(r"\2", path[-1])
+    query = "&".join(q for q in parts.query.split("&") if q and not _LANG_QUERY_PARAM.match(q))
+    return f"{_site(parts.hostname)}/{'/'.join(path)}?{query}"
 
 
 def _country_order(links: list[str], labels: dict, words: dict) -> list[str]:
@@ -382,11 +405,13 @@ def _country_order(links: list[str], labels: dict, words: dict) -> list[str]:
     many years before `this_year` is dropped ("Program de Stat 2020-2023").
     Only the text counts: an address may carry a programme's first year
     ("...moldova-creativa-pentru-anii-2024" runs to 2028). With
-    `rank_strong_links`, links naming no past year go first, then those
-    holding a strong grant word, each in their order, so this year's call
-    beats last year's press release before the page cap is reached. With
-    `page_order` the page's own order stands (a listing, newest first) and
-    only links naming a past year go last."""
+    `rank_strong_links`, links naming no past year go first; of those, the
+    ones naming this year or a later one, then those whose text holds a
+    strong phrase, then those holding a strong grant word, pages before
+    documents; each class in
+    the order it came in, its site sections taking turns (_by_section) (the page's own order with
+    `page_order`), so this year's call beats last year's press release and
+    a listing stays newest first."""
     fold = words["fold"]
 
     def years(h: str) -> list[int]:
@@ -398,9 +423,42 @@ def _country_order(links: list[str], labels: dict, words: dict) -> list[str]:
         def key(h: str) -> tuple:
             said = f"{fold(labels.get(h, ''))} {fold(decode(urlsplit(h).path))}"
             past = bool(years(h)) and max(years(h)) < words["this_year"]
-            return (past,) if words.get("page_order") else (past, not words["strong_words"].search(said))
-        links = sorted(links, key=key)
+            # A link naming this year or a later one is a current round:
+            # "Vouchere Inovaționale pentru anul 2026" before "Apeluri deschise".
+            current = bool(years(h)) and max(years(h)) >= words["this_year"]
+            # A strong phrase in the link's text names a call ("Call for
+            # Proposals", "Concursul de proiecte"), where a strong word may
+            # name a whole site section ("Funding portal").
+            phrase = bool(words.get("strong_phrases") and words["strong_phrases"].search(
+                fold(labels.get(h, ""))))
+            # A page before a document: the call's page says what the order
+            # (a PDF) decides, and has links to follow.
+            document = bool(rw.DOCUMENT.search(urlsplit(h).path))
+            return past, not current, not phrase, not words["strong_words"].search(said), document
+        keys = {h: key(h) for h in links}
+        links = sorted(links, key=keys.get)
+        # Within a class, the site's sections take turns: AIPA's grants
+        # (/granturi/aggri/) are not left behind all its subsidy pages.
+        out: list[str] = []
+        for _, run in itertools.groupby(links, key=keys.get):
+            out += _by_section(list(run), words.get("language_paths") or set())
+        links = out
     return links
+
+
+def _by_section(links: list[str], languages) -> list[str]:
+    """Links one from each section in turn, each section in its order. A
+    section is the first folder of the address, language aside; a page with
+    no folder is a section of its own."""
+    sections: dict[str, list[str]] = {}
+    for h in links:
+        parts = [p for p in urlsplit(h).path.lower().split("/") if p]
+        parts = [p for i, p in enumerate(parts) if not (i < 2 and _path_code(p, languages))]
+        sections.setdefault(parts[0] if len(parts) > 1 else h, []).append(h)
+    out = []
+    for rank in range(max((len(v) for v in sections.values()), default=0)):
+        out += [v[rank] for v in sections.values() if rank < len(v)]
+    return out
 
 
 def _site_languages(url: str, words: dict) -> set[str]:
@@ -417,16 +475,67 @@ def _site_languages(url: str, words: dict) -> set[str]:
     return {default} if tld in words.get("default_language_tlds", set()) else {default, "en"}
 
 
-def _other_language(href: str, text: str, own: set[str], words: dict) -> bool:
-    """A link to the page in another language: its text is a language's
-    name or code ("Русский", "EN"), or its address names a language that is
-    not one of the funder's own (`_site_languages`)."""
+def _other_language(href: str, text: str, own: set[str], own_keys: set[str], words: dict) -> bool:
+    """A link to a copy of the site in another language:
+
+      its text names a language ("Русский", "Français")
+      its text is a bare code ("EN", "RU") and its address names a language
+        not the funder's own: a switcher, not the IT department
+      its address names another language and the same page is linked in the
+        funder's own language (`own_keys`): /apply-for-grant/ru/ beside
+        /apply-for-grant/en/. A page only in English ("...moldova-2025_en",
+        with no "_ro" beside it) is the funder's call, not a copy."""
     languages = words["language_paths"]
     label = " ".join(text.split()).casefold()
-    if label in words.get("language_names", set()) or label in languages:
+    if label in words.get("language_names", set()):
         return True
     code = _language(href, languages)
-    return code is not None and code not in own
+    if code is None or code in own:
+        return False
+    return label in languages or _language_key(href, languages) in own_keys
+
+
+def _content_first(links: list[str], page: dict) -> list[str]:
+    """The page's content links first, when the content is a part of the
+    page (fewer than half its links); where it is most of the page, the
+    menus were not told apart and the order stands."""
+    content = {h.rstrip("/") for h in page.get("content_links") or []}
+    every = {h.rstrip("/") for h, _ in page.get("links", [])}
+    if not content or len(content & every) >= len(every) / 2:
+        return links
+    return ([h for h in links if h.rstrip("/") in content]
+            + [h for h in links if h.rstrip("/") not in content])
+
+
+def _country_links(page: dict, funder: dict, words: dict, seen: set[str], strict_links: bool,
+                   own: set[str] | None) -> list[str]:
+    """The links a country crawl follows from one page, best first."""
+    links = rw.country_pick_links(page, funder["url"], words, seen)
+    if strict_links:
+        links = [h for h in links if not rw.page_problem(words, h)]
+    labels = {h: t for h, t in page.get("links", [])}
+    texts = {h.rstrip("/"): t for h, t in page.get("links", [])}
+    fold = words["fold"]
+
+    def strong(h: str) -> bool:
+        return bool(words.get("strong_words") and words["strong_words"].search(
+            fold(texts.get(h.rstrip("/"), ""))))
+    # Facets: the page itself again with a filter ("?country=Albania"), kept
+    # only when their text names funding: "grants_ro" in every facet's
+    # address does not count.
+    here = urlsplit(page["url"])
+    links = [h for h in links if strong(h) or not (
+        _site(urlsplit(h).hostname) == _site(here.hostname)
+        and urlsplit(h).path.rstrip("/") == here.path.rstrip("/") and urlsplit(h).query)]
+    if words.get("language_paths") and own:
+        languages = words["language_paths"]
+        own_keys = {_language_key(h, languages) for h in [page["url"]] + list(texts)
+                    if _language(h, languages) in own | {None}}
+        links = [h for h in links if not _other_language(
+            h, texts.get(h.rstrip("/"), ""), own, own_keys, words)]
+    if words.get("content_links_first"):
+        links = _content_first(links, page)
+    return _country_order(links, labels, words)
 
 
 def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
@@ -437,28 +546,49 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
     choose pages and links by the country's words instead of the English
     defaults; with `strict_links` a link must also pass its page rules.
     With `words`, a page is read once however it is reached: "www." or not,
-    a redirect, a closing slash. `visits` records every address fetched,
-    how it was reached and whether it passed the page filter, for
-    --crawl-only."""
+    a redirect, a closing slash. With `links_per_page` the links of one
+    depth are queued together, one from each page in turn, so a second
+    index page gets its share of the cap; a page takes at most that many
+    only when another page of its depth has links too. `visits` records
+    every address fetched, how it was reached and whether it passed the
+    page filter, for --crawl-only."""
     seen, pages, errors, visits = {funder["url"].rstrip("/")}, [], [], []
     read: set[str] = set()
-    # With `links_per_page` each page gives at most that many links, and the
-    # frontier takes one link from each page of a depth before a second
-    # from any (rank), so a second index page gets its share of the cap.
-    per_page = (words or {}).get("links_per_page")
-    frontier = [(funder["url"], 0, "registered page", None, 0)]
+    share = bool(words and words.get("links_per_page"))
+    pending: list[tuple] = []          # (depth, page url, links, labels), with `share`
+    own = None                          # the funder's languages, from its first page read
+    frontier = [(funder["url"], 0, "registered page", None)]
     # Funding pages move. If the registered one is gone, or is a file or a
     # bot check rather than a page with links, start again from the home page.
     home = "{0.scheme}://{0.netloc}/".format(urlsplit(funder["url"]))
     tried_home = home.rstrip("/") in seen
-    while (frontier or not tried_home) and len(pages) < MAX_PAGES_PER_FUNDER:
+
+    def queue(href: str, depth: int, label: str, parent: str) -> None:
+        seen.add(href.rstrip("/"))
+        frontier.append((href, depth, f"link \"{label[:80]}\" on {parent}", parent))
+
+    def flush() -> None:
+        room = MAX_PAGES_PER_FUNDER * 2 - len(seen)
+        cap = words["links_per_page"] if sum(1 for p in pending if p[2]) > 1 else None
+        for rank in range(max((len(p[2]) for p in pending), default=0)):
+            for depth, parent, links, labels in pending:
+                if rank < len(links) and (cap is None or rank < cap) and room > 0 \
+                        and links[rank].rstrip("/") not in seen:
+                    queue(links[rank], depth, labels.get(links[rank], ""), parent)
+                    room -= 1
+        pending.clear()
+    while True:
+        if pending and (not frontier or frontier[0][1] >= pending[0][0]):
+            flush()
+        if not ((frontier or not tried_home) and len(pages) < MAX_PAGES_PER_FUNDER):
+            break
         if not frontier:
             if pages:
                 break
             tried_home = True
             seen.add(home.rstrip("/"))
-            frontier.append((home, 0, "home page, after the registered page gave nothing", None, 0))
-        url, depth, via, parent, _ = frontier.pop(0)
+            frontier.append((home, 0, "home page, after the registered page gave nothing", None))
+        url, depth, via, parent = frontier.pop(0)
         page = fetch(url)
         if page.get("error"):
             errors.append({"url": url, "error": page["error"]})
@@ -474,6 +604,10 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
             if kept and address in read:
                 kept, why_not = False, "already read"
             read.add(address)
+            if depth == 0 and words.get("language_paths"):
+                # From where the funder's page landed: a .md address that
+                # redirects to /ru/ is a Russian site.
+                own = _site_languages(page["url"], words)
         if kept:
             # `from`: the page whose link led here, for prefer_dedicated_pages.
             pages.append({"url": page["url"], "text": text, "from": parent})
@@ -481,40 +615,17 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
                        **({} if kept else {"why_not": why_not}),
                        **({"through": "tavily"} if page.get("via") == "tavily" else {})})
         if depth < MAX_DEPTH:
-            room = MAX_PAGES_PER_FUNDER * 2 - len(seen)
+            labels = {h: t for h, t in page.get("links", [])}
             if words:
-                links = rw.country_pick_links(page, funder["url"], words, seen)
-                if strict_links:
-                    links = [h for h in links if not rw.page_problem(words, h)]
-                if words.get("language_paths"):
-                    # The funder's page is in one language: its copies in
-                    # the others (/ru/ beside /ro/) are the same calls again.
-                    own = _site_languages(funder["url"], words)
-                    texts = {h.rstrip("/"): t for h, t in page.get("links", [])}
-                    links = [h for h in links if not _other_language(
-                        h, texts.get(h.rstrip("/"), ""), own, words)]
-                if words.get("content_links_first") and page.get("content_links"):
-                    # Menus first on the page, the listing after: the
-                    # listing's links (newest call first) go first.
-                    inside = {h.rstrip("/") for h in page["content_links"]}
-                    links = ([h for h in links if h.rstrip("/") in inside]
-                             + [h for h in links if h.rstrip("/") not in inside])
-                links = _country_order(links, {h: t for h, t in page.get("links", [])}, words)
-                if per_page and depth > 0:
-                    # The funder's own page may fill the cap; a page below it
-                    # takes its share only.
-                    links = links[:per_page]
+                links = _country_links(page, funder, words, seen, strict_links, own)
+                if share:
+                    pending.append((depth + 1, page["url"], links, labels))
+                    continue
             else:
                 links = pick_links(page, funder["url"], seen)
-            labels = {h: t for h, t in page.get("links", [])}
-            for rank, href in enumerate(links[:max(room, 0)]):
-                seen.add(href.rstrip("/"))
-                frontier.append((href, depth + 1,
-                                 f"link \"{labels.get(href, '')[:80]}\" on {page['url']}",
-                                 page["url"], rank))
-            if per_page:
-                # Stable: by depth, then each page's first link, then its second.
-                frontier.sort(key=lambda f: (f[1], f[4]))
+            room = MAX_PAGES_PER_FUNDER * 2 - len(seen)
+            for href in links[:max(room, 0)]:
+                queue(href, depth + 1, labels.get(href, ""), page["url"])
     return {"funder": funder, "pages": pages, "errors": errors, "visits": visits}
 
 
@@ -769,6 +880,16 @@ def country_rules(cfg) -> dict:
         found = sweep.get(key) or []
         return re.compile(rw._pattern(found, _to_ascii), re.IGNORECASE) if found else None
 
+    def whole_short(key: str):
+        """words(), but a word of three letters or fewer must end there too:
+        "до" folds to "do", which starts "Dosarele" and "domeniul"."""
+        found = sweep.get(key) or []
+        short = [w for w in found if len(_to_ascii(w).strip()) <= 3]
+        long = [w for w in found if w not in short]
+        parts = ([rw._pattern(long, _to_ascii)] if long else []) + (
+            [rw._pattern(short, _to_ascii) + r"(?![^\W_])"] if short else [])
+        return re.compile("|".join(parts), re.IGNORECASE) if parts else None
+
     def markers(found: list[str]) -> str:
         # A marker that starts with a letter starts a word: "lei", not "salei".
         return "|".join(("(?<![a-z])" if _to_ascii(m)[:1].isalpha() else "") + re.escape(_to_ascii(m))
@@ -798,7 +919,7 @@ def country_rules(cfg) -> dict:
         "not_covered": words("not_covered_words"),
         "covered_with": words("covered_with_words"),
         "both_banks": words("both_banks_words"),
-        "deadline_words": words("deadline_words"),
+        "deadline_words": whole_short("deadline_words"),
         # Words that name the US dollar itself, beside a bare "$".
         "usd_words": re.compile(markers([m for m in (sweep.get("currencies") or {})
                                          .get("USD", {}).get("markers", []) if m != "$"])

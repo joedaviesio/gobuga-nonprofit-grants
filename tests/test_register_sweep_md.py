@@ -605,9 +605,9 @@ def test_md_does_not_follow_another_languages_copy_or_a_regulation():
         return {"url": url, "text": "Granturi pentru IMM. " + FILLER,
                 "links": links if url == oda else []}
     out = rs.crawl_all("md", md(), [funder("ODA", oda)], fetch)[0]
+    # In the page's order; the /ru/ copy and the regulation are not followed.
     assert [p["url"] for p in out["pages"]] == [
-        oda, "https://oda.md/granturi/start-uri", "https://oda.md/ro/granturi/crestem-imm-main"]
-    # A funder whose page names no language follows every copy.
+        oda, "https://oda.md/ro/granturi/crestem-imm-main", "https://oda.md/granturi/start-uri"]
     assert rs._language("https://oda.md/granturi", {"ro", "ru"}) is None
 
 
@@ -767,9 +767,10 @@ def test_md_crawl_follows_programme_links_and_drops_hr_notices_and_old_years():
         return {"url": url, "text": "Apeluri deschise pentru granturi. " + FILLER,
                 "links": links if url == home else []}
     out = rs.crawl_all("md", md(), [funder("ANCD", home)], fetch, NOW)[0]
+    # In the page's order, a past year's competition last.
     assert [p["url"] for p in out["pages"]] == [
-        home, "https://ancd.gov.md/ro/content/apel-granturi-2026",
-        "https://ancd.gov.md/ro/content/programe-de-postdoctorat-2025-2026",
+        home, "https://ancd.gov.md/ro/content/programe-de-postdoctorat-2025-2026",
+        "https://ancd.gov.md/ro/content/apel-granturi-2026",
         "https://ancd.gov.md/ro/press/concursul-proiectelor-2024-2025"]
 
 
@@ -852,10 +853,9 @@ def test_a_loan_whose_title_names_no_loan_is_not_a_grant():
     # By the kind the model names ...
     row, why = facem(kind="loan", kind_excerpt="Credit cu impact pentru afacerea ta")
     assert row is None and why == "not a grant (loan)"
-    # ... and, if it names none or calls it a grant, by its own summary's words.
-    for kind in (None, "grant"):
-        row, why = facem(kind=kind)
-        assert row is None and why == "not a grant (loan)"
+    # ... and, if it names none, by its own summary's words.
+    row, why = facem(kind=None)
+    assert row is None and why == "not a grant (loan)"
     row, why = facem(kind="guarantee")
     assert row is None and why == "not a grant (guarantee)"
 
@@ -924,14 +924,22 @@ def test_an_index_pages_rows_give_way_to_the_programme_pages_own():
         oda_row("Programul de susținere a inovațiilor digitale și startup-urilor tehnologice", tech),
     ]
     parents = {fem: CAL, crestem: CAL, tech: CAL, CAL: None}
-    kept = [r["title"] for r in rs.prefer_dedicated_pages(rows, parents, md())]
+    # What each programme page says of itself (shortened from oda.md).
+    texts = {fem: "Programul de Susținere a Antreprenoriatului Feminin. Măsura 1: debutante. "
+                  "Măsura 2: întreprinderi în dezvoltare.",
+             crestem: "CREȘTEM IMM: lansarea afacerii (tineri, femei, migranți) și dezvoltarea: "
+                      "tranziție digitală, ecologică, eficiență energetică.",
+             tech: "Inovații digitale și start-upuri tehnologice. Măsura 1 și Măsura 2."}
+    kept = [r["title"] for r in rs.prefer_dedicated_pages(rows, parents, md(), texts)]
     assert kept == ["CREȘTEM IMM – eficiență energetică", "Programul PARE 1+1",
                     "Programul de Susținere a Antreprenoriatului Feminin", "CREȘTEM IMM",
                     "Programul de susținere a inovațiilor digitale și startup-urilor tehnologice"]
     # A page that does not link to the other is not its index.
-    assert len(rs.prefer_dedicated_pages(rows, {}, md())) == len(rows)
+    assert len(rs.prefer_dedicated_pages(rows, {}, md(), texts)) == len(rows)
+    # Nor is one whose own text is not known.
+    assert len(rs.prefer_dedicated_pages(rows, parents, md())) == len(rows)
     # Not for NZ.
-    assert len(rs.prefer_dedicated_pages(rows, parents, get_country_config("nz"))) == len(rows)
+    assert len(rs.prefer_dedicated_pages(rows, parents, get_country_config("nz"), texts)) == len(rows)
 
 
 def test_different_rounds_of_one_competition_stay_apart():
@@ -950,7 +958,8 @@ def test_a_run_folds_the_calendars_row_into_the_programme_page(isolated):
     pages = {CAL: ("Calendar granturi. Programul de susținere a antreprenoriatului feminin – "
                    "Măsura 1. Apelurile se organizează lunar. " + FILLER,
                    [(fem, "Antreprenoriat Feminin - granturi")]),
-             fem: ("Programul de Susținere a Antreprenoriatului Feminin: granturi. Pot aplica femeile "
+             fem: ("Programul de Susținere a Antreprenoriatului Feminin: granturi, Măsura 1 și "
+                   "Măsura 2. Pot aplica femeile "
                    "antreprenoare. " + FILLER, [])}
 
     def fetch(url):
@@ -967,3 +976,255 @@ def test_a_run_folds_the_calendars_row_into_the_programme_page(isolated):
     report = rs.run("md", budget_usd=1.0, fetch=fetch, ask=ask, now=NOW)
     rows = json.load(open(os.path.join(report["run_dir"], "verified.json")))["opportunities"]
     assert [r["source_url"] for r in rows] == [fem], (report["rejected_reasons"], report["pages_read"])
+
+
+# --- Final audit: crawl order and shares, languages, joins, deadlines, retries --------
+
+EEF_LIST = "https://eef.md/ro/oportunitati-de-finantare/333"
+
+
+def test_a_listing_is_read_newest_first_with_its_menu_aside():
+    """EEF's page: menu links first, then its calls newest first. Old calls'
+    long slugs have more grant words, but the listing's order stands."""
+    menu = [("https://eef.md/ro/granturi-acordate-1/396", "Granturi acordate"),
+            ("https://eef.md/ro/concursuri-si-achizitii/338", "Concursuri și achiziții"),
+            ("https://eef.md/ro/promovarea-antreprenoriatului-social/327", "Antreprenoriat social")]
+    new = [f"https://eef.md/ro/concurs-granturi-{n}-2026/333" for n in range(6)]
+    old = [f"https://eef.md/ro/fundatia-anunta-concursul-de-granturi-pentru-granturi-{n}/333"
+           for n in range(6)]
+    listing = [(h, "Concurs de granturi") for h in new] + [
+        (h, "Concursul de granturi: granturi pentru finanțarea proiectelor") for h in old]
+
+    def fetch(url):
+        if url == EEF_LIST:
+            return {"url": url, "text": "Oportunități de finanțare. Granturi. " + FILLER,
+                    "links": menu + listing, "content_links": [h for h, _ in listing]}
+        return {"url": url, "text": "Concurs de granturi. " + FILLER, "links": []}
+    out = rs.crawl_all("md", md(), [funder(url=EEF_LIST)], fetch, NOW)[0]
+    assert [p["url"] for p in out["pages"]] == [EEF_LIST] + new + [old[0]]
+
+
+def test_a_second_index_page_gets_its_share_of_the_cap():
+    """The Ministry: the mass-media fund's page lists many announcements;
+    the cultural projects page lists this year's call, and it is read."""
+    home, fund, culture = ("https://www.mc.gov.md/", "https://mc.gov.md/ro/content/fondul",
+                           "https://mc.gov.md/ro/content/proiecte-culturale")
+    call = "https://mc.gov.md/ro/content/proiecte-culturale-2026"
+    editorial = "https://mc.gov.md/ro/content/proiecte-editoriale"
+    pages = {home: [(fund, "Fondul pentru subvenționarea mass-mediei"),
+                    (editorial, "Proiecte editoriale"), (culture, "Proiecte culturale")],
+             # Enough announcements to use every link the crawl may queue ...
+             fund: [(f"https://mc.gov.md/ro/content/anunt-lansare-subventii-{n}",
+                     f"Anunț de lansare a concursului de subvenții {n}") for n in range(14)],
+             # ... and the call, on the page read after it.
+             culture: [(call, "Proiecte culturale 2026")]}
+
+    def fetch(url):
+        return {"url": url, "text": "Concurs de finanțare, subvenții. " + FILLER,
+                "links": pages.get(url, [])}
+    out = rs.crawl_all("md", md(), [funder("Ministerul Culturii", home)], fetch, NOW)[0]
+    read = [p["url"] for p in out["pages"]]
+    assert call in read and len(read) == rs.MAX_PAGES_PER_FUNDER
+    assert sum("anunt-lansare" in u for u in read) <= md().sweep["links_per_page"]
+
+
+@pytest.mark.parametrize("href, text, followed", [
+    ("https://www.ned.org/apply-for-grant/ru/", "Русский", False),
+    ("https://www.ned.org/apply-for-grant/fr/", "Apply for a grant", False),
+    ("https://www.ned.org/apply-for-grant/pt-pt/", "Apply for a grant", False),
+    ("https://www.ned.org/grants/?lang=fra", "Grants", False),
+    ("https://research.ec.europa.eu/funding_en?prefLang=hu", "Funding", False),
+    ("https://www.ned.org/grants/", "EN", False),
+    ("https://www.ned.org/apply-for-grant/en/how-to-apply/", "How to apply for a grant", True),
+    ("https://www.ned.org/grants/ro-md-cooperation/", "Grants for cooperation", True),
+])
+def test_md_does_not_follow_a_copy_in_another_language(href, text, followed):
+    start = "https://www.ned.org/apply-for-grant/en/"
+
+    def fetch(url):
+        return {"url": url, "text": "Apply for a grant. Grants and funding. " * 20,
+                "links": [(href, text)] if url == start else []}
+    out = rs.crawl_all("md", md(), [funder("NED", start)], fetch, NOW)[0]
+    assert (href in [p["url"] for p in out["pages"]]) is followed
+
+
+def test_a_moldovan_page_with_no_language_part_skips_the_english_copy():
+    start = "https://aipa.gov.md/subventii/"
+
+    def fetch(url):
+        return {"url": url, "text": "Subvenții pentru fermieri. " * 20,
+                "links": [("https://aipa.gov.md/en/subsidies/", "Subsidies"),
+                          ("https://aipa.gov.md/subventii/apel-2026/", "Apel subvenții 2026")]
+                if url == start else []}
+    out = rs.crawl_all("md", md(), [funder("AIPA", start)], fetch, NOW)[0]
+    assert [p["url"] for p in out["pages"]] == [start, "https://aipa.gov.md/subventii/apel-2026/"]
+
+
+def test_eefs_calls_in_both_languages_join_pair_by_pair():
+    ro_comm = md_row("Granturi pentru mobilizarea comunitară", "2026-10-12", 31200)
+    ru_comm = md_row("Конкурс грантов для местных НКО", "2026-10-12", 31200)
+    ro_civ = md_row("Granturi pentru Consiliile de participare civică", "2026-10-12", 60000)
+    ru_civ = md_row("Конкурс грантов по созданию Советов гражданского участия", "2026-10-12", 60000)
+    ro_roma = md_row("Granturi pentru incluziunea romilor", "2026-10-23", 30000)
+    ru_roma = md_row("Конкурс грантов для организаций ромов", "2026-10-23", 30000)
+    rows = rs.dedupe_rows([ru_comm, ro_comm, ru_civ, ro_civ, ru_roma, ro_roma])
+    assert rows == [ro_comm, ro_civ, ro_roma]
+    # Two different calls on one date, neither stating an amount: never joined.
+    a, b = md_row("Конкурс А", "2026-10-12"), md_row("Programul B", "2026-10-12")
+    assert len(rs.dedupe_rows([a, b])) == 2
+
+
+# The dated excerpts of the smoke run (30 Sep 2026), and ODA's fair.
+@pytest.mark.parametrize("excerpt, date, dated", [
+    ("Noi 26 Noi 29 Expo Mobila", "2026-11-29", False),
+    ("Data limită de depunere a propunerilor de proiect este 16 aprilie 2026.", "2026-04-16", True),
+    ("до 12 октября 2026 года, 23:59", "2026-10-12", True),
+    ("Perioada de Acordare a Finanțărilor Până la 31.03.2027", "2027-03-31", True),
+    ("încheierea procesului de recepționare a dosarelor va avea loc pe 02.12.2026",
+     "2026-12-02", True),
+])
+def test_an_md_deadline_needs_a_word_that_makes_it_one(excerpt, date, dated):
+    page = f"Programul de promovare la târguri. {excerpt}. Pot aplica IMM-urile. " + FILLER
+    row, why = check(page, title="Programul de promovare la târguri", deadline_state="dated",
+                     deadline=date, deadline_excerpt=excerpt, eligibility_excerpt="Pot aplica IMM-urile.")
+    assert why == ""
+    assert (row["deadline_state"] in ("dated", "closed")) is dated
+    if not dated:
+        assert row["deadline"] == "TBC" and row["source_excerpt"] == "Pot aplica IMM-urile."
+
+
+def test_an_unreadable_answer_is_asked_again_and_kept_for_the_run(isolated):
+    (isolated / "md-register.json").write_text(json.dumps({"funders": [funder(url=EEF_CALL)]}))
+    answers = iter(["Sorry, here is the list: {broken", "still not json",
+                    "not json either", "nope"])
+
+    def fetch(url):
+        return {"url": url, "text": SITE[EEF_CALL][0], "links": []}
+    calls = []
+
+    def ask(system, user):
+        calls.append(1)
+        return next(answers), 1000, 100
+    report = rs.run("md", budget_usd=1.0, fetch=fetch, ask=ask, now=NOW)
+    assert len(calls) == 2 and report["budget"]["calls"] == 2
+    assert report["page_errors"][0]["error"] == "answer was not the expected JSON"
+    saved = json.load(open(os.path.join(report["run_dir"], "unparsed_answers.json")))
+    assert saved[0]["answers"] == ["Sorry, here is the list: {broken", "still not json"]
+    # A second try that reads is used.
+    answers = iter(["garbage", json.dumps({"programmes": ANSWERS[EEF_CALL]})])
+    report = rs.run("md", budget_usd=1.0, fetch=fetch, ask=lambda s, u: (next(answers), 10, 10),
+                    now=NOW)
+    assert report["rows"] == 1 and report["page_errors"] == []
+
+
+def test_a_distinct_programme_is_not_folded_into_a_broader_page():
+    young = oda_row("Programul de granturi pentru tineri", CAL)
+    broad = "https://oda.md/ro/granturi/program"
+    rows = [young, oda_row("Programul de granturi", broad)]
+    texts = {broad: "Programul de granturi pentru întreprinderi mici și mijlocii."}
+    assert len(rs.prefer_dedicated_pages(rows, {broad: CAL}, md(), texts)) == 2
+    # A page titled only "Granturi" names no programme to fold into.
+    generic = "https://oda.md/ro/granturi"
+    rows = [oda_row("CREȘTEM IMM – tranziție digitală", CAL), oda_row("Granturi", generic)]
+    texts = {generic: "Granturi: CREȘTEM IMM, tranziție digitală și altele."}
+    assert len(rs.prefer_dedicated_pages(rows, {generic: CAL}, md(), texts)) == 2
+
+
+def test_prefer_dedicated_pages_edges():
+    child, grandchild = "https://oda.md/ro/a", "https://oda.md/ro/a/b"
+    parents = {child: CAL, grandchild: child}
+    texts = {grandchild: "CREȘTEM IMM tranziție digitală", child: "Alt program"}
+    # A page two links down is still the index's programme page.
+    rows = [oda_row("CREȘTEM IMM – tranziție digitală", CAL), oda_row("CREȘTEM IMM", grandchild)]
+    assert [r["title"] for r in rs.prefer_dedicated_pages(rows, parents, md(), texts)] == [
+        "CREȘTEM IMM"]
+    # The index row's own amount keeps it.
+    rows = [oda_row("CREȘTEM IMM – tranziție digitală", CAL, amount=300000),
+            oda_row("CREȘTEM IMM", grandchild)]
+    assert len(rs.prefer_dedicated_pages(rows, parents, md(), texts)) == 2
+    # One shared word is not the same programme.
+    rows = [oda_row("CREȘTEM IMM – tranziție digitală", CAL), oda_row("IMM Export", grandchild)]
+    texts2 = {grandchild: "IMM Export CREȘTEM tranziție digitală"}
+    assert len(rs.prefer_dedicated_pages(rows, parents, md(), texts2)) == 2
+    # Another funder's page never folds this funder's row.
+    rows = [oda_row("CREȘTEM IMM – tranziție digitală", CAL),
+            {**oda_row("CREȘTEM IMM", grandchild), "funder": "Other"}]
+    assert len(rs.prefer_dedicated_pages(rows, parents, md(), texts)) == 2
+
+
+@pytest.mark.parametrize("summary, kind, kept", [
+    ("Nu se acceptă cereri de credit; finanțarea acoperă echipamente.", "grant", True),
+    ("Cofinanțare prin credit bancar posibilă.", "grant", True),
+    ("Dobânda nu este eligibilă ca cheltuială.", "subsidy", True),
+    ("Garanția bancară nu este necesară pentru a aplica.", None, True),
+    ("Programul oferă microcredite antreprenorilor din mediul rural.", None, False),
+    ("Suma este returnabilă în 5 ani.", None, False),
+])
+def test_loan_words_in_a_summary_need_no_grant_word_and_no_grant_kind(summary, kind, kept):
+    page = "Programul pentru antreprenori. Pot aplica antreprenorii. " + FILLER
+    row, why = check(page, title="Programul pentru antreprenori", kind=kind, summary=summary,
+                     eligibility_excerpt="Pot aplica antreprenorii.")
+    assert (row is not None) == kept, why
+
+
+@pytest.mark.parametrize("eligibility, kept", [
+    ("Pot aplica ONG-urile din Republica Moldova și din regiunea transnistreană.", True),
+    ("Могут подать заявку НКО Молдовы и Приднестровья.", True),
+    ("Могут подать заявку организации, в том числе из Приднестровья.", True),
+    ("Pot aplica ONG-urile din regiunea transnistreană, inclusiv Tiraspol.", False),
+    ("Могут подать заявку организации левого берега Днестра.", False),
+    ("Могут подать заявку организации с левый берег.", False),
+])
+def test_transnistria_both_banks_and_the_left_bank(eligibility, kept):
+    row, why = check(f"Granturi comunitare. {eligibility} " + FILLER, title="Granturi comunitare",
+                     eligibility_excerpt=eligibility, regions=["national"])
+    assert (row is not None) == kept, why
+
+
+def test_a_model_call_that_raises_gives_its_hold_back():
+    budget = rs.Budget(1.0)
+
+    def ask(system, user):
+        raise RuntimeError("overloaded")
+    out = rs.extract_page({"url": "https://x.md/", "text": "Granturi. " * 50}, funder(), md(),
+                          budget, ask, TODAY, NOW.isoformat())
+    assert out["error"].startswith("RuntimeError") and budget.reserved == 0
+
+
+def test_without_stale_years_an_old_years_link_is_followed(monkeypatch):
+    home = "https://ancd.gov.md/ro/content/apeluri"
+    old = "https://ancd.gov.md/ro/content/program-de-stat-2020-2023"
+
+    def fetch(url):
+        return {"url": url, "text": "Apeluri pentru granturi. " + FILLER,
+                "links": [(old, "Program de Stat 2020-2023: apel de propuneri")] if url == home else []}
+    assert old not in [p["url"] for p in rs.crawl_all("md", md(), [funder(url=home)], fetch, NOW)[0]["pages"]]
+    from types import SimpleNamespace
+    loose = SimpleNamespace(**{k: getattr(md(), k) for k in ("slug", "regions", "tags", "currency",
+                                                               "timezone")},
+                            sweep={k: v for k, v in md().sweep.items() if k != "stale_years"})
+    assert old in [p["url"] for p in rs.crawl_all("md", loose, [funder(url=home)], fetch, NOW)[0]["pages"]]
+
+
+def test_an_href_with_spaces_is_one_address(monkeypatch):
+    import httpx
+    html = ("<html><body><main>" + "Granturi pentru școli. " * 30 +
+            '<a href=" /ro/content/programul-de-granturi ">Granturi</a>'
+            '<a href="/ro/content/programul-de-granturi">Granturi</a></main></body></html>')
+
+    class Client:
+        def __init__(self, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def get(self, url):
+            return httpx.Response(200, request=httpx.Request("GET", url), text=html)
+    monkeypatch.setattr(rs.httpx, "Client", Client)
+    monkeypatch.setattr(rs, "assert_public_url", lambda url: None)
+    page = rs.fetch_page("https://mec.gov.md/ro/")
+    assert {h for h, _ in page["links"]} == {"https://mec.gov.md/ro/content/programul-de-granturi"}

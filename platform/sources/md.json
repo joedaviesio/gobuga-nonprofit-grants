@@ -330,7 +330,7 @@
     "country_words": true,
     "skip_link_words": [
       "proiecte finanțate", "proiectele finanțate", "финансированные проекты", "vacant",
-      "admiterea candidaților", "regulament", "în derulare", "proiecte în curs",
+      "admiterea candidaților", "regulament", "raport", "în derulare", "proiecte în curs",
       "anunț - concurs", "informații despre concurs", "fondul de fonduri", "ordine de finanțare",
       "câștigătoare", "finalizat", "inactive", "colectarea propunerilor", "colectăm propuneri",
       "rezultatele proiectelor", "sumarul rezultatelor", "rapoarte anuale", "monitorizarea",
@@ -343,7 +343,21 @@
     ],
     "stale_years": 2,
     "rank_strong_links": true,
-    "language_paths": ["ro", "ru", "en"],
+    "language_paths": [
+      "ro", "ru", "en", "uk", "ua", "fr", "de", "es", "pt", "it", "ar", "bg", "hu", "el", "pl",
+      "cs", "sk", "sl", "hr", "sr", "tr", "az", "hy", "ka", "lt", "lv", "et", "nl", "sv",
+      "da", "fi", "zh", "ja", "ko", "fa", "vi", "th", "ur", "mt", "ga"
+    ],
+    "language_names": [
+      "Русский", "Русская версия", "English", "Română", "Romana", "Română (RO)", "Français",
+      "Español", "Português", "Deutsch", "Italiano", "العربية", "Українська", "Български",
+      "Magyar", "Ελληνικά", "Polski", "Türkçe", "Հայերեն", "ქართული", "Azərbaycan"
+    ],
+    "default_language": "ro",
+    "default_language_tlds": ["md"],
+    "link_order": "page",
+    "links_per_page": 4,
+    "content_links_first": true,
     "fold_letters": true,
     "number_format": "ro",
     "currencies": {
@@ -360,7 +374,9 @@
     "prefer_dedicated_pages": true,
     "title_stopwords": [
       "programul", "program", "de", "a", "al", "ai", "ale", "și", "în", "pentru", "la", "din",
-      "susținere", "sprijin", "the", "of", "for", "and", "программа", "поддержки", "для", "и", "в"
+      "susținere", "sprijin", "the", "of", "for", "and", "программа", "поддержки", "для", "и", "в",
+      "granturi", "grant", "grants", "finanțare", "concurs", "concursul", "apel", "apeluri",
+      "гранты", "грантов", "конкурс"
     ],
     "not_a_grant_words": [
       "credit", "împrumut", "garant", "leasing", "licitați", "achiziții publice",
@@ -369,7 +385,8 @@
     ],
     "grant_title_words": ["grant", "subvenți", "nerambursabil", "грант", "субсиди", "безвозмезд"],
     "loan_text_words": [
-      "credit", "împrumut", "dobând", "rambursabil", "garanți", "leasing",
+      "credit", "împrumut", "dobând", "rambursabil", "leasing", "microcredit", "microfinanț",
+      "returnabil", "restituir",
       "кредит", "заём", "заем", "займ", "процентн", "возвратн", "лизинг"
     ],
     "reject_kinds": ["loan", "guarantee", "other"],
@@ -379,12 +396,21 @@
       "fără termen limită", "постоянно", "в любое время", "в течение всего года", "круглый год"
     ],
     "not_covered_region": "transnistria",
-    "covered_with_words": [
-      "inclusiv", "ambele maluri", "both banks", "including", "включая", "обоих берег"
+    "covered_with_words": ["inclusiv", "including", "включая", "в том числе"],
+    "both_banks_words": [
+      "ambele maluri", "both banks", "malul drept", "right bank", "toată țara", "întreaga țară",
+      "Moldova și", "Moldova and", "обоих берег", "обеих берег", "правого берег", "всей стран",
+      "Молдовы и", "Молдова и"
+    ],
+    "deadline_words": [
+      "termen", "data limită", "până la", "până pe", "pînă la", "depune", "depunerii", "depun",
+      "aplicare", "aplica", "prelungit", "închis", "încheiat", "încheier", "recepționa", "до", "срок", "крайний", "подач",
+      "принима", "deadline", "closes", "closing", "closed", "by", "until", "apply", "submission"
     ],
     "not_covered_words": [
       "transnistr", "tighina", "bender", "tiraspol", "stânga nistrului", "malul stâng",
-      "left bank", "приднестров", "бендер", "тирасп", "левобереж", "левом берегу"
+      "left bank", "приднестров", "бендер", "тирасп", "левобереж", "левом берегу",
+      "левого берег", "левый берег"
     ],
     "region_names": {
       "chisinau": "Chișinău", "balti": "Bălți", "cahul": "Cahul", "comrat": "Comrat",

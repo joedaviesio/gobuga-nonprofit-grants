@@ -54,10 +54,12 @@ def decode(address: str) -> str:
 
 
 def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SKIP_LINK,
-               fold=None) -> list[str]:
+               fold=None, by_score: bool = True) -> list[str]:
     """Same-site links whose text or address looks like a grant programme,
     best first. Pure: decided by rule, not by a model. `words`, `skip` and
-    `fold` let a country whose sites are not in English bring its own."""
+    `fold` let a country whose sites are not in English bring its own.
+    Without `by_score` they keep the page's order: a listing newest first
+    stays newest first."""
     site = _site(urlsplit(home).hostname)
     scored = []
     for href, text in page.get("links", []):
@@ -76,7 +78,7 @@ def pick_links(page: dict, home: str, seen: set[str], words=GRANT_WORDS, skip=SK
         if score:
             scored.append((-score, len(href), href))
     out, picked = [], set()
-    for _, _, href in sorted(scored):
+    for _, _, href in (sorted(scored) if by_score else scored):
         if href.rstrip("/") not in picked:
             picked.add(href.rstrip("/"))
             out.append(href)
@@ -278,7 +280,8 @@ def country_pick_links(page: dict, home: str, settings: dict,
     # The sweep may bring more words that name a programme ("link_words").
     words = settings.get("link_words") or settings["grant_words"]
     return pick_links({**page, "links": links}, home, seen, words,
-                      settings["skip_link"], settings["fold"])
+                      settings["skip_link"], settings["fold"],
+                      by_score=not settings.get("page_order"))
 
 
 def page_problem(settings: dict, url: str) -> str | None:

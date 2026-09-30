@@ -30,9 +30,23 @@ block the sweep is New Zealand's, unchanged:
                    English defaults; see orchestrator/register_words.py
   skip_link_words  with country_words: more words that mark a link not
                    worth following, beside the register's own
-  language_paths   with country_words: path prefixes naming a language
-                   (["ro", "ru", "en"]); when the funder's page sits under
-                   one, links to the other languages' copies are not followed
+  language_paths   with country_words: language codes; a link whose address
+                   names another language than the funder's page (a path
+                   part anywhere, "pt-pt", or lang=/prefLang=), or whose
+                   text is a language's name (language_names) or code, is a
+                   copy of the site and is not followed
+  language_names   with language_paths: link texts that name a language
+  default_language with language_paths: the language of a funder's page
+                   whose address names none ("ro"); off the country's own
+                   domains (default_language_tlds) English is taken too
+  link_order       "page": links are followed in the page's order (a
+                   listing, newest first), past years last; otherwise the
+                   most grant words first
+  links_per_page   at most this many links are taken from any page below the
+                   funder's own, and pages of one depth take turns, so no one
+                   page uses the cap
+  content_links_first  links in the page's content (menus, header and footer
+                   aside) are followed before the others
   link_words       with country_words: more words that make a link worth
                    following (not a page worth reading): "voucher",
                    "postdoctorat", names of programmes without a grant word
@@ -77,7 +91,12 @@ block the sweep is New Zealand's, unchanged:
                    names one with no covered_with_words word
   not_covered_words   with not_covered_region
   covered_with_words  with not_covered_region: words that take the area in
-                   beside the rest of the country ("inclusiv", "включая")
+                   beside the rest of the country ("inclusiv", "включая"),
+                   when they come before the area
+  both_banks_words    with not_covered_region: phrases naming both banks or
+                   the whole country ("Молдовы и", "toată țara")
+  deadline_words   a dated deadline's excerpt must hold one ("termen",
+                   "până la", "срок"), or no date is claimed
   prefer_dedicated_pages  a row from a page linking to another is dropped
                    when that page's row names the same programme (see
                    prefer_dedicated_pages)
@@ -268,7 +287,12 @@ def fetch_page(url: str, use_tavily: bool = True) -> dict:
         html = body.decode(resp.encoding or "utf-8", errors="replace")
         parser = _Links()
         parser.feed(html)
-        links = [(urldefrag(urljoin(current, h))[0], t) for h, t in parser.links if h]
+        links = [(urldefrag(urljoin(current, h.strip()))[0], t) for h, t in parser.links if h.strip()]
+        # The links in the page's own content, menus aside, in its order:
+        # a country crawling with `content_links_first` follows these first.
+        inner = _Links()
+        inner.feed(main_content(html))
+        content = [urldefrag(urljoin(current, h.strip()))[0] for h, _ in inner.links if h.strip()]
         text = html_to_text(html)
         if len(text) < MIN_PAGE_CHARS:
             # Built in the browser by script: the plain fetch sees an empty shell.
@@ -283,7 +307,8 @@ def fetch_page(url: str, use_tavily: bool = True) -> dict:
                         "extract_tried": True, "extract_error": rendered["error"],
                         **({"extract_message": rendered["extract_message"]}
                            if "extract_message" in rendered else {})}
-        return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links}
+        return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links,
+                "content_links": content}
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (401, 403, 406, 429, 503):
             return fetch_blocked(url, f"HTTP {exc.response.status_code}", use_tavily)
@@ -322,10 +347,34 @@ def fetch_blocked(url: str, why: str, use_tavily: bool = True) -> dict:
             "extract_tried": True}
 
 
+# A language named in a query ("?lang=eng", "?prefLang=hu"), three letters or two.
+_LANG_QUERY = re.compile(r"(?:^|&)(?:lang|preflang|language|locale)=([a-z]{2,3})", re.IGNORECASE)
+_LANG_3 = {"eng": "en", "fra": "fr", "fre": "fr", "rus": "ru", "ron": "ro", "rum": "ro",
+           "deu": "de", "ger": "de", "spa": "es", "por": "pt", "ukr": "uk", "ita": "it"}
+
+
 def _language(url: str, languages) -> str | None:
-    """The language an address's first path part names (/ro/, /ru/), or None."""
-    first = next((p for p in urlsplit(url).path.split("/") if p), "").lower()
-    return first if languages and first in languages else None
+    """The language an address names, or None: a lang= or prefLang= query
+    (it wins: "..._en?prefLang=hu" is shown in Hungarian), a path part that
+    is a language code (/ro/, /apply-for-grant/ru/, /pt-pt/), or a last part
+    ending in one after an underscore, as the European Commission's pages
+    do ("open-calls_lv"). Only a whole part or suffix counts, so
+    /ro-md-cooperare/ names none."""
+    if not languages:
+        return None
+    parts = urlsplit(url)
+    found = _LANG_QUERY.search(parts.query)
+    if found:
+        code = found.group(1).lower()
+        code = _LANG_3.get(code, code[:2])
+        return code if code in languages else None
+    path = [p for p in parts.path.lower().split("/") if p]
+    for p in path:
+        code = p[:2] if re.fullmatch(r"[a-z]{2}-[a-z]{2}", p) else p
+        if code in languages:
+            return code
+    suffix = re.search(r"_([a-z]{2})(?:\.[a-z]+)?$", path[-1]) if path else None
+    return suffix.group(1) if suffix and suffix.group(1) in languages else None
 
 
 def _country_order(links: list[str], labels: dict, words: dict) -> list[str]:
@@ -335,7 +384,9 @@ def _country_order(links: list[str], labels: dict, words: dict) -> list[str]:
     ("...moldova-creativa-pentru-anii-2024" runs to 2028). With
     `rank_strong_links`, links naming no past year go first, then those
     holding a strong grant word, each in their order, so this year's call
-    beats last year's press release before the page cap is reached."""
+    beats last year's press release before the page cap is reached. With
+    `page_order` the page's own order stands (a listing, newest first) and
+    only links naming a past year go last."""
     fold = words["fold"]
 
     def years(h: str) -> list[int]:
@@ -347,9 +398,35 @@ def _country_order(links: list[str], labels: dict, words: dict) -> list[str]:
         def key(h: str) -> tuple:
             said = f"{fold(labels.get(h, ''))} {fold(decode(urlsplit(h).path))}"
             past = bool(years(h)) and max(years(h)) < words["this_year"]
-            return past, not words["strong_words"].search(said)
+            return (past,) if words.get("page_order") else (past, not words["strong_words"].search(said))
         links = sorted(links, key=key)
     return links
+
+
+def _site_languages(url: str, words: dict) -> set[str]:
+    """The languages a funder's own copies are in: the one its page's
+    address names; where it names none, the country's `default_language`
+    on a site of the country's own top-level domain (aipa.gov.md: /en/ is
+    a copy), and that and English elsewhere (unodc.org/unodc/en/ is the
+    site itself, not a copy)."""
+    start = _language(url, words["language_paths"])
+    if start:
+        return {start}
+    default = words.get("default_language")
+    tld = (urlsplit(url).hostname or "").rsplit(".", 1)[-1]
+    return {default} if tld in words.get("default_language_tlds", set()) else {default, "en"}
+
+
+def _other_language(href: str, text: str, own: set[str], words: dict) -> bool:
+    """A link to the page in another language: its text is a language's
+    name or code ("Русский", "EN"), or its address names a language that is
+    not one of the funder's own (`_site_languages`)."""
+    languages = words["language_paths"]
+    label = " ".join(text.split()).casefold()
+    if label in words.get("language_names", set()) or label in languages:
+        return True
+    code = _language(href, languages)
+    return code is not None and code not in own
 
 
 def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
@@ -365,7 +442,11 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
     --crawl-only."""
     seen, pages, errors, visits = {funder["url"].rstrip("/")}, [], [], []
     read: set[str] = set()
-    frontier = [(funder["url"], 0, "registered page", None)]
+    # With `links_per_page` each page gives at most that many links, and the
+    # frontier takes one link from each page of a depth before a second
+    # from any (rank), so a second index page gets its share of the cap.
+    per_page = (words or {}).get("links_per_page")
+    frontier = [(funder["url"], 0, "registered page", None, 0)]
     # Funding pages move. If the registered one is gone, or is a file or a
     # bot check rather than a page with links, start again from the home page.
     home = "{0.scheme}://{0.netloc}/".format(urlsplit(funder["url"]))
@@ -376,8 +457,8 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
                 break
             tried_home = True
             seen.add(home.rstrip("/"))
-            frontier.append((home, 0, "home page, after the registered page gave nothing", None))
-        url, depth, via, parent = frontier.pop(0)
+            frontier.append((home, 0, "home page, after the registered page gave nothing", None, 0))
+        url, depth, via, parent, _ = frontier.pop(0)
         page = fetch(url)
         if page.get("error"):
             errors.append({"url": url, "error": page["error"]})
@@ -405,21 +486,35 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
                 links = rw.country_pick_links(page, funder["url"], words, seen)
                 if strict_links:
                     links = [h for h in links if not rw.page_problem(words, h)]
-                start = _language(funder["url"], words.get("language_paths"))
-                if start:
+                if words.get("language_paths"):
                     # The funder's page is in one language: its copies in
                     # the others (/ru/ beside /ro/) are the same calls again.
-                    links = [h for h in links
-                             if _language(h, words["language_paths"]) in (None, start)]
+                    own = _site_languages(funder["url"], words)
+                    texts = {h.rstrip("/"): t for h, t in page.get("links", [])}
+                    links = [h for h in links if not _other_language(
+                        h, texts.get(h.rstrip("/"), ""), own, words)]
+                if words.get("content_links_first") and page.get("content_links"):
+                    # Menus first on the page, the listing after: the
+                    # listing's links (newest call first) go first.
+                    inside = {h.rstrip("/") for h in page["content_links"]}
+                    links = ([h for h in links if h.rstrip("/") in inside]
+                             + [h for h in links if h.rstrip("/") not in inside])
                 links = _country_order(links, {h: t for h, t in page.get("links", [])}, words)
+                if per_page and depth > 0:
+                    # The funder's own page may fill the cap; a page below it
+                    # takes its share only.
+                    links = links[:per_page]
             else:
                 links = pick_links(page, funder["url"], seen)
             labels = {h: t for h, t in page.get("links", [])}
-            for href in links[:max(room, 0)]:
+            for rank, href in enumerate(links[:max(room, 0)]):
                 seen.add(href.rstrip("/"))
                 frontier.append((href, depth + 1,
                                  f"link \"{labels.get(href, '')[:80]}\" on {page['url']}",
-                                 page["url"]))
+                                 page["url"], rank))
+            if per_page:
+                # Stable: by depth, then each page's first link, then its second.
+                frontier.sort(key=lambda f: (f[1], f[4]))
     return {"funder": funder, "pages": pages, "errors": errors, "visits": visits}
 
 
@@ -702,6 +797,8 @@ def country_rules(cfg) -> dict:
         "not_covered_region": sweep.get("not_covered_region"),
         "not_covered": words("not_covered_words"),
         "covered_with": words("covered_with_words"),
+        "both_banks": words("both_banks_words"),
+        "deadline_words": words("deadline_words"),
         # Words that name the US dollar itself, beside a bare "$".
         "usd_words": re.compile(markers([m for m in (sweep.get("currencies") or {})
                                          .get("USD", {}).get("markers", []) if m != "$"])
@@ -870,8 +967,16 @@ def not_covered(item: dict, title: str, eligibility_excerpt: str | None, rules: 
     if names.search(_to_ascii(title)):
         return True
     who = _to_ascii(eligibility_excerpt or "")
-    inclusive = rules["covered_with"]
-    return bool(names.search(who)) and not (inclusive and inclusive.search(who))
+    area = names.search(who)
+    if not area:
+        return False
+    # Taken in beside the rest: an inclusive word before the area ("din toată
+    # țara, inclusiv din regiunea transnistreană"), not after it ("regiunea
+    # transnistreană, inclusiv Tiraspol"), or a phrase naming both banks or
+    # the whole country ("Молдовы и Приднестровья").
+    inclusive, both = rules["covered_with"], rules["both_banks"]
+    return not ((inclusive and inclusive.search(who, 0, area.start()))
+                or (both and both.search(who)))
 
 
 def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: str) -> tuple[dict | None, str]:
@@ -894,9 +999,12 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         return None, f"not a grant ({kind})"
     said = _to_ascii(f"{item.get('summary') or ''} {item.get('eligibility') or ''}")
     if rules.get("loan_text") and rules["loan_text"].search(said) and not (
-            rules["grant_title"] and rules["grant_title"].search(said)):
+            rules["grant_title"] and rules["grant_title"].search(said)) and kind not in (
+            "grant", "subsidy"):
         # The summary or who can apply speaks of credit, interest or
-        # repayment and never of a grant or subsidy.
+        # repayment, never of a grant or subsidy, and the model did not
+        # call the money a grant: "dobânda nu este eligibilă" in a grant's
+        # rules is not a loan.
         return None, "not a grant (loan)"
     general = title.upper() == "GENERAL"
     if general:
@@ -926,6 +1034,16 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         if excerpt is None:
             return None, "nothing on the page supports the programme"
 
+    dated_by_words = not rules.get("deadline_words") or bool(
+        rules["deadline_words"].search(_to_ascii(excerpt)))
+    if state == "dated" and not dated_by_words:
+        # "Noi 26 Noi 29 Expo Mobila" gives a fair's dates, not a closing
+        # date: without a word that makes a date a deadline no date is
+        # claimed, and the programme stands on what the page says of it.
+        state = "unknown"
+        excerpt = (on_page.verbatim(item.get("eligibility_excerpt"))
+                   or on_page.verbatim(item.get("amount_excerpt")) or excerpt)
+
     if state == "rolling" and not ROLLING_WORDS.search(excerpt) and not (
             rules.get("rolling") and rules["rolling"].search(_to_ascii(excerpt))):
         # "Closes on the 10th of every month" is a repeating date, not an open
@@ -934,7 +1052,7 @@ def check_programme(item: dict, page: dict, funder: dict, cfg, today, now_iso: s
         state = "unknown"
 
     deadline = None
-    if state == "dated" or (state == "closed" and item.get("deadline")):
+    if state == "dated" or (state == "closed" and item.get("deadline") and dated_by_words):
         deadline, why = _plausible_date(item.get("deadline"), {"first_seen": now_iso}, today)
         if deadline is not None and not _day_in(excerpt, deadline):
             deadline, why = None, "excerpt does not state the deadline date"
@@ -1004,18 +1122,31 @@ def extract_page(page: dict, funder: dict, cfg, budget: Budget, ask, today, now_
     system = system_prompt(cfg, today)
     user = f"Funder: {funder['name']}\nPage address: {page['url']}\n\nPage text:\n{page['text']}"
     held = worst_case_usd(system, user)
-    if budget.exhausted or not budget.reserve(held):
-        return {"url": page["url"], "skipped": "budget reached", "rows": [], "rejected": []}
-    try:
-        raw, tin, tout = ask(system, user)
-    except Exception as exc:  # noqa: BLE001
-        budget.release(held)
-        return {"url": page["url"], "error": f"{type(exc).__name__}: {exc}"[:200], "rows": [], "rejected": []}
-    budget.add(tin, tout, reserved=held)
-    answer = parse_json(raw)
-    items = answer.get("programmes") if isinstance(answer, dict) else None
+    answers = []
+    # An answer that is not the expected JSON is asked for once more, and
+    # both calls are paid for; the answers are kept for the run folder.
+    for attempt in range(2):
+        if budget.exhausted or not budget.reserve(held):
+            if attempt:
+                break
+            return {"url": page["url"], "skipped": "budget reached", "rows": [], "rejected": []}
+        try:
+            raw, tin, tout = ask(system, user)
+        except Exception as exc:  # noqa: BLE001
+            budget.release(held)
+            return {"url": page["url"], "error": f"{type(exc).__name__}: {exc}"[:200], "rows": [],
+                    "rejected": [], **({"raw_answers": answers} if answers else {})}
+        budget.add(tin, tout, reserved=held)
+        answers.append(raw)
+        answer = parse_json(raw)
+        items = answer.get("programmes") if isinstance(answer, dict) else None
+        if isinstance(items, list):
+            break
+    else:
+        items = None
     if not isinstance(items, list):
-        return {"url": page["url"], "error": "answer was not the expected JSON", "rows": [], "rejected": []}
+        return {"url": page["url"], "error": "answer was not the expected JSON", "rows": [],
+                "rejected": [], "raw_answers": answers}
     rows, rejected = [], []
     for item in items[:40]:
         row, reason = check_programme(item, page, funder, cfg, today, now_iso)
@@ -1051,10 +1182,12 @@ def _cyrillic(title: str) -> bool:
 def join_translations(rows: list[dict]) -> list[dict]:
     """For a country with `sweep.join_translations`: a funder that posts one
     call in Romanian and in Russian gives two rows no title key can join.
-    When one funder has, for one closing date, exactly one Cyrillic-titled
-    row and one Latin-titled row, with the same amounts and currency, they
-    are one programme and the Latin-titled row is kept. Any other mix (two
-    Russian calls and one Romanian on one date) is left alone."""
+    Within one funder and closing date, each Cyrillic-titled row is paired
+    with a Latin-titled row of the same stated amount (_same_money), and
+    the Latin-titled row is kept. EEF posts two or three calls on one date,
+    each in both languages (€31,200, €60,000): each pair is joined. Rows
+    with no amount are never joined: two different calls on one date both
+    say nothing of money."""
     groups: dict[tuple, list[dict]] = {}
     for row in rows:
         rules = country_rules(get_country_config(row.get("country")))
@@ -1062,12 +1195,24 @@ def join_translations(rows: list[dict]) -> list[dict]:
             groups.setdefault((row["funder"].lower(), row["deadline"]), []).append(row)
     dropped = set()
     for group in groups.values():
-        cyr = [r for r in group if _cyrillic(r["title"])]
         lat = [r for r in group if not _cyrillic(r["title"])]
-        if len(cyr) == 1 and len(lat) == 1 and all(
-                cyr[0][k] == lat[0][k] for k in ("amount_min", "amount_max", "currency")):
-            dropped.add(id(cyr[0]))
+        for ru in (r for r in group if _cyrillic(r["title"])):
+            twin = next((ro for ro in lat if _same_money(ru, ro)), None)
+            if twin is not None:
+                lat.remove(twin)
+                dropped.add(id(ru))
     return [r for r in rows if id(r) not in dropped]
+
+
+def _same_money(a: dict, b: dict) -> bool:
+    """The same stated amount in the same currency: amount_max and currency
+    equal and present, and amount_min equal where both give one. Two rows
+    with no amount are never taken to be one call."""
+    if a["amount_max"] is None or a["currency"] is None:
+        return False
+    if (a["amount_max"], a["currency"]) != (b["amount_max"], b["currency"]):
+        return False
+    return a["amount_min"] is None or b["amount_min"] is None or a["amount_min"] == b["amount_min"]
 
 
 def _title_stems(title: str, stop: set[str]) -> set[str]:
@@ -1078,13 +1223,19 @@ def _title_stems(title: str, stop: set[str]) -> set[str]:
     return {w[:6] for w in words if w not in stop}
 
 
-def prefer_dedicated_pages(rows: list[dict], parents: dict, cfg) -> list[dict]:
+def prefer_dedicated_pages(rows: list[dict], parents: dict, cfg,
+                           texts: dict | None = None) -> list[dict]:
     """With `sweep.prefer_dedicated_pages`: a row read from a page that
     links to another of the funder's pages is dropped when a row read from
     that linked page (or one further down) names the same programme: every
-    word of the dedicated page's title is in the index row's. ODA's grants
-    calendar lists "CREȘTEM IMM – tranziție digitală" and three more
-    measures; the CREȘTEM IMM page describes the programme in full.
+    word of the dedicated page's title is in the index row's, and every
+    word of the index row's title is on the dedicated page (`texts`, by
+    address). ODA's grants calendar lists "CREȘTEM IMM – tranziție
+    digitală" and three more measures; the CREȘTEM IMM page describes the
+    programme and its measures in full. "Programul de granturi pentru
+    tineri" is not folded into a page "Programul de granturi" that never
+    speaks of young people, and a page titled only "Granturi" (a stopword)
+    names no programme to fold into.
 
     The index row stands when it has what the dedicated row lacks: a
     closing date or an amount of its own. A sub-measure with nothing of its
@@ -1116,7 +1267,9 @@ def prefer_dedicated_pages(rows: list[dict], parents: dict, cfg) -> list[dict]:
             own_date = row["deadline_state"] == "dated" and other["deadline_state"] != "dated"
             own_amount = (row["amount_min"] or row["amount_max"]) and not (
                 other["amount_min"] or other["amount_max"])
-            if theirs and theirs <= mine and not (own_date or own_amount):
+            page = _to_ascii((texts or {}).get(other["source_url"], "")).replace("-", "")
+            on_page = all(re.search(rf"(?<![a-z0-9]){re.escape(w)}", page) for w in mine)
+            if theirs and theirs <= mine and on_page and not (own_date or own_amount):
                 dropped.add(id(row))
                 break
     return [r for r in rows if id(r) not in dropped]
@@ -1149,7 +1302,14 @@ def crawl_all(country: str, cfg, funders: list[dict], fetch, now=None) -> list[d
         words = {**words, "own_skip": re.compile(
             f"{own.pattern}|{extra}" if own else extra, re.IGNORECASE)}
     if words and sweep.get("language_paths"):
-        words = {**words, "language_paths": {p.lower() for p in sweep["language_paths"]}}
+        words = {**words, "language_paths": {p.lower() for p in sweep["language_paths"]},
+                 "language_names": {n.casefold() for n in sweep.get("language_names") or []},
+                 "default_language": sweep.get("default_language"),
+                 "default_language_tlds": set(sweep.get("default_language_tlds") or [])}
+    if words:
+        words = {**words, "page_order": sweep.get("link_order") == "page",
+                 "links_per_page": sweep.get("links_per_page"),
+                 "content_links_first": bool(sweep.get("content_links_first"))}
     if words and sweep.get("link_words"):
         # Words that name a programme on these sites without a grant word
         # ("Voucher cultural", "Programe de postdoctorat"): they choose a
@@ -1195,7 +1355,8 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
 
     rows = dedupe_rows([row for r in results for row in r["rows"]])
     rows = prefer_dedicated_pages(rows, {p["url"]: p.get("from") for c in crawled
-                                         for p in c["pages"]}, cfg)
+                                         for p in c["pages"]}, cfg,
+                                  {p["url"]: p["text"] for c in crawled for p in c["pages"]})
     for n, row in enumerate(sorted(rows, key=lambda r: (r["funder"], r["title"])), 1):
         row["id"] = f"OPP-{country.upper()}-{month}-{n:04d}"
 
@@ -1243,6 +1404,12 @@ def run(country: str, *, tier: int | None = None, limit: int | None = None, budg
     with open(os.path.join(run_dir, "rejected.json"), "w", encoding="utf-8") as f:
         json.dump([{"funder": r["funder"], "url": r["url"], "rejected": r["rejected"]}
                    for r in results if r["rejected"]], f, indent=2, ensure_ascii=False)
+    unparsed = [{"funder": r["funder"], "url": r["url"], "answers": r["raw_answers"]}
+                for r in results if r.get("raw_answers")]
+    if unparsed:
+        # Written only when a page's answer could not be read, to see why.
+        with open(os.path.join(run_dir, "unparsed_answers.json"), "w", encoding="utf-8") as f:
+            json.dump(unparsed, f, indent=2, ensure_ascii=False)
     report["run_dir"] = run_dir
 
     if publish:

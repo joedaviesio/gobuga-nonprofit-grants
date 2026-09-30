@@ -695,7 +695,8 @@ def test_a_page_with_text_is_returned_to_the_sweep_as_before(served):
     served.html = "<html><body><main><p>" + "Community grants open now. " * 30 + "</p></main></body></html>"
     served.extract = failed_extract
     page = rs.fetch_page("https://f.example/")
-    assert set(page) == {"url", "text", "links"}
+    # content_links: the links in the page's content, for a country's crawl.
+    assert set(page) == {"url", "text", "links", "content_links"}
 
 
 # --- The owner's lists hold: exclusions, the gate, merges, resumes ------------------

@@ -1650,6 +1650,8 @@ class GivingUpTavily:
                                               "your plan.")
             if mode == "432":
                 raise ForbiddenError("This request exceeds your plan's set usage limit.")
+            if mode == "bad-query":
+                raise ValueError("Query is too long")
         with GivingUpTavily.lock:
             GivingUpTavily.searches.append(query)
         if include_domains:
@@ -1687,9 +1689,9 @@ def giving_up(isolated, paid, monkeypatch):
     # message is known.
     monkeypatch.setattr(rs, "CRAWL_CONCURRENCY", 1)
 
-    def fetch_page(url):
+    def fetch_page(url, use_tavily=True):
         if "beta.example" in url:
-            return rs.fetch_blocked(url, "HTTP 403")
+            return rs.fetch_blocked(url, "HTTP 403", use_tavily)
         if "gamma.example" in url:
             return {"url": url, "text": "Gamma Fund. Granturi. " * 20, "links": []}
         if "delta.example" in url:
@@ -1705,9 +1707,10 @@ def giving_up(isolated, paid, monkeypatch):
 
 @pytest.mark.parametrize("mode, gives_up", [
     ("429", {"alpha-fund"}),
-    # Out of credits: no later Tavily call is made, so Gamma's site search
-    # is not tried either. Beta's extract is made by the sweep's own fetch.
-    ("429-credits", {"alpha-fund", "gamma-fund"}), ("432", {"alpha-fund", "gamma-fund"}),
+    # Out of credits: no later Tavily call is made, so neither Beta's
+    # extract nor Gamma's site search is tried; both wait for a re-run.
+    ("429-credits", {"alpha-fund", "beta-fund", "gamma-fund"}),
+    ("432", {"alpha-fund", "beta-fund", "gamma-fund"}),
     ("extract-429", {"beta-fund"}),
 ])
 def test_tavily_giving_up_keeps_the_register_unwritten_and_a_rerun_pays_only_for_those(
@@ -1912,7 +1915,7 @@ def test_md_real_funding_pages_are_not_refused(path):
 @pytest.mark.parametrize("path", [
     "/wp/2026/09/apel-granturi", "/2026/apel-de-propuneri", "/en/news/call-for-proposals-2026",
     "/ro/noutati/apel-de-propuneri", "/ro/stiri/apel-deschis", "/en/blog/grants",
-    "/en/about-us/grants", "/media", "/en/resources", "/contact/embassy-chisinau",
+    "/en/about-us", "/media", "/en/resources", "/contact/embassy-chisinau",
 ])
 def test_md_news_and_dated_pages_are_still_refused(path):
     assert br.page_problem(br.register_settings("md"), "https://www.example.md" + path)
@@ -1964,3 +1967,182 @@ def test_md_a_generic_word_or_an_aggregator_is_not_the_funders_site(url, name):
 ])
 def test_md_the_funders_own_site_is_found(url, name, website):
     assert br.site_is_funders(br.register_settings("md"), url, {"name": name, "website": website})
+
+
+# --- Audit 5: search errors, Tavily's stop, sites, pages, merges ------------------
+
+def test_a_search_error_that_is_not_a_limit_is_nothing_found_and_the_register_is_written(
+        giving_up, capsys):
+    """A query Tavily rejects fails the same way every run; before, it kept
+    the register unwritten for good and was reported as a Tavily limit."""
+    GivingUpTavily.mode = "bad-query"
+    assert br.main(["md", "--confirm", "--budget", "100"]) == 0
+    out = capsys.readouterr().out
+    assert giving_up.register.exists() and "hit Tavily limits" not in out
+    assert "search failed for Alpha Fund: ValueError: Query is too long; taken as nothing found" in out
+    summary = json.loads(out[out.index('{\n  "candidates"'):])
+    assert summary["stopped_by_tavily"] == 0
+
+
+@pytest.mark.parametrize("error, limited", [
+    (ValueError("cannot read the model's pick"), False), (KeyError("results"), False),
+    (type("UsageLimitExceededError", (Exception,), {})("Too many requests"), True),
+    (type("ForbiddenError", (Exception,), {})("plan limit"), True),
+    (br.TavilyStopped("stopped"), True),
+])
+def test_only_a_tavily_limit_leaves_a_funder_for_a_rerun(monkeypatch, error, limited):
+    monkeypatch.setattr(rs, "fetch_page", lambda url: {"url": url, "error": "HTTP 404"})
+
+    def raises(*a, **k):
+        raise error
+    monkeypatch.setattr(br, "tavily_site", raises)
+    funder = {"name": "F", "category": "foundation", "tier": 2, "regions": [],
+              "website": "https://f.example/"}
+    out = br.resolve(funder, True, br.register_settings("md"), br.Budget(100))
+    assert bool(out.get("search_failed")) is limited and br.retry_later(out) is limited
+    br._out_of_credits.clear()
+
+
+def test_once_tavily_stops_no_extract_is_tried(monkeypatch):
+    """After a ForbiddenError, a page that refuses a plain fetch stays
+    refused: the builder's fetch asks the sweep's for no extract."""
+    asked = []
+
+    def fetch_page(url, use_tavily=True):
+        asked.append(use_tavily)
+        return {"url": url, "error": "HTTP 403"}
+    monkeypatch.setattr(rs, "fetch_page", fetch_page)
+    br._out_of_credits.clear()
+    br.fetch("https://a.example/", br.Budget(10))
+    br._out_of_credits.set()
+    br.fetch("https://b.example/", br.Budget(10))
+    br._out_of_credits.clear()
+    assert asked == [True, False]
+
+
+def test_an_extract_429_that_says_credits_are_used_up_stops_tavily(monkeypatch):
+    """The sweep's fetch keeps the extract's message beside its error, so a
+    429 for credits used up is told from one for too many requests."""
+    class UsageLimitExceededError(Exception):
+        pass
+
+    class Tavily:
+        calls = 0
+
+        def __init__(self, api_key=None):
+            pass
+
+        def extract(self, urls):
+            Tavily.calls += 1
+            raise UsageLimitExceededError("You have used all your credits. Please upgrade your plan.")
+    monkeypatch.setitem(sys.modules, "tavily", SimpleNamespace(TavilyClient=Tavily))
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+    monkeypatch.setattr(rs, "fetch_page", lambda url, use_tavily=True: rs.fetch_blocked(
+        url, "HTTP 403", use_tavily))
+    waits = []
+    monkeypatch.setattr(br, "_pause", waits.append)
+    br._out_of_credits.clear()
+    failed = []
+    page = br.fetch("https://a.example/", br.Budget(10), failed)
+    assert br._out_of_credits.is_set() and waits == [] and failed == ["extract"]
+    assert page["error"] == "HTTP 403; extract failed: UsageLimitExceededError"
+    br.fetch("https://b.example/", br.Budget(10))
+    assert Tavily.calls == 1
+    br._out_of_credits.clear()
+
+
+# From the audit of the first paid md build: real funders' own sites.
+FUNDERS_OWN_SITES = [
+    ("Consiliul Raional Orhei", "https://or.md/"),                      # trusted_hosts
+    ("Consiliul Raional Ialoveni", "https://il.md/"),                   # trusted_hosts
+    ("Bureau of Interethnic Relations", "https://bri.gov.md/"),         # trusted_hosts
+    ("Agency for Interethnic Relations (Agenția Relații Interetnice)", "https://bri.gov.md/"),
+    ("Ministerul Muncii și Protecției Sociale", "https://msmps.gov.md/"),   # trusted_hosts
+    ("UN Women Moldova", "https://moldova.unwomen.org/"),
+    ("Heinrich Boll Stiftung Moldova", "https://md.boell.org/"),
+    ("Heinrich Böll Stiftung", "https://www.boell.de/"),
+    ("Energy Efficiency Fund of Moldova (FEE)", "https://fee.md/"),
+    ("National Employment Agency (ANOFM)", "https://anofm.md/"),
+    ("United Nations Children's Fund (UNICEF) Moldova", "https://www.unicef.org/moldova"),
+    ("World Health Organization (WHO) Moldova", "https://www.who.int/moldova"),
+    ("Consiliul Raional Ștefan Vodă", "https://stefan-voda.md/"),
+    ("Consiliul Raional Ștefan Vodă", "https://stefanvoda.md/"),
+    ("Consiliul Raional Hîncești", "https://hincesti.md/"),
+    ("Primăria Municipiului Chișinău", "https://www.chisinau.md/"),
+    ("Moldcell Foundation", "https://www.moldcell.md/"),
+    ("Cancelaria de Stat", "https://cancelaria.gov.md/"),
+    ("National Agency for Interethnic Relations (Agenția Națională Relații Interetnice)",
+     "https://anri.gov.md/"),                                           # bracketed acronym
+]
+
+NOT_THE_FUNDERS_SITES = [
+    ("Energy Efficiency Fund of Moldova (FEE)", "https://feedback.md/"),
+    ("Consiliul Raional Cahul", "https://cahulexpress.md/"),
+    ("Consiliul Raional Orhei", "https://orheiinfo.md/"),
+    ("Consiliul Raional Ungheni", "https://ungheni.info/"),
+    ("Friedrich Ebert Stiftung Moldova", "https://ebertfans.md/"),
+    ("Fundatia Soros Moldova", "https://soros-news.md/"),
+    ("Moldcell Foundation", "https://moldcellnews.md/"),
+    ("UN Women Moldova", "https://womenfund.md/"),
+    ("UN Women Moldova", "https://www.un.org/"),
+    ("European Endowment for Democracy", "https://www.ned.org/"),
+]
+
+
+@pytest.mark.parametrize("name, url", FUNDERS_OWN_SITES)
+def test_md_a_funders_own_short_or_acronym_site_is_its_own(name, url):
+    assert br.site_is_funders(br.register_settings("md"), url, {"name": name, "website": ""})
+
+
+@pytest.mark.parametrize("name, url", NOT_THE_FUNDERS_SITES)
+def test_md_a_site_that_only_starts_with_the_name_is_not_the_funders(name, url):
+    assert not br.site_is_funders(br.register_settings("md"), url, {"name": name, "website": ""})
+
+
+@pytest.mark.parametrize("path", [
+    "https://www.soros.md/ro/concursuri/2026/apel-de-propuneri-pentru-ong-uri",
+    "https://tineret.gov.md/ro/programe/2026/granturi",
+    "https://example.md/about-us/grants",
+    "https://example.md/ro/despre-noi/granturi",
+    "https://example.md/ro/finantare/apel-deschis-pentru-organizatiile-societatii-civile-din-"
+    "regiunea-de-dezvoltare-nord",
+    "https://example.md/en/call-for-applications-2026-small-grants-for-civil-society-"
+    "organisations-in-moldova",
+])
+def test_md_a_round_a_section_or_a_calls_title_is_a_funding_page(path):
+    assert br.page_problem(br.register_settings("md"), path) is None
+
+
+@pytest.mark.parametrize("path", [
+    "https://example.md/2026/granturi", "https://example.md/ro/posts/2026/apel",
+    "https://www.chisinau.md/ro/2026/05/concurs-de-proiecte-pentru-ong-uri",
+    "https://example.md/en/news/2026/call-for-proposals", "https://example.md/ro/despre-noi",
+    "https://example.md/en/about-us/team", "https://example.md/ro/noutati/apel-de-propuneri",
+])
+def test_md_dated_news_and_about_pages_without_a_funding_part_are_still_refused(path):
+    assert br.page_problem(br.register_settings("md"), path)
+
+
+def test_a_candidate_on_a_known_town_halls_site_that_is_its_council_is_not_merged(
+        isolated, paid, monkeypatch, capsys):
+    """Consiliul Municipal Bălți on balti.md is not Primăria Municipiului
+    Bălți, whose site it is; and a known funder keeps its own category."""
+    paid.COST = 0.0
+    paid.reply = reply_by_category({
+        "council": [claim("Consiliul Municipal Bălți", "https://www.balti.md/", tier=2)],
+        "foundation": [claim("Delegația Uniunii Europene în Republica Moldova",
+                             "https://www.eeas.europa.eu/delegations/moldova_en", tier=2)],
+        "international": [claim("National Endowment for Democracy", "https://www.ned.org/",
+                                tier=2)],
+    })
+    monkeypatch.setattr(rs, "fetch_page", lambda url: {
+        "url": url, "text": "Granturi și finanțare. " * 20, "links": []})
+    assert br.main(["md", "--confirm", "--no-search", "--budget", "100"]) == 0
+    out = capsys.readouterr().out
+    summary = json.loads(out[out.index('{\n  "candidates"'):])
+    assert not [m for m in summary["merged_by_site"] if m.startswith("Consiliul Municipal")]
+    funders = {f["name"]: f for f in json.loads((isolated / "md-register.json").read_text())["funders"]}
+    assert {"Consiliul Municipal Bălți", "Primăria Municipiului Bălți"} <= set(funders)
+    assert funders["Delegația Uniunii Europene în Republica Moldova"]["category"] == "international"
+    assert funders["National Endowment for Democracy"]["category"] == "foundation"
+    assert funders["Primăria Municipiului Bălți"]["category"] == "council"

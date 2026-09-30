@@ -69,6 +69,18 @@ which the sweep shares. Optional keys in that block:
                          find that are never a funder's own
   host_generic_words     with strict_pages: name words too common to show a
                          host is the funder's ("development", "women")
+  keep_known_categories  a funder already known (the manifest's) keeps its
+                         category when a listed candidate merges into it
+  dated_path_words       with strict_pages: words that, in a path part before
+                         a year, make it a round and not a dated news folder
+                         (/concursuri/2026/...), as a programme word does
+  about_path_words       with strict_pages: not_funding_path_words that name
+                         a section of the site, excused when a later part is
+                         a strong word (/despre-noi/granturi)
+  trusted_hosts          with strict_pages: hosts a search may find that are
+                         a funder's own though their labels are too short to
+                         carry its name (or.md, a raion council); the page
+                         must still name the funder
 
 Usage:
     python scripts/build_register.py nz --confirm [--budget 3] [--only-category council]
@@ -147,37 +159,123 @@ def is_excluded(settings: dict, name: str, country: str) -> bool:
     return any(exclude.search(_to_ascii(n)) for n in names)
 
 
+# A host under one of these is a news or hobby site more often than a
+# funder's: ungheni.info is a town's news portal, not its council.
+NEWS_TLDS = {"info", "news", "online", "press", "media", "tv", "live", "today", "blog", "site"}
+# A funder's site may add one of these to a word of its name: civilspace.eu.
+# Not "express", "info", "news" or "fans": cahulexpress.md is a newspaper.
+LABEL_SUFFIXES = ("space", "hub", "fund", "fond", "ngo")
+# Words that join a name's other words and give no initial: "Bureau of ...".
+_CONNECTORS = {"of", "for", "and", "the", "de", "din", "si", "pentru", "la", "in", "a", "al",
+               "dlya", "i", "po"}
+_GERMAN = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+
+
+def _name_forms(name: str) -> list[str]:
+    """The name folded to plain Latin letters, and also German-style when
+    that differs: "Böll" is "boll" and "boell"."""
+    forms = [name]
+    german = name.lower().translate(_GERMAN)
+    if _to_ascii(german) != _to_ascii(name):
+        forms.append(german)
+    return forms
+
+
+def _acronyms(name: str) -> set[str]:
+    """Acronyms a host may use for the funder: one the name gives in
+    capitals (FEE, UNICEF), and the initials of a bracketed name of three
+    words or more, Romanian or English, connectors left out."""
+    found = {a.lower() for a in re.findall(r"\b[A-Z]{3,}\b", name)}
+    for inner in re.findall(r"\(([^)]*)\)", name):
+        words = [w for w in re.findall(r"[^\W\d_]+", _to_ascii(inner)) if w not in _CONNECTORS]
+        if len(words) >= 3:
+            found.add("".join(w[0] for w in words))
+    return found
+
+
 def site_is_funders(settings: dict, url: str, funder: dict) -> bool:
     """A site found by search belongs to the funder when it is the site the
-    listing gave; never when it is a grants aggregator; otherwise when its
-    host carries the funder's name, as one of:
+    listing gave, or a host the country trusts (`trusted_hosts`: or.md, a
+    council whose label is too short to carry its name); never when it is a
+    grants aggregator; otherwise when one of its host labels, the top-level
+    domain aside, is the funder's name, as one of:
 
-      the acronym as a host label or the start of one: fee.md for the
-        Energy Efficiency Fund (FEE), but not coffee.md
-      a distinctive name word starting or ending a host label: cahul.md for
-        Consiliul Raional Cahul, crungheni.md for Ungheni, civilspace.eu
-        for the Civil Society Development Foundation
-      two distinctive name words anywhere in the host
+      an acronym, as the whole label: fee.md for the Energy Efficiency Fund
+        (FEE), but not feedback.md or coffee.md; unicef.org
+      a distinctive name word, as the whole label: cahul.md for Consiliul
+        Raional Cahul, md.boell.org for Heinrich Böll (German fold too), but
+        not cahulexpress.md, orheiinfo.md or soros-news.md; "Boll" is
+        boell.org too
+      that word after the initials of the name's other words, or before a
+        short suffix a funder's site may add: crungheni.md ("Consiliul
+        Raional"), civilspace.eu
+      two or more name words run together, one of them distinctive:
+        stefanvoda.md or stefan-voda.md, democracyendowment.eu
+      the whole name run together, generic words and all: unwomen.org for
+        UN Women (the country's name aside)
 
     A distinctive word is not one of name_stopwords or host_generic_words:
     "development" alone does not make developmentaid.org UNDP's, nor
-    "women" womenfund.org UN Women's. A place name is distinctive, so a
-    council whose only other words are generic is found by its town."""
+    "women" womenfund.org UN Women's. A bare two-letter acronym is never
+    enough ("un" would give UN Women every un.org page). A host under a
+    news-like top-level domain (ungheni.info) counts only as the listed or
+    a trusted site."""
     site = _site_of(url)
     if site and site == _site_of(funder.get("website")):
         return True
+    if site and site in settings.get("trusted_hosts", set()):
+        return True
     if not site or site in settings["aggregator_hosts"]:
         return False
-    labels = [lab for lab in re.split(r"[.-]", site) if lab and lab != "www"]
-    words = [w for w in _name_words(funder["name"]) if w not in settings["host_generic_words"]]
-    acronyms = [a.lower() for a in re.findall(r"\b[A-Z]{3,}\b", funder["name"])]
+    parts = site.split(".")
+    if parts[-1] in NEWS_TLDS:
+        return False
+    labels = [lab.replace("-", "") for lab in parts[:-1] if lab and lab != "www"]
+    # And each label read back from German spelling: boell.org for "Heinrich
+    # Boll", written without its umlaut.
+    labels += [g for g in (re.sub(r"(?<=[aou])e", "", lab) for lab in labels) if g not in labels]
+    generic = settings["host_generic_words"]
+    acronyms = _acronyms(funder["name"])
+    for form in _name_forms(funder["name"]):
+        tokens = re.findall(r"[^\W\d_]+", _to_ascii(re.sub(r"\([^)]*\)", " ", form)))
+        words = [w for w in tokens if len(w) >= 4]
+        distinct = [w for w in words if w not in generic]
+        whole = "".join(t for t in tokens if t not in settings["name_stopwords"]
+                        and t not in _CONNECTORS)
+        for lab in labels:
+            if lab in acronyms or lab in distinct or (len(whole) >= 5 and lab == whole):
+                return True
+            for w in distinct:
+                if lab.endswith(w) and lab[:-len(w)] and _initials_of(lab[:-len(w)], tokens, w):
+                    return True
+                if lab.startswith(w) and lab[len(w):] in LABEL_SUFFIXES:
+                    return True
+            if any(w in distinct for w in _run_of(lab, words)):
+                return True
+    return False
 
-    def at_edge(w: str) -> bool:
-        return any(lab.startswith(w) or lab.endswith(w) for lab in labels)
-    host = "".join(labels)
-    return (any(lab.startswith(a) for a in acronyms for lab in labels)
-            or any(at_edge(w) for w in words)
-            or sum(1 for w in set(words) if w in host) >= 2)
+
+def _initials_of(prefix: str, tokens: list[str], word: str) -> bool:
+    """`prefix` is the initials of the name's words before `word`, in order:
+    "cr" in crungheni.md for Consiliul Raional Ungheni."""
+    before = tokens[:tokens.index(word)] if word in tokens else []
+    initials = "".join(t[0] for t in before if t not in _CONNECTORS)
+    return len(prefix) >= 2 and prefix == initials
+
+
+def _run_of(label: str, words: list[str]) -> list[str]:
+    """The name words that, two or more run together in any order, make up
+    the whole label, or [] when they do not."""
+    def split(rest: str, used: list[str]) -> list[str]:
+        if not rest:
+            return used if len(used) >= 2 else []
+        for w in words:
+            if rest.startswith(w) and w not in used:
+                found = split(rest[len(w):], used + [w])
+                if found:
+                    return found
+        return []
+    return split(label, [])
 
 
 class Budget(rs.Budget):
@@ -230,16 +328,33 @@ def _too_fast(exc: Exception) -> bool:
     """A 429 worth waiting out. One whose message says the credits or the
     plan are used up is not, nor a ForbiddenError (432, 433); after either
     no other call is made."""
-    if type(exc).__name__ == PLAN_LIMIT:
+    return _limit_wait(type(exc).__name__, str(exc))
+
+
+def _limit_wait(name: str, message: str) -> bool:
+    """_too_fast by the error's class name and message, which is all an
+    extract's error keeps."""
+    if name == PLAN_LIMIT:
         _out_of_credits.set()
         return False
-    if type(exc).__name__ != RATE_LIMITED:
+    if name != RATE_LIMITED:
         return False
-    message = str(exc)
     if OUT_OF_CREDITS.search(message) and not TOO_FAST.search(message):
         _out_of_credits.set()
         return False
     return True
+
+
+def gave_up(exc: Exception, failed: list[str], what: str, name: str) -> None:
+    """A search that raised. Tavily's limits (too many requests, the plan
+    or credits used up) are not an answer: the funder is left for a re-run.
+    Anything else (a query Tavily rejects, a model pick that cannot be
+    read) would fail the same way again, so it counts as nothing found."""
+    if type(exc).__name__ in LIMIT_ERRORS:
+        failed.append(what)
+        print(f"[register] {what} failed for {name}: {_describe(exc)}; a re-run tries again")
+    else:
+        print(f"[register] {what} failed for {name}: {_describe(exc)}; taken as nothing found")
 
 
 def tavily_call(call, *args, **kwargs):
@@ -267,21 +382,27 @@ def fetch(url: str, budget: Budget, failed: list | None = None) -> dict:
     brought the page back: Tavily bills only a successful extraction, and
     an attempt that failed (a 429, or nothing returned) costs nothing.
 
-    The sweep's fetch keeps only the error's class name, so an extract
-    turned away as too many requests is told by that name; the page is
-    fetched again after a wait, as a search is. Callers check the budget
+    The sweep's fetch keeps the error's class name in `error` and its
+    message in `extract_message`, so an extract turned away as too many
+    requests is fetched again after a wait, as a search is, and one whose
+    message says the credits are used up stops Tavily for the run. Callers check the budget
     first. An extract Tavily turned away for good is added to `failed`, so
     the funder is tried again on a re-run."""
     waited = 0.0
     for attempt in range(TAVILY_TRIES):
-        page = rs.fetch_page(url)
+        # Once Tavily has said the plan or credits are used up, a page that
+        # refuses a plain fetch stays refused: no extract is tried.
+        page = (rs.fetch_page(url, use_tavily=False) if _out_of_credits.is_set()
+                else rs.fetch_page(url))
         if page.get("via") == "tavily":
             budget.add_extract()
         why = page.get("extract_error") or page.get("error") or ""
         if f"extract failed: {PLAN_LIMIT}" in why:
             _out_of_credits.set()
         limited = any(f"extract failed: {e}" in why for e in LIMIT_ERRORS)
-        wait = _wait(attempt, waited) if f"extract failed: {RATE_LIMITED}" in why else 0.0
+        too_fast = f"extract failed: {RATE_LIMITED}" in why and _limit_wait(
+            RATE_LIMITED, page.get("extract_message", ""))
+        wait = _wait(attempt, waited) if too_fast else 0.0
         if wait <= 0:
             if limited and failed is not None:
                 failed.append("extract")
@@ -697,8 +818,7 @@ def _resolve(funder: dict, use_search: bool, settings: dict, budget: Budget,
             found = tavily_site(funder["name"], settings["country"], budget)
         except Exception as exc:  # noqa: BLE001
             found = None
-            failed.append("site search")
-            print(f"[register] site search failed for {funder['name']}: {_describe(exc)}")
+            gave_up(exc, failed, "site search", funder["name"])
         if found and strict and not site_is_funders(settings, found, funder):
             # A page that happens to mention the funder, on someone else's
             # site: a tyre dealer's article is not the Energy Efficiency Fund.
@@ -746,8 +866,7 @@ def _resolve(funder: dict, use_search: bool, settings: dict, budget: Budget,
             found = tavily_find(funder["name"], site, settings["search_terms"], budget, accept)
         except Exception as exc:  # noqa: BLE001
             found = None
-            failed.append("search")
-            print(f"[register] search failed for {funder['name']}: {_describe(exc)}")
+            gave_up(exc, failed, "search", funder["name"])
         if found:
             return {**funder, "url": found, "resolved_by": "search"}
     if has_grant_words(settings, home.get("text", "")) and not page_problem(settings, home["url"]):
@@ -833,8 +952,17 @@ def main(argv=None) -> int:
                 if site in settings["shared_hosts"]:
                     known_shared.setdefault(site, []).append(k)
 
+    # With keep_known_categories a known funder keeps its own category when
+    # it is one of this country's register categories (Delegația Uniunii
+    # Europene stays "international" whatever a candidate merged into it
+    # says). Otherwise, and for a pool funder ("other"), the candidate's
+    # category is taken, as it always was.
+    own_category = ({id(k) for k in known.values() if k["category"] in settings["categories"]}
+                    if settings["keep_known_categories"] else set())
+
     def merge(match: dict, c: dict, why: str | None = None) -> None:
-        match["category"] = c["category"]
+        if id(match) not in own_category:
+            match["category"] = c["category"]
         if not from_manifest:
             match["tier"] = min(match["tier"], c["tier"])
         match["regions"] = match["regions"] or c["regions"]
@@ -863,8 +991,10 @@ def main(argv=None) -> int:
                             shared=shared, page="website") if merge_new and site else None)
         if match:
             merge(match, c)
-        elif site in by_site:
-            # Merged before any resolve spend: its listed site is a known one.
+        elif site in by_site and not kinds_differ(settings, by_site[site]["name"], c["name"]):
+            # Merged before any resolve spend: its listed site is a known one,
+            # unless the two say they are different kinds of body: a raion
+            # council and the town hall on its town's site.
             merge(by_site[site], c, f"listed site {site}")
         elif on_known:
             why = "same page" if same_page(on_known["website"], c["website"]) else "same name"
@@ -926,7 +1056,7 @@ def main(argv=None) -> int:
             site = _site_of(r.get("url"))
             on_known = (same_funder(settings, known_shared.get(site, []), r, by_page=True,
                                     shared=True) if site in known_shared else None)
-            if site in by_site:
+            if site in by_site and not kinds_differ(settings, by_site[site]["name"], r["name"]):
                 merge(by_site[site], r, f"funding page on {site}")
             elif on_known:
                 why = "same page" if same_page(on_known["url"], r["url"]) else "same name"

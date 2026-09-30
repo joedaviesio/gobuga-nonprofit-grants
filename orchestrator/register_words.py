@@ -139,7 +139,7 @@ def register_settings(country: str) -> dict:
         if not isinstance(reg[key], str) or not reg[key].strip():
             raise _config_error(country, f"register.{key} must be a non-empty string")
     for key in ("fold_words", "dedupe_known_by_site", "tier_one_from_manifest",
-                "merge_new_by_site", "strict_pages"):
+                "merge_new_by_site", "strict_pages", "keep_known_categories"):
         if not isinstance(reg.get(key, False), bool):
             raise _config_error(country, f"register.{key} must be true or false")
     grant_words = _strings(reg, "grant_words", country)
@@ -157,6 +157,9 @@ def register_settings(country: str) -> dict:
     kind_words = _strings(reg, "merge_kind_words", country)
     aggregators = _strings(reg, "aggregator_hosts", country)
     host_generic = _strings(reg, "host_generic_words", country)
+    trusted = _strings(reg, "trusted_hosts", country)
+    dated_words = _strings(reg, "dated_path_words", country)
+    about_words = _strings(reg, "about_path_words", country)
     fold = _to_ascii if reg.get("fold_words") else None
     if weak_words and not fold:
         raise _config_error(country, "register.weak_skip_link_words needs fold_words")
@@ -165,7 +168,7 @@ def register_settings(country: str) -> dict:
         raise _config_error(country,
                             "register.strict_pages needs fold_words and strong_grant_words")
     own_skip = weak_skip = strong = path_strong = not_funding_part = None
-    not_funding_whole = programme = None
+    not_funding_whole = programme = phrases = dated = about = None
     try:
         words = re.compile(_pattern(grant_words, fold), re.IGNORECASE)
         skip = SKIP_LINK
@@ -195,6 +198,15 @@ def register_settings(country: str) -> dict:
                     "^" + _pattern(not_funding_parts, fold) + "$", re.IGNORECASE)
             if programme_words:
                 programme = re.compile(_pattern(programme_words, fold), re.IGNORECASE)
+            # Strong words of more than one word ("apel deschis", "call for
+            # proposals"): a slug holding one is a call's title, however long.
+            multi = [w for w in strong_words if len(re.split(r"[\s_-]+", w.strip())) > 1]
+            if multi:
+                phrases = re.compile(_pattern(multi, fold), re.IGNORECASE)
+            if dated_words:
+                dated = re.compile(_pattern(dated_words, fold), re.IGNORECASE)
+            if about_words:
+                about = re.compile("^" + _pattern(about_words, fold) + r"(?![^\W_])", re.IGNORECASE)
     except ValueError as exc:
         raise _config_error(country, f"register words: {exc}") from exc
     return {
@@ -215,6 +227,7 @@ def register_settings(country: str) -> dict:
         "exclude": exclude,
         "tier_one_from_manifest": reg.get("tier_one_from_manifest", False),
         "merge_new_by_site": reg.get("merge_new_by_site", False),
+        "keep_known_categories": reg.get("keep_known_categories", False),
         # Words naming a kind of body ("primăria", "raional") are not set
         # aside: a town hall and a raion council of one town are two funders.
         "merge_stopwords": ({_to_ascii(w) for w in stopwords + merge_stopwords}
@@ -226,8 +239,12 @@ def register_settings(country: str) -> dict:
         "not_funding_part": not_funding_part,
         "not_funding_whole": not_funding_whole,
         "programme_path": programme,
+        "strong_phrases": phrases,
+        "dated_path": dated,
+        "about_path": about,
         "aggregator_hosts": {_site(h) for h in aggregators},
         "host_generic_words": {_to_ascii(w) for w in stopwords + host_generic},
+        "trusted_hosts": {_site(h) for h in trusted},
     }
 
 
@@ -287,13 +304,20 @@ def page_problem(settings: dict, url: str) -> str | None:
 
     def funding_part(p: str) -> bool:
         return bool(strong.search(p) or (programme and programme.search(p)))
+    dated, about = settings.get("dated_path"), settings.get("about_path")
     for i, p in enumerate(parts[:-1]):
+        # A year is a funding page's round when a part before it names
+        # funding, a programme or a competition: /programe/2026/granturi,
+        # /concursuri/2026/apel-de-propuneri.
         if YEAR.fullmatch(p) and (MONTH.fullmatch(parts[i + 1]) or not any(
-                strong.search(q) for q in parts[:i])):
+                funding_part(q) or (dated and dated.search(q)) for q in parts[:i])):
             return "a dated path"
     marker, whole = settings["not_funding_part"], settings["not_funding_whole"]
     for i, p in enumerate(parts):
         if strong.search(p):
+            continue
+        if about and about.search(p) and any(strong.search(q) for q in parts[i + 1:]):
+            # A section of the site, not news: /despre-noi/granturi.
             continue
         if marker and marker.search(p):
             return "a news or other non-funding path"
@@ -302,6 +326,10 @@ def page_problem(settings: dict, url: str) -> str | None:
             return "a news or other non-funding path"
     slug = re.sub(r"\.(html?|aspx?|php)$", "", parts[-1]) if parts else ""
     words = re.findall(r"[^\W\d_]{3,}", slug)
+    phrases = settings.get("strong_phrases")
+    if phrases and phrases.search(slug):
+        # A call's own title: "apel-deschis-pentru-organizatiile-...".
+        return None
     if len(words) >= HEADLINE_WORDS or (
             len(words) >= LONG_SLUG_WORDS and not strong.search(slug)):
         return "an article slug"

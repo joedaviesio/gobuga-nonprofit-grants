@@ -588,3 +588,22 @@ def test_a_left_bank_call_in_russian_is_not_published():
                      title=title, eligibility_excerpt="Могут подать заявку организации.",
                      regions=["national"])
     assert row is None and why == "only for an area not yet covered"
+
+
+def test_md_does_not_follow_another_languages_copy_or_a_regulation():
+    oda = "https://oda.md/ro/granturi/calendar-granturi"
+    links = [("https://oda.md/ru/granty/kalendar-granty", "RU"),
+             ("https://oda.md/files/2026/Regulament privind organizarea apelurilor pentru "
+              "finan_are nerambursabila.pdf",
+              "Regulamentul privind organizarea și desfășurarea apelurilor de finanțare"),
+             ("https://oda.md/ro/granturi/crestem-imm-main", "Creștem IMM - granturi"),
+             ("https://oda.md/granturi/start-uri", "Granturi pentru start-uri")]
+
+    def fetch(url):
+        return {"url": url, "text": "Granturi pentru IMM. " + FILLER,
+                "links": links if url == oda else []}
+    out = rs.crawl_all("md", md(), [funder("ODA", oda)], fetch)[0]
+    assert [p["url"] for p in out["pages"]] == [
+        oda, "https://oda.md/granturi/start-uri", "https://oda.md/ro/granturi/crestem-imm-main"]
+    # A funder whose page names no language follows every copy.
+    assert rs._language("https://oda.md/granturi", {"ro", "ru"}) is None

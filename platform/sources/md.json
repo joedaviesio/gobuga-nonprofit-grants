@@ -230,6 +230,7 @@
       "gov.uk", "ec.europa.eu"
     ],
     "merge_new_by_site": true,
+    "keep_known_categories": true,
     "merge_name_stopwords": [
       "stiftung", "republic", "republicii", "chisinau", "chișinău",
       "grant", "grants", "granturi", "program", "programs", "programme", "programul",
@@ -267,6 +268,9 @@
       "eufundingportal.eu", "grantwatch.com", "instrumentl.com", "candid.org",
       "globalgiving.org", "civic.md", "wikipedia.org", "facebook.com", "linkedin.com"
     ],
+    "dated_path_words": ["concurs", "конкурс"],
+    "about_path_words": ["about us", "despre noi"],
+    "trusted_hosts": ["or.md", "il.md", "bri.gov.md", "msmps.gov.md"],
     "host_generic_words": [
       "development", "international", "european", "europe", "fund", "funds", "foundation",
       "grant", "grants", "moldova", "rural", "women", "national", "agency", "community",
@@ -326,8 +330,9 @@
     "country_words": true,
     "skip_link_words": [
       "proiecte finanțate", "proiectele finanțate", "финансированные проекты", "vacant",
-      "admiterea candidaților"
+      "admiterea candidaților", "regulament"
     ],
+    "language_paths": ["ro", "ru", "en"],
     "fold_letters": true,
     "number_format": "ro",
     "currencies": {

@@ -30,6 +30,9 @@ block the sweep is New Zealand's, unchanged:
                    English defaults; see orchestrator/register_words.py
   skip_link_words  with country_words: more words that mark a link not
                    worth following, beside the register's own
+  language_paths   with country_words: path prefixes naming a language
+                   (["ro", "ru", "en"]); when the funder's page sits under
+                   one, links to the other languages' copies are not followed
   strict_links     with country_words: a followed link must also pass the
                    register's strict page rules (not a document, dated or
                    news path, or headline slug)
@@ -242,7 +245,9 @@ def fetch_page(url: str, use_tavily: bool = True) -> dict:
                 # The short page stands, but a caller counting spend must
                 # still see that an extract was paid for.
                 return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links,
-                        "extract_tried": True, "extract_error": rendered["error"]}
+                        "extract_tried": True, "extract_error": rendered["error"],
+                        **({"extract_message": rendered["extract_message"]}
+                           if "extract_message" in rendered else {})}
         return {"url": current, "text": text[:MAX_PAGE_CHARS], "links": links}
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (401, 403, 406, 429, 503):
@@ -268,8 +273,11 @@ def fetch_blocked(url: str, why: str, use_tavily: bool = True) -> dict:
         res = TavilyClient(api_key=os.environ["TAVILY_API_KEY"]).extract(urls=[url])
         raw = (res.get("results") or [{}])[0].get("raw_content") or ""
     except Exception as exc:  # noqa: BLE001
+        # The message stays apart from the error, which is recorded as it
+        # always was; the register build reads it to tell a 429 for too many
+        # requests from one for credits used up.
         return {"url": url, "error": f"{why}; extract failed: {type(exc).__name__}",
-                "extract_tried": True}
+                "extract_message": " ".join(str(exc).split())[:300], "extract_tried": True}
     SEARCH_CREDITS["extract"] += 1
     if not raw.strip():
         return {"url": url, "error": f"{why}; extract returned nothing", "extract_tried": True}
@@ -277,6 +285,12 @@ def fetch_blocked(url: str, why: str, use_tavily: bool = True) -> dict:
     text = re.sub(r"[ \t]+", " ", MARKDOWN_LINK.sub(r"\1", raw))
     return {"url": url, "text": text[:MAX_PAGE_CHARS], "links": links, "via": "tavily",
             "extract_tried": True}
+
+
+def _language(url: str, languages) -> str | None:
+    """The language an address's first path part names (/ro/, /ru/), or None."""
+    first = next((p for p in urlsplit(url).path.split("/") if p), "").lower()
+    return first if languages and first in languages else None
 
 
 def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
@@ -331,6 +345,12 @@ def crawl_funder(funder: dict, fetch=fetch_page, words: dict | None = None,
                 links = rw.country_pick_links(page, funder["url"], words, seen)
                 if strict_links:
                     links = [h for h in links if not rw.page_problem(words, h)]
+                start = _language(funder["url"], words.get("language_paths"))
+                if start:
+                    # The funder's page is in one language: its copies in
+                    # the others (/ru/ beside /ro/) are the same calls again.
+                    links = [h for h in links
+                             if _language(h, words["language_paths"]) in (None, start)]
             else:
                 links = pick_links(page, funder["url"], seen)
             labels = {h: t for h, t in page.get("links", [])}
@@ -913,6 +933,8 @@ def crawl_all(country: str, cfg, funders: list[dict], fetch) -> list[dict]:
         own = words["own_skip"]
         words = {**words, "own_skip": re.compile(
             f"{own.pattern}|{extra}" if own else extra, re.IGNORECASE)}
+    if words and sweep.get("language_paths"):
+        words = {**words, "language_paths": {p.lower() for p in sweep["language_paths"]}}
     with ThreadPoolExecutor(max_workers=CRAWL_CONCURRENCY) as pool:
         return list(pool.map(lambda f: crawl_funder(f, fetch, words, strict), funders))
 

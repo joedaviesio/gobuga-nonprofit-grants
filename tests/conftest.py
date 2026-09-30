@@ -71,6 +71,7 @@ def backend():
         "GOBUGA_DATA_DIR": data_dir,
         "GOBUGA_COUNTRY": os.environ.get("GOBUGA_COUNTRY", "nz"),
         "STARTUP_SWEEP_DISABLED": "1",
+        "WEEKLY_REPORT_DISABLED": "1",
         # Unlocks POST /api/org/toggle-tier so tests can put the throwaway
         # org on Officer without Stripe. Never set in production.
         "GOBUGA_DEV_TIER_TOGGLE": "1",

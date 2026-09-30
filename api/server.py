@@ -87,6 +87,12 @@ def _seed_pool_on_startup() -> None:
     maybe_seed_pool()
 
 
+@app.on_event("startup")
+def _start_weekly_report() -> None:
+    from api.weekly_report import maybe_start_scheduler
+    maybe_start_scheduler()
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch unhandled exceptions so CORS headers are still sent.
@@ -263,6 +269,17 @@ def api_run_sweep(
     if not verify_sweep_secret(_extract_token(request)):
         raise HTTPException(401, "Invalid or missing sweep secret")
     return trigger_sweep(country=country, month=month, force=force)
+
+
+@app.post("/api/admin/weekly-report")
+def api_weekly_report(request: Request, dry_run: bool = False):
+    """Send the weekly traffic email now, or with `dry_run` return its text.
+    Auth via the SWEEP_SECRET bearer."""
+    from api.startup_sweep import verify_sweep_secret
+    from api.weekly_report import send
+    if not verify_sweep_secret(_extract_token(request)):
+        raise HTTPException(401, "Invalid or missing sweep secret")
+    return send(dry_run=dry_run)
 
 
 MAX_PUBLISH_BYTES = 8 * 1024 * 1024

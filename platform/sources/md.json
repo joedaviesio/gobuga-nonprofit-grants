@@ -330,8 +330,19 @@
     "country_words": true,
     "skip_link_words": [
       "proiecte finanțate", "proiectele finanțate", "финансированные проекты", "vacant",
-      "admiterea candidaților", "regulament"
+      "admiterea candidaților", "regulament", "în derulare", "proiecte în curs",
+      "anunț - concurs", "informații despre concurs", "fondul de fonduri", "ordine de finanțare",
+      "câștigătoare", "finalizat", "inactive", "colectarea propunerilor", "colectăm propuneri",
+      "rezultatele proiectelor", "sumarul rezultatelor", "rapoarte anuale", "monitorizarea",
+      "prima casă", "реализуемые проекты", "завершенные проекты"
     ],
+    "link_words": [
+      "proiecte culturale", "proiecte editoriale", "voucher", "programul național",
+      "postdoctorat", "stimularea excelenței", "proiecte inovaționale", "antreprenoriat",
+      "competitivitate", "программа"
+    ],
+    "stale_years": 2,
+    "rank_strong_links": true,
     "language_paths": ["ro", "ru", "en"],
     "fold_letters": true,
     "number_format": "ro",
@@ -340,13 +351,16 @@
               "markers": ["lei", "leu", "MDL", "леев", "лей", "лея", "леи"]},
       "EUR": {"label": "euro, €", "max": 2500000, "markers": ["€", "EUR", "euro", "евро"]},
       "USD": {"label": "dolari SUA, $", "max": 2500000,
-              "markers": ["$", "USD", "dolar", "долл"]}
+              "markers": ["$", "US$", "USD", "dolar", "долл"]}
     },
     "other_dollar_words": ["CAD", "C$", "CA$", "canad", "канад", "AUD", "A$", "NZD", "NZ$"],
+    "other_dollar_tlds": ["ca", "nz", "au"],
     "general_title": "Granturi {funder}",
+    "join_translations": true,
     "not_a_grant_words": [
-      "credit", "împrumut", "garant", "leasing", "licitați", "achiziți",
-      "кредит", "заём", "заем", "займ", "гарант", "лизинг", "тендер", "закупк"
+      "credit", "împrumut", "garant", "leasing", "licitați", "achiziții publice",
+      "achiziție publică", "achiziția publică", "achizițiilor publice", "кредит", "заём", "заем", "займ", "гарант",
+      "лизинг", "тендер", "госзакуп", "государственные закупки", "государственных закупок"
     ],
     "grant_title_words": ["grant", "subvenți", "nerambursabil", "грант", "субсиди", "безвозмезд"],
     "rolling_words": [
@@ -354,6 +368,9 @@
       "fără termen limită", "постоянно", "в любое время", "в течение всего года", "круглый год"
     ],
     "not_covered_region": "transnistria",
+    "covered_with_words": [
+      "inclusiv", "ambele maluri", "both banks", "including", "включая", "обоих берег"
+    ],
     "not_covered_words": [
       "transnistr", "tighina", "bender", "tiraspol", "stânga nistrului", "malul stâng",
       "left bank", "приднестров", "бендер", "тирасп", "левобереж", "левом берегу"

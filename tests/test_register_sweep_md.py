@@ -569,14 +569,16 @@ def test_md_reads_a_page_once_and_skips_funded_projects_and_vacancies(isolated):
         ("https://ancd.gov.md/ro/content/proiecte-finantate-1", "Proiecte finanțate"),
         ("https://ancd.gov.md/ro/content/admiterea-la-concurs",
          "Cu privire la admiterea candidaților la concurs pentru funcțiile vacante"),
-        ("https://ancd.gov.md/ro/content/anunt-concurs", "Anunț - Concurs")])
+        ("https://ancd.gov.md/ro/content/anunt-concurs", "Anunț - Concurs"),
+        ("https://ancd.gov.md/ro/content/apel-de-proiecte", "Apel de propuneri")])
 
     def fetch(url):
         # The registered www. address redirects to the bare host.
         return {"url": url.replace("www.", ""), "text": page[0], "links": page[1]}
     out = rs.crawl_all("md", md(), [funder("ANCD", ancd)], fetch)[0]
+    # "Anunț - Concurs" is an HR notice on this site, and not followed.
     assert [p["url"] for p in out["pages"]] == [
-        "https://ancd.gov.md/ro/content/apeluri-deschise", "https://ancd.gov.md/ro/content/anunt-concurs"]
+        "https://ancd.gov.md/ro/content/apeluri-deschise", "https://ancd.gov.md/ro/content/apel-de-proiecte"]
     assert [v["why_not"] for v in out["visits"] if not v["kept"]] == ["already read"]
     assert len(out["visits"]) == 3
 
@@ -607,3 +609,215 @@ def test_md_does_not_follow_another_languages_copy_or_a_regulation():
         oda, "https://oda.md/granturi/start-uri", "https://oda.md/ro/granturi/crestem-imm-main"]
     # A funder whose page names no language follows every copy.
     assert rs._language("https://oda.md/granturi", {"ro", "ru"}) is None
+
+
+# --- Sweep audit: currency, Transnistria, translations, words, crawl, budget -------
+
+CFLI = "https://www.international.gc.ca/world-monde/funding-financement/cfli-fcil/moldova.aspx"
+
+
+@pytest.mark.parametrize("excerpt, page, url, expect", [
+    # The Canada Fund writes "$20k" and says CAD elsewhere on the page.
+    ("Grants of up to $20k are available.", "Canada Fund for Local Initiatives. All amounts "
+     "are in Canadian dollars (CAD).", "https://cfli.example.org/", (None, None, None)),
+    # A bare "$" on a .ca site is never USD, whatever the page says.
+    ("Grants of up to $20k are available.", "Small grants for local projects.", CFLI,
+     (None, None, None)),
+    # A bare "$" on a page naming no other dollar is USD, as before.
+    ("Grants of up to $20k are available.", "Small grants for local projects.",
+     "https://soros.md/x", (None, 20000, "USD")),
+    # The excerpt names the US dollar: it stands, even beside CAD elsewhere.
+    ("Grants of up to US$20,000 are available.", "Some partners give CAD.",
+     "https://cfli.example.org/", (None, 20000, "USD")),
+])
+def test_a_bare_dollar_is_not_usd_where_the_page_or_site_names_another_dollar(
+        excerpt, page, url, expect):
+    rules = rs.country_rules(md())
+    assert rs.country_amounts({"amount_max": 20000, "currency": "USD"}, excerpt, rules,
+                              page, url) == expect
+
+
+def test_a_cfli_like_page_gives_no_usd_amount():
+    page = ("Canada Fund for Local Initiatives in Moldova. Grants of up to $20k are available "
+            "for local organisations. All funding is in Canadian dollars.\n" + FILLER)
+    row, why = rs.check_programme(
+        item(title="Canada Fund for Local Initiatives in Moldova", amount_max=20000,
+             currency="USD", amount_excerpt="Grants of up to $20k are available for local organisations.",
+             eligibility_excerpt="Grants of up to $20k are available for local organisations."),
+        {"url": "https://cfli.example.org/moldova", "text": page}, funder(), md(), TODAY,
+        NOW.isoformat())
+    assert why == "" and (row["amount_max"], row["currency"]) == (None, None)
+
+
+def test_another_currency_beside_a_stated_figure_blanks_the_amount():
+    rules = rs.country_rules(md())
+    assert rs.country_amounts({"amount_max": 20000, "currency": "MDL"},
+                              "Granturi de până la 20 000 € (20 000 lei).", rules) == (None, None, None)
+
+
+@pytest.mark.parametrize("regions, eligibility, kept, row_regions", [
+    (["national"], "Pot aplica organizațiile din toată țara, inclusiv din regiunea transnistreană.",
+     True, ["national"]),
+    (["transnistria", "national"], "Pot aplica organizațiile obștești înregistrate.", True,
+     ["national"]),
+    (["transnistria"], "Pot aplica organizațiile obștești înregistrate.", False, None),
+    (["national"], "Pot aplica doar organizațiile din regiunea transnistreană.", False, None),
+    (["national"], "Могут подать заявку организации обоих берегов Днестра, включая Приднестровье.",
+     True, ["national"]),
+])
+def test_transnistria_rejects_only_a_programme_limited_to_it(regions, eligibility, kept, row_regions):
+    row, why = check(f"Granturi comunitare. {eligibility} " + FILLER, title="Granturi comunitare",
+                     eligibility_excerpt=eligibility, regions=regions)
+    assert (row is not None) == kept, why
+    if kept:
+        assert row["region"] == row_regions
+
+
+def md_row(title, deadline="2026-10-25", amount=None, funder_name="Fundația Est-Europeană"):
+    return {"country": "md", "funder": funder_name, "title": title, "deadline": deadline,
+            "deadline_state": "dated" if deadline[0].isdigit() else "not-stated",
+            "amount_min": None, "amount_max": amount, "currency": "EUR" if amount else None,
+            "provenance": {}}
+
+
+def test_one_call_posted_in_romanian_and_russian_is_one_row():
+    ro = md_row("Programul de sprijin al micilor producători", amount=20000)
+    ru = md_row("Программа поддержки малых производителей", amount=20000)
+    assert rs.dedupe_rows([ru, ro]) == [ro]
+    # Different amounts, or two Russian calls and one Romanian on one date: left alone.
+    assert len(rs.dedupe_rows([md_row("Программа А", amount=10000),
+                               md_row("Programul B", amount=20000)])) == 2
+    assert len(rs.dedupe_rows([md_row("Программа А"), md_row("Программа Б"),
+                               md_row("Programul C")])) == 3
+    # No closing date: not joined.
+    assert len(rs.dedupe_rows([md_row("Программа А", "TBC"), md_row("Programul C", "TBC")])) == 2
+    # Not for NZ.
+    nz = [{**r, "country": "nz"} for r in (ro, ru)]
+    assert len(rs.dedupe_rows(nz)) == 2
+
+
+def test_md_dedupe_folds_diacritics_in_the_title_key():
+    a = md_row("Granturi pentru inițiative comunitare", "TBC")
+    b = md_row("Granturi pentru initiative comunitare", "TBC")
+    assert len(rs.dedupe_rows([a, b])) == 1
+
+
+@pytest.mark.parametrize("title, kept", [
+    ("Programul de susținere pentru achiziția de echipamente", True),
+    ("Granturi pentru achiziții de utilaje agricole", True),
+    ("Achiziții publice de servicii de consultanță", False),
+    ("Anunț privind achiziția publică de lucrări", False),
+    ("Государственные закупки услуг", False),
+    ("Программа поддержки закупки оборудования", True),
+])
+def test_buying_equipment_is_a_grant_but_public_procurement_is_not(title, kept):
+    row, why = check(f"{title}. Pot aplica organizațiile înregistrate. " + FILLER, title=title,
+                     eligibility_excerpt="Pot aplica organizațiile înregistrate.")
+    assert (row is not None) == kept, why
+
+
+def test_crawl_only_asks_the_sweeps_fetch_for_no_extract_on_either_path(isolated, monkeypatch):
+    """A refused page (HTTP 403) and a page empty without scripts both reach
+    fetch_blocked with use_tavily=False from --crawl-only."""
+    import httpx
+    (isolated / "md-register.json").write_text(json.dumps({"funders": [
+        funder("Refused", "https://refused.example/"), funder("Empty", "https://empty.example/")]}))
+    seen = []
+
+    def spy(url, why, use_tavily=True):
+        seen.append((url, why, use_tavily))
+        return {"url": url, "error": why}
+
+    class Client:
+        def __init__(self, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def get(self, url):
+            request = httpx.Request("GET", url)
+            if "refused" in url:
+                return httpx.Response(403, request=request)
+            return httpx.Response(200, request=request, text="<html><body>tiny</body></html>")
+    monkeypatch.setattr(rs, "fetch_blocked", spy)
+    monkeypatch.setattr(rs.httpx, "Client", Client)
+    monkeypatch.setattr(rs, "assert_public_url", lambda url: None)
+    rs.crawl_only("md", now=NOW)
+    assert sorted(seen) == [("https://empty.example/", "page has no text without scripts", False),
+                            ("https://refused.example/", "HTTP 403", False)]
+
+
+def test_md_crawl_follows_programme_links_and_drops_hr_notices_and_old_years():
+    home = "https://ancd.gov.md/ro/content/apeluri-deschise"
+    links = [("https://ancd.gov.md/ro/content/anunt-concurs", "Anunț - Concurs"),
+             ("https://ancd.gov.md/ro/content/informatii-despre-concurs", "Informații despre concurs"),
+             ("https://ancd.gov.md/ro/content/finantarea-proiectelor-in-derulare", "Proiecte în derulare"),
+             ("https://ancd.gov.md/ro/content/program-de-stat-2020-2023", "Program de Stat 2020-2023"),
+             ("https://ancd.gov.md/ro/press/concursul-proiectelor-2024-2025",
+              "CONCURSUL PROIECTELOR DE INOVARE 2024-2025"),
+             ("https://ancd.gov.md/ro/content/programe-de-postdoctorat-2025-2026",
+              "Programe de postdoctorat 2025-2026"),
+             ("https://ancd.gov.md/ro/content/apel-granturi-2026", "Apel de propuneri 2026")]
+
+    def fetch(url):
+        return {"url": url, "text": "Apeluri deschise pentru granturi. " + FILLER,
+                "links": links if url == home else []}
+    out = rs.crawl_all("md", md(), [funder("ANCD", home)], fetch, NOW)[0]
+    assert [p["url"] for p in out["pages"]] == [
+        home, "https://ancd.gov.md/ro/content/apel-granturi-2026",
+        "https://ancd.gov.md/ro/content/programe-de-postdoctorat-2025-2026",
+        "https://ancd.gov.md/ro/press/concursul-proiectelor-2024-2025"]
+
+
+def test_the_budget_is_a_ceiling_with_calls_in_flight():
+    """Six calls at once may not take the spend past the cap: each is held at
+    its worst case before it is made."""
+    import threading
+    budget = rs.Budget(0.2)
+    worst = rs.worst_case_usd("s" * 3000, "u" * 20000)
+    started, go = [], threading.Event()
+
+    def call():
+        if budget.reserve(worst):
+            started.append(1)
+            go.wait(2)
+            budget.add(10000, rs.MAX_ANSWER_TOKENS, reserved=worst)
+    threads = [threading.Thread(target=call) for _ in range(6)]
+    for t in threads:
+        t.start()
+    go.set()
+    for t in threads:
+        t.join()
+    assert len(started) == int(0.2 // worst) < 6
+    assert budget.spent <= 0.2 and budget.reserved == pytest.approx(0)
+
+
+def test_extract_page_holds_the_budget_before_asking():
+    """Six pages at once against a cap that fits two worst-case calls: only
+    two are asked, however slowly they answer."""
+    import threading
+    cfg, f = md(), funder()
+    page = {"url": "https://eef.md/ro/apel/1", "text": "Granturi. " * 2000}
+    worst = rs.worst_case_usd(rs.system_prompt(cfg, TODAY),
+                              f"Funder: {f['name']}\nPage address: {page['url']}\n\nPage text:\n{page['text']}")
+    budget, asked, go = rs.Budget(worst * 2.5), [], threading.Event()
+
+    def ask(system, user):
+        asked.append(1)
+        go.wait(2)
+        return '{"programmes": []}', 1000, 100
+    threads = [threading.Thread(target=rs.extract_page,
+                                args=(page, f, cfg, budget, ask, TODAY, NOW.isoformat()))
+               for _ in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(0.3)
+    go.set()
+    for t in threads:
+        t.join()
+    assert len(asked) == 2 and budget.reserved == pytest.approx(0)

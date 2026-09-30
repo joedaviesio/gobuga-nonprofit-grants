@@ -275,7 +275,9 @@ def country_pick_links(page: dict, home: str, settings: dict,
     if not settings["fold"]:
         return pick_links(page, home, seen, settings["grant_words"], settings["skip_link"])
     links = [(h, t) for h, t in page.get("links", []) if not _skipped(settings, h, t)]
-    return pick_links({**page, "links": links}, home, seen, settings["grant_words"],
+    # The sweep may bring more words that name a programme ("link_words").
+    words = settings.get("link_words") or settings["grant_words"]
+    return pick_links({**page, "links": links}, home, seen, words,
                       settings["skip_link"], settings["fold"])
 
 
